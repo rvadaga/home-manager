@@ -1,0 +1,13 @@
+# nix result symlinks
+result
+result-*
+
+# direnv
+.direnv/
+
+# backup files
+*.bak
+*.backup
+
+# OS files
+.DS_Store
