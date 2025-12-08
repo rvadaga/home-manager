@@ -50,11 +50,8 @@
         . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
       fi
 
+      # source some helper functions
       source ~/.config/home-manager/utils/functions.sh;
-
-      HISTSIZE=100000000;
-      SAVEHIST=100000000;
-      HISTFILESIZE=100000;
     '';
   };
 }
