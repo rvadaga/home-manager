@@ -7,7 +7,7 @@
 
   programs = {
     zsh = {
-      initExtra = ''
+      initContent = ''
         source $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh
       '';
     };
@@ -17,7 +17,7 @@
     gpg-agent = {
       enable = true;
       enableZshIntegration = true;
-      pinentryPackage = pkgs.pinentry-curses;
+      pinentry.package = pkgs.pinentry-curses;
     };
   };
 }

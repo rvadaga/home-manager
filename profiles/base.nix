@@ -59,7 +59,9 @@
       ])
 
       # infrastructure as code
-      pkgs.terraform
+      (pkgs.staging-next.terraform.overrideAttrs (old: {
+        doCheck = false;
+      }))
 
       # grpc tools
       pkgs.grpcurl
