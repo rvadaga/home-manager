@@ -2,6 +2,7 @@
   imports = [
     ../modules/zsh.nix
     ../modules/fzf.nix
+    ../modules/neovim.nix
   ];
 
   home = {
