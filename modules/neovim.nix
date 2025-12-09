@@ -59,6 +59,13 @@
           -- keybindings
           vim.keymap.set('n', '<C-n>', ':NvimTreeToggle<CR>', { silent = true })
           vim.keymap.set('n', '<leader>e', ':NvimTreeFocus<CR>', { silent = true })
+
+          -- auto-open on startup
+          vim.api.nvim_create_autocmd("VimEnter", {
+            callback = function()
+              require("nvim-tree.api").tree.open()
+            end
+          })
         '';
       }
 
@@ -274,7 +281,7 @@
     extraLuaConfig = ''
       -- basic settings
       vim.opt.number = true
-      vim.opt.relativenumber = true
+      vim.opt.relativenumber = false
       vim.opt.mouse = 'a'
       vim.opt.ignorecase = true
       vim.opt.smartcase = true
