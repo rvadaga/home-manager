@@ -5,14 +5,14 @@ personal nix home-manager configuration for managing development environments ac
 ## repository organization
 
 * `flake.nix`: entry point defining available configurations and exported modules
-* `profiles/`: reusable configuration building blocks
+* `os-configs/`: reusable configuration building blocks
   * `base.nix`: common packages and settings for all systems
   * `mac.nix`: macos-specific configuration
   * `linux.nix`: linux-specific configuration
-* `hosts/`: per-machine configurations
+* `machines/`: per-machine configurations
   * `personal-laptop.nix`: example macos configuration
-* `modules/`: program-specific configurations (zsh, kitty, fzf)
-* `utils/`: bash scripts and helper functions
+* `programs/`: program-specific configurations (zsh, kitty, fzf)
+* `scripts/`: bash scripts and helper functions
 
 ## installation
 
@@ -42,7 +42,7 @@ nix flake update
 ```
 
 ### add a new host
-copy `hosts/personal-laptop.nix` and customize the imports and settings for your machine.
+copy `machines/personal-laptop.nix` and customize the imports and settings for your machine.
 
 ## exported modules
 

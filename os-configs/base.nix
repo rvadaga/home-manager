@@ -1,8 +1,8 @@
 { config, pkgs, lib, ... }: {
   imports = [
-    ../modules/zsh.nix
-    ../modules/fzf.nix
-    ../modules/neovim.nix
+    ../programs/zsh.nix
+    ../programs/fzf.nix
+    ../programs/neovim.nix
   ];
 
   home = {

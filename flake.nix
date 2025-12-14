@@ -46,16 +46,16 @@
       homeConfigurations = {
         personal-laptop = mkHomeManagerConfiguration {
           system = "aarch64-darwin";
-          homeManagerModule = ./hosts/personal-laptop.nix;
+          homeManagerModule = ./machines/personal-laptop.nix;
         };
       };
 
       # exported modules that other flakes can import
       # example: inputs.personal-config.homeManagerModules.base
       homeManagerModules = {
-        base = ./profiles/base.nix;
-        mac = ./profiles/mac.nix;
-        linux = ./profiles/linux.nix;
+        base = ./os-configs/base.nix;
+        mac = ./os-configs/mac.nix;
+        linux = ./os-configs/linux.nix;
       };
     };
 }
