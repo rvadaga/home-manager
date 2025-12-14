@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }: {
   imports = [
-    ./flavors/base.nix
-    ./flavors/mac.nix
+    ../os-configs/base.nix
+    ../os-configs/mac.nix
   ];
 
   # Home Manager needs a bit of information about you and the paths it should

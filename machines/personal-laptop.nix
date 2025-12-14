@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }: {
   imports = [
-    ../profiles/base.nix
-    ../profiles/mac.nix
+    ../os-configs/base.nix
+    ../os-configs/mac.nix
   ];
 
   home = {

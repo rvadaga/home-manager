@@ -1,6 +1,6 @@
 { config, pkgs, lib, ... }: {
   imports = [
-    ../modules/kitty.nix
+    ../programs/kitty.nix
   ];
 
   home = {
