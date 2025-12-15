@@ -51,7 +51,7 @@
       fi
 
       # source some helper functions
-      source ~/.config/home-manager/utils/functions.sh;
+      source ~/.config/home-manager/scripts/functions.sh;
     '';
   };
 }
