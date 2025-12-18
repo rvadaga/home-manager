@@ -54,8 +54,8 @@
       pkgs.kubectx
 
       # cloud providers
-      (pkgs.google-cloud-sdk.withExtraComponents [
-        pkgs.google-cloud-sdk.components.gke-gcloud-auth-plugin
+      (pkgs.unstable.google-cloud-sdk.withExtraComponents [
+        pkgs.unstable.google-cloud-sdk.components.gke-gcloud-auth-plugin
       ])
 
       # infrastructure as code
