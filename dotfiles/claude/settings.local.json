@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:code.claude.com)",
+      "Bash(gcloud:*)",
+      "Bash(nslookup:*)",
+      "Bash(env)",
+      "Bash(node:*)",
+      "Bash(time node:*)",
+      "Bash(readlink:*)",
+      "Bash(xargs nix-store --query:*)",
+      "Bash(nix profile:*)",
+      "Bash(nix-store:*)",
+      "Bash(nix why-depends:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(home-manager switch:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
