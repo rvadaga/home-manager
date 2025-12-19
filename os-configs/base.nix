@@ -6,6 +6,12 @@
   ];
 
   home = {
+    file = {
+      ".claude/CLAUDE.md".source = ../dotfiles/claude/CLAUDE.md;
+      ".claude/settings.json".source = ../dotfiles/claude/settings.json;
+      ".claude/settings.local.json".source = ../dotfiles/claude/settings.local.json;
+    };
+
     packages = [
       # shell and terminal
       pkgs.bash
