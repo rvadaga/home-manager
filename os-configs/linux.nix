@@ -1,14 +1,7 @@
-{ config, pkgs, lib, ... }:
-
-let
-  linuxSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-linux.json);
-  linuxSettingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-linux.json);
-in
-
-{
+{ config, pkgs, lib, ... }: {
   # claude configuration
-  claude.settings = lib.mkMerge [ config.claude.settings linuxSettings ];
-  claude.settingsLocal = lib.recursiveUpdate config.claude.settingsLocal linuxSettingsLocal;
+  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-linux.json)) ];
+  claude.settingsLocalPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-linux.json)) ];
 
   home = {
     file.".claude/CLAUDE.md".text = lib.mkAfter (

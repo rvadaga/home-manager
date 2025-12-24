@@ -1,14 +1,7 @@
-{ config, pkgs, lib, ... }:
-
-let
-  macSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json);
-  macSettingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-mac.json);
-in
-
-{
+{ config, pkgs, lib, ... }: {
   # claude configuration
-  claude.settings = lib.mkMerge [ config.claude.settings macSettings ];
-  claude.settingsLocal = lib.recursiveUpdate config.claude.settingsLocal macSettingsLocal;
+  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
+  claude.settingsLocalPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-mac.json)) ];
 
   home = {
     file.".claude/CLAUDE.md".text = lib.mkAfter (

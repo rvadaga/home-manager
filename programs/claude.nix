@@ -4,23 +4,27 @@ with lib;
 
 {
   options.claude = {
-    settings = mkOption {
-      type = types.attrs;
-      default = {};
-      description = "claude code settings.json content";
+    settingsPieces = mkOption {
+      type = types.listOf types.attrs;
+      default = [];
+      description = "list of settings.json pieces to merge";
     };
 
-    settingsLocal = mkOption {
-      type = types.attrs;
-      default = {};
-      description = "claude code settings.local.json content";
+    settingsLocalPieces = mkOption {
+      type = types.listOf types.attrs;
+      default = [];
+      description = "list of settings.local.json pieces to merge";
     };
   };
 
   config = {
     home.file = {
-      ".claude/settings.json".text = builtins.toJSON config.claude.settings;
-      ".claude/settings.local.json".text = builtins.toJSON config.claude.settingsLocal;
+      ".claude/settings.json".text = builtins.toJSON (
+        lib.foldl lib.recursiveUpdate {} config.claude.settingsPieces
+      );
+      ".claude/settings.local.json".text = builtins.toJSON (
+        lib.foldl lib.recursiveUpdate {} config.claude.settingsLocalPieces
+      );
     };
   };
 }
