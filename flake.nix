@@ -4,7 +4,11 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-25.05-darwin";
 
+    nixos.url = "github:nixos/nixpkgs/nixos-25.05";
+
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
+    nixos-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     nixpkgs-staging-next.url = "github:nixos/nixpkgs/staging-next";
 
@@ -14,12 +18,19 @@
     };
   };
 
-  outputs = { nixpkgs, nixpkgs-unstable, nixpkgs-staging-next, home-manager, ... }:
+  outputs = { nixpkgs, nixos, nixpkgs-unstable, nixos-unstable, nixpkgs-staging-next, home-manager, ... }:
     let
-      mkHomeManagerConfiguration = { homeManagerModule, system }:
+      mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? nixpkgs }:
         let
           unstable-overlay = final: prev: {
             unstable = import nixpkgs-unstable {
+              inherit (prev.stdenv.hostPlatform) system;
+              config.allowUnfree = true;
+              config.allowUnfreePredicate = _: true;
+            };
+          };
+          nixos-unstable-overlay = final: prev: {
+            nixos-unstable = import nixos-unstable {
               inherit (prev.stdenv.hostPlatform) system;
               config.allowUnfree = true;
               config.allowUnfreePredicate = _: true;
@@ -34,11 +45,11 @@
           };
         in
           home-manager.lib.homeManagerConfiguration {
-            pkgs = import nixpkgs {
+            pkgs = import pkgsInput {
               inherit system;
               config.allowUnfree = true;
               config.allowUnfreePredicate = _: true;
-              overlays = [ unstable-overlay staging-next-overlay ];
+              overlays = [ unstable-overlay nixos-unstable-overlay staging-next-overlay ];
             };
             modules = [ homeManagerModule ];
           };
@@ -48,6 +59,11 @@
           system = "aarch64-darwin";
           homeManagerModule = ./machines/personal-laptop.nix;
         };
+        nixos-workstation = mkHomeManagerConfiguration {
+          system = "x86_64-linux";
+          pkgsInput = nixos;
+          homeManagerModule = ./machines/nixos-workstation.nix;
+        };
       };
 
       # exported modules that other flakes can import
@@ -56,6 +72,7 @@
         base = ./os-configs/base.nix;
         mac = ./os-configs/mac.nix;
         linux = ./os-configs/linux.nix;
+        nixos = ./os-configs/nixos.nix;
       };
     };
 }
