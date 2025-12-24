@@ -103,9 +103,8 @@ function code() {
   if [ $# -eq 0 ]; then
     if [ -d "$workspace_dir" ]; then
       local selected_workspace
-      selected_workspace=$(ls "$workspace_dir"/*.code-workspace 2>/dev/null | \
-        xargs -n 1 basename | \
-        sed 's/\.code-workspace$//' | \
+      selected_workspace=$(find "$workspace_dir" -maxdepth 1 -name "*.code-workspace" -type f 2>/dev/null | \
+        sed 's|.*/||; s/\.code-workspace$//' | \
         fzf --prompt="Select workspace: " --height=40% --reverse)
 
       if [ -n "$selected_workspace" ]; then
@@ -117,6 +116,6 @@ function code() {
     fi
   else
     # If arguments provided, pass them directly to VS Code
-    /usr/local/bin/code "$@"
+    code "$@"
   fi
 }
