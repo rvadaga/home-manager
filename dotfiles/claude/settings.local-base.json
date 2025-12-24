@@ -12,9 +12,9 @@
       "Bash(nix profile:*)",
       "Bash(nix-store:*)",
       "Bash(nix why-depends:*)",
+      "Bash(home-manager switch:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(home-manager switch:*)"
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
