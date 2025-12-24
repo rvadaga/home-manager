@@ -4,13 +4,16 @@
     ../programs/fzf.nix
     ../programs/neovim.nix
     ../programs/kitty.nix
+    ../programs/claude.nix
   ];
+
+  # claude configuration
+  claude.settings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
+  claude.settingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-base.json);
 
   home = {
     file = {
-      ".claude/CLAUDE.md".source = ../dotfiles/claude/CLAUDE.md;
-      ".claude/settings.json".source = ../dotfiles/claude/settings.json;
-      ".claude/settings.local.json".source = ../dotfiles/claude/settings.local.json;
+      ".claude/CLAUDE.md".text = builtins.readFile ../dotfiles/claude/CLAUDE-base.md;
     };
 
     packages = [

@@ -1,3 +1,5 @@
+# base instructions
+
 * when writing ANY new content, always use lower case.
     * when editing, preserve case for code, variable names, identifiers, abbreviations and actual code
     * product names are lower case too

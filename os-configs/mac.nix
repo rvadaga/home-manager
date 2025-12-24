@@ -1,9 +1,20 @@
-{ config, pkgs, lib, ... }: {
-  imports = [
-    ../programs/kitty.nix
-  ];
+{ config, pkgs, lib, ... }:
+
+let
+  macSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json);
+  macSettingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-mac.json);
+in
+
+{
+  # claude configuration
+  claude.settings = lib.mkMerge [ config.claude.settings macSettings ];
+  claude.settingsLocal = lib.recursiveUpdate config.claude.settingsLocal macSettingsLocal;
 
   home = {
+    file.".claude/CLAUDE.md".text = lib.mkAfter (
+      "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-mac.md
+    );
+
     packages = [
       pkgs.unstable.coreutils-full
       # g-prefixed symlinks for gnu coreutils (avoids collision with coreutils-prefixed)
