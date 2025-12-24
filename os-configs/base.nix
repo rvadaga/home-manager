@@ -3,6 +3,7 @@
     ../programs/zsh.nix
     ../programs/fzf.nix
     ../programs/neovim.nix
+    ../programs/kitty.nix
   ];
 
   home = {
