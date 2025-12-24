@@ -8,8 +8,8 @@
   ];
 
   # claude configuration
-  claude.settings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
-  claude.settingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-base.json);
+  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
+  claude.settingsLocalPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-base.json)) ];
 
   home = {
     file = {

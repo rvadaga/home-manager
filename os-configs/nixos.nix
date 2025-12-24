@@ -1,14 +1,7 @@
-{ config, pkgs, lib, ... }:
-
-let
-  nixosSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-nixos.json);
-  nixosSettingsLocal = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-nixos.json);
-in
-
-{
+{ config, pkgs, lib, ... }: {
   # claude configuration
-  claude.settings = lib.mkMerge [ config.claude.settings nixosSettings ];
-  claude.settingsLocal = lib.recursiveUpdate config.claude.settingsLocal nixosSettingsLocal;
+  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-nixos.json)) ];
+  claude.settingsLocalPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-nixos.json)) ];
 
   home = {
     file.".claude/CLAUDE.md".text = lib.mkAfter (
