@@ -98,6 +98,22 @@ function gct() {
 
 function code() {
   local workspace_dir="$HOME/Desktop/workspaces"
+  local code_bin=""
+
+  code_bin="$(whence -p code 2>/dev/null)"
+
+  if [ -z "$code_bin" ] && [ -x /run/current-system/sw/bin/code ]; then
+    code_bin="/run/current-system/sw/bin/code"
+  elif [ -z "$code_bin" ] && [ -x "$HOME/.nix-profile/bin/code" ]; then
+    code_bin="$HOME/.nix-profile/bin/code"
+  elif [ -z "$code_bin" ] && [ -x /usr/local/bin/code ]; then
+    code_bin="/usr/local/bin/code"
+  fi
+
+  if [ -z "$code_bin" ]; then
+    echo "VS Code not found on PATH."
+    return 1
+  fi
 
   # If no arguments provided, use fzf to select a workspace
   if [ $# -eq 0 ]; then
@@ -108,7 +124,7 @@ function code() {
         fzf --prompt="Select workspace: " --height=40% --reverse)
 
       if [ -n "$selected_workspace" ]; then
-        /usr/local/bin/code "$workspace_dir/${selected_workspace}.code-workspace"
+        "$code_bin" "$workspace_dir/${selected_workspace}.code-workspace"
       fi
     else
       echo "Workspace directory not found: $workspace_dir"
@@ -116,6 +132,6 @@ function code() {
     fi
   else
     # If arguments provided, pass them directly to VS Code
-    code "$@"
+    "$code_bin" "$@"
   fi
 }
