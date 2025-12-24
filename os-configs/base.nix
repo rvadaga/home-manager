@@ -1,10 +1,11 @@
 { config, pkgs, lib, ... }: {
   imports = [
-    ../programs/zsh.nix
-    ../programs/fzf.nix
-    ../programs/neovim.nix
-    ../programs/kitty.nix
     ../programs/claude.nix
+    ../programs/fzf.nix
+    ../programs/kitty.nix
+    ../programs/neovim.nix
+    ../programs/npm.nix
+    ../programs/zsh.nix
   ];
 
   # claude configuration
