@@ -70,7 +70,7 @@
       ])
 
       # infrastructure as code
-      (pkgs.staging-next.terraform.overrideAttrs (old: {
+      (pkgs.unstable.terraform.overrideAttrs (old: {
         doCheck = false;
       }))
 
@@ -140,7 +140,7 @@
     # version control
     git = {
       enable = true;
-      package = pkgs.staging-next.git;
+      package = pkgs.unstable.git;
 
       # identity
       userName = "Rahul Vadaga";
