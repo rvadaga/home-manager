@@ -124,7 +124,7 @@ function code() {
         fzf --prompt="Select workspace: " --height=40% --reverse)
 
       if [ -n "$selected_workspace" ]; then
-        "$code_bin" "$workspace_dir/${selected_workspace}.code-workspace"
+        "$code_bin" --new-window "$workspace_dir/${selected_workspace}.code-workspace"
       fi
     else
       echo "Workspace directory not found: $workspace_dir"
