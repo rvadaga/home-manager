@@ -12,4 +12,12 @@
       pkgs.unstable.claude-code
     ];
   };
+
+  programs = {
+    zsh = {
+      shellAliases = {
+        nosc = "cd $HOME/.config/nixos";
+      };
+    };
+  };
 }
