@@ -16,7 +16,9 @@
   programs = {
     zsh = {
       initContent = ''
-        source $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh
+        if [ -e $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh ]; then
+          source $HOME/.nix-profile/etc/profile.d/hm-session-vars.sh
+        fi
       '';
     };
   };
