@@ -12,7 +12,6 @@
     * prefix the name with rahul/
 * when making ~/.config/home-manager changes, test that they work first. then push them to remote and do home-manager switch.
 
-
 # updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
 * these files are managed by home-manager, so they are read only
 * whenever you need to update user settings, please modify the files in ~/.config/home-manager instead
