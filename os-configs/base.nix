@@ -142,23 +142,25 @@
       enable = true;
       package = pkgs.unstable.git;
 
-      # identity
-      userName = "Rahul Vadaga";
-      userEmail = lib.mkDefault "rahul.vadaga@gmail.com";
-
       # signing
       signing = {
         key = null;
         signByDefault = true;
       };
 
-      # aliases
-      aliases = {
-        rpull = "pull --rebase --stat";
-      };
-
       # configuration
-      extraConfig = {
+      settings = {
+        # identity
+        user = {
+          name = "Rahul Vadaga";
+          email = lib.mkDefault "rahul.vadaga@gmail.com";
+        };
+
+        # aliases
+        alias = {
+          rpull = "pull --rebase --stat";
+        };
+
         branch = {
           sort = "-committerdate";
         };
