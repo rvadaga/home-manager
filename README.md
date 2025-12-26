@@ -26,7 +26,7 @@ cd ~/.config/home-manager
 
 3. activate the configuration:
 ```bash
-nix run home-manager/release-25.05 -- switch --flake ".#personal-laptop"
+nix run home-manager/release-25.11 -- switch --flake ".#personal-laptop"
 ```
 
 ## usage
