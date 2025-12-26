@@ -3,8 +3,8 @@
 
   inputs = {
     # stable channels (platform-specific)
-    darwin-stable.url = "github:nixos/nixpkgs/nixpkgs-25.05-darwin";
-    nixos-stable.url = "github:nixos/nixpkgs/nixos-25.05";
+    darwin-stable.url = "github:nixos/nixpkgs/nixpkgs-25.11-darwin";
+    nixos-stable.url = "github:nixos/nixpkgs/nixos-25.11";
 
     # unstable channels (platform-specific)
     # darwin-unstable (nixpkgs-unstable) has autopatchelf issues on linux
@@ -16,7 +16,7 @@
     staging-next.url = "github:nixos/nixpkgs/staging-next";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.05";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "darwin-stable";
     };
   };
