@@ -1,22 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:code.claude.com)",
-      "Bash(gcloud:*)",
-      "Bash(nslookup:*)",
       "Bash(env)",
-      "Bash(node:*)",
-      "Bash(time node:*)",
-      "Bash(readlink:*)",
-      "Bash(xargs nix-store --query:*)",
-      "Bash(nix profile:*)",
-      "Bash(nix-store:*)",
-      "Bash(nix why-depends:*)",
-      "Bash(home-manager switch:*)",
+      "Bash(gcloud:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(home-manager switch:*)",
+      "Bash(nix profile:*)",
+      "Bash(nix why-depends:*)",
+      "Bash(nix-store:*)",
+      "Bash(node:*)",
+      "Bash(nslookup:*)",
+      "Bash(readlink:*)",
+      "Bash(time node:*)",
+      "Bash(xargs nix-store --query:*)",
+      "WebFetch(domain:code.claude.com)"
     ],
-    "deny": [],
-    "ask": []
+    "ask": [],
+    "deny": []
   }
 }
