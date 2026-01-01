@@ -10,6 +10,9 @@
       # home-manager
       hmc = "cd $HOME/.config/home-manager";
 
+      # bat
+      b = "bat -P";
+
       # k8s
       k = "kubectl";
       ctx = "kubectx";
