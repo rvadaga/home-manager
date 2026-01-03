@@ -36,6 +36,7 @@
       # file viewers and search
       pkgs.ripgrep
       pkgs.bat
+      pkgs.glow
       pkgs.jless
       pkgs.difftastic
 
