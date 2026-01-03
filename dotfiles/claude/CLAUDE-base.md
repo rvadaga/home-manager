@@ -10,8 +10,10 @@
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
 * when creating a branch
     * prefix the name with rahul/
-* when making any home-manager config changes, always test that they work.
-* running home-manager switch command is ok, but NEVER push to remote without getting the user's permission.
+* when making any home-manager config changes:
+    * always show the full diff to user and confirm it looks good to them
+    * run home-manager switch and always reload the shell by running `exec $SHELL` for changes to completely take effect
+    * after confirming changes look good and expected, always follow up by committing and pushing to remote
 
 # updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
 
