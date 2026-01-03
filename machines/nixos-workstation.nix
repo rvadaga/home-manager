@@ -9,5 +9,9 @@
     username = "rahulv";
     homeDirectory = "/home/rahulv";
     stateVersion = "24.11";
+
+    sessionVariables = {
+      HM_CONFIG_NAME = "nixos-workstation";
+    };
   };
 }

@@ -8,5 +8,9 @@
     username = "rvadaga";
     homeDirectory = "/Users/rvadaga";
     stateVersion = "24.11";
+
+    sessionVariables = {
+      HM_CONFIG_NAME = "personal-laptop";
+    };
   };
 }
