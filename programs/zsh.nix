@@ -49,6 +49,9 @@
     ];
 
     initContent = ''
+      # enable menu completion (cycle through options with tab)
+      zstyle ':completion:*' menu select
+
       if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
         . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
       fi
