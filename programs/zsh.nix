@@ -52,6 +52,9 @@
       # enable menu completion (cycle through options with tab)
       zstyle ':completion:*' menu select
 
+      # use gnu ls (gls) with LS_COLORS for better color support
+      zstyle ':omz:lib:theme-and-appearance' gnu-ls yes
+
       if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
         . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
       fi
