@@ -15,9 +15,25 @@
     * run home-manager switch and always reload the shell by running `exec $SHELL` for changes to completely take effect
     * after confirming changes look good and expected, always follow up by committing and pushing to remote
 
-# updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
+# home-manager configuration
 
-## overview
+## multi-repo structure
+
+this personal/base home-manager config (`~/.config/home-manager`) can be imported as a flake input by other configs (e.g., work-specific configs). on machines with layered configs:
+
+* the downstream config imports this repo as `inputs.personal-config`
+* CLAUDE.md files from both repos get combined
+* check `$HM_CONFIG_NAME` to determine which flake to rebuild against
+* if rebuilding a downstream config, use that config's flake path (not this one)
+
+when editing this personal config on a machine with a downstream config:
+1. make the edit here in `~/.config/home-manager`
+2. rebuild using the downstream flake (since it imports this as input)
+3. to persist changes, the downstream config may need `nix flake update personal-config`
+
+## updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
+
+### overview
 
 * files in ~/.claude are managed by home-manager and are read-only
 * source files live in ~/.config/home-manager/dotfiles/claude/
