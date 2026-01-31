@@ -11,9 +11,9 @@
 * when creating a branch
     * prefix the name with rahul/
 * when making any home-manager config changes:
-    * always show the full diff to user and confirm it looks good to them
     * run home-manager switch and always reload the shell by running `exec $SHELL` for changes to completely take effect
     * after confirming changes look good and expected, always follow up by committing and pushing to remote
+* always prefer fetching just the branch that was needed, if needed to fetch everything, get the users permission
 
 # home-manager configuration
 
