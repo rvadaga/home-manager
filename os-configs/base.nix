@@ -57,6 +57,7 @@
       pkgs.fortune
       pkgs.cowsay
       pkgs.lolcat
+      pkgs.neofetch
 
       # version control
       pkgs.gh
