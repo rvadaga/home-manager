@@ -75,6 +75,51 @@ this flake exports reusable modules that other configurations can import:
 * `homeManagerModules.linux` - linux-specific configuration
 * `homeManagerModules.nixos` - nixos-specific configuration
 
+## comma and nix-index
+
+[comma](https://github.com/nix-community/comma) (`,`) is included in the base configuration. it lets you run any program from nixpkgs without installing it:
+
+```bash
+, jshell    # runs jshell via nix shell
+, cowsay    # runs cowsay via nix shell
+```
+
+comma uses [nix-index](https://github.com/nix-community/nix-index) to look up which package provides a given binary. nixpkgs doesn't have a built-in reverse mapping from binary name to package attribute, so nix-index builds a precomputed index of every file path across all packages. without this database, comma has no way to resolve e.g. `jshell` → `openjdk` without evaluating all 80,000+ packages.
+
+the nix-index database must be built or downloaded before comma will work.
+
+### setup (prebuilt database — recommended)
+
+download the prebuilt database from [nix-index-database](https://github.com/Mic92/nix-index-database):
+
+```bash
+mkdir -p ~/.cache/nix-index
+
+# for apple silicon macs (aarch64-darwin)
+curl -L -o ~/.cache/nix-index/files \
+  https://github.com/Mic92/nix-index-database/releases/latest/download/index-aarch64-darwin
+
+# for intel macs (x86_64-darwin)
+curl -L -o ~/.cache/nix-index/files \
+  https://github.com/Mic92/nix-index-database/releases/latest/download/index-x86_64-darwin
+
+# for linux (x86_64-linux)
+curl -L -o ~/.cache/nix-index/files \
+  https://github.com/Mic92/nix-index-database/releases/latest/download/index-x86_64-linux
+```
+
+### setup (build from source)
+
+this indexes all of nixpkgs locally. it's thorough but slow (~30+ minutes):
+
+```bash
+nix run 'nixpkgs#nix-index'
+```
+
+### updating the database
+
+re-run either method above periodically to pick up new packages. the prebuilt database is rebuilt weekly. to check which nixpkgs commit a prebuilt release was built against, inspect the [flake.lock](https://github.com/Mic92/nix-index-database/blob/main/flake.lock) in the nix-index-database repo.
+
 ## available configurations
 
 - `personal-laptop` (aarch64-darwin) - personal macbook
