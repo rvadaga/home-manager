@@ -84,7 +84,8 @@
       # documentation
       pkgs.asciidoctor-with-extensions
 
-      # development environments
+      # nix tools
+      pkgs.comma
       pkgs.nix-direnv
 
       # programming languages: java
