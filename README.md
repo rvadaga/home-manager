@@ -77,11 +77,12 @@ this flake exports reusable modules that other configurations can import:
 
 ## comma and nix-index
 
-[comma](https://github.com/nix-community/comma) (`,`) is included in the base configuration. it lets you run any program from nixpkgs without installing it:
+[comma](https://github.com/nix-community/comma) (`,`) and [nix-index](https://github.com/nix-community/nix-index) are included in the base configuration. comma lets you run any program from nixpkgs without installing it, and `nix-locate` (provided by nix-index) lets you search for which package provides a given file:
 
 ```bash
-, jshell    # runs jshell via nix shell
-, cowsay    # runs cowsay via nix shell
+, jshell                    # runs jshell via nix shell
+, cowsay                    # runs cowsay via nix shell
+nix-locate -w bin/jshell    # find which packages provide jshell
 ```
 
 comma uses [nix-index](https://github.com/nix-community/nix-index) to look up which package provides a given binary. nixpkgs doesn't have a built-in reverse mapping from binary name to package attribute, so nix-index builds a precomputed index of every file path across all packages. without this database, comma has no way to resolve e.g. `jshell` → `openjdk` without evaluating all 80,000+ packages.

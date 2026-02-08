@@ -89,6 +89,7 @@
 
       # nix tools
       pkgs.comma
+      pkgs.nix-index
       pkgs.nix-direnv
 
       # programming languages: java
