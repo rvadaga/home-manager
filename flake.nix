@@ -15,13 +15,16 @@
     staging.url = "github:nixos/nixpkgs/staging";
     staging-next.url = "github:nixos/nixpkgs/staging-next";
 
+    # external tools
+    cloudflare-speed-cli.url = "github:kavehtehrani/cloudflare-speed-cli";
+
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "darwin-stable";
     };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, ... }:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, ... }:
     let
       mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? null }:
         let
@@ -61,13 +64,15 @@
               config.allowUnfreePredicate = _: true;
             };
           };
+
+          cloudflare-speed-cli-overlay = cloudflare-speed-cli.overlays.default;
         in
           home-manager.lib.homeManagerConfiguration {
             pkgs = import selectedPkgsInput {
               inherit system;
               config.allowUnfree = true;
               config.allowUnfreePredicate = _: true;
-              overlays = [ unstable-overlay staging-overlay staging-next-overlay ];
+              overlays = [ unstable-overlay staging-overlay staging-next-overlay cloudflare-speed-cli-overlay ];
             };
             modules = [ homeManagerModule ];
           };

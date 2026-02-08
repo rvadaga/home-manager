@@ -53,6 +53,9 @@
       # benchmarking
       pkgs.hyperfine
 
+      # network tools
+      pkgs.cloudflare-speed-cli
+
       # fun stuff
       pkgs.fortune
       pkgs.cowsay

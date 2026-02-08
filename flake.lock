@@ -1,5 +1,23 @@
 {
   "nodes": {
+    "cloudflare-speed-cli": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1769710383,
+        "narHash": "sha256-TEpcQtJYb3VwEW8u0PbJxDe3QRmcR/J7NvCu1nhRYlo=",
+        "owner": "kavehtehrani",
+        "repo": "cloudflare-speed-cli",
+        "rev": "7f65ae91dc3e4913748a9fc926c71dc635ea123d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kavehtehrani",
+        "repo": "cloudflare-speed-cli",
+        "type": "github"
+      }
+    },
     "darwin-stable": {
       "locked": {
         "lastModified": 1766705440,
@@ -85,8 +103,25 @@
         "type": "github"
       }
     },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1766902085,
+        "narHash": "sha256-coBu0ONtFzlwwVBzmjacUQwj3G+lybcZ1oeNSQkgC0M=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "c0b0e0fddf73fd517c3471e546c0df87a42d53f4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
+        "cloudflare-speed-cli": "cloudflare-speed-cli",
         "darwin-stable": "darwin-stable",
         "darwin-unstable": "darwin-unstable",
         "home-manager": "home-manager",
