@@ -8,6 +8,7 @@
     * don't add ai generated prompt
     * always use pull request templates available in the repository
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
+    * always read the pr description from github before updating it (user may have made changes via github ui)
 * when creating a branch
     * prefix the name with rahul/
 * when making any home-manager config changes:
