@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }: {
   # claude configuration
-  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
-  claude.settingsLocalPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-mac.json)) ];
+  claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
+  claude.settingsLocalPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-mac.json)) ];
 
   home = {
     file.".claude/CLAUDE.md".text = lib.mkAfter (

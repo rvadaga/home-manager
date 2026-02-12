@@ -27,10 +27,23 @@ this personal/base home-manager config (`~/.config/home-manager`) can be importe
 * check `$HM_CONFIG_NAME` to determine which flake to rebuild against
 * if rebuilding a downstream config, use that config's flake path (not this one)
 
+**critical: downstream configs import this repo as a git flake input, so `flake.lock` pins to a specific git revision. simply running `home-manager switch` with the downstream flake will NOT pick up local changes here unless you explicitly override the input.**
+
 when editing this personal config on a machine with a downstream config:
 1. make the edit here in `~/.config/home-manager`
-2. rebuild using the downstream flake (since it imports this as input)
-3. to persist changes, the downstream config may need `nix flake update personal-config`
+2. to test/apply locally, use `--override-input` to point the downstream flake at the local path:
+   ```bash
+   home-manager switch --flake <downstream-flake-path>#$HM_CONFIG_NAME \
+     --override-input personal-config path:$HOME/.config/home-manager
+   ```
+3. once confirmed working, commit and push the personal config changes
+4. update the flake lock in the downstream config:
+   ```bash
+   cd <downstream-flake-path> && nix flake update personal-config
+   ```
+5. rebuild without the override to confirm the lock is correct
+
+**never rebuild a downstream flake without `--override-input` after editing this repo - it will silently use the old locked revision.**
 
 ## updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
 

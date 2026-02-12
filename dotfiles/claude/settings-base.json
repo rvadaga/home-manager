@@ -1,3 +1,4 @@
 {
-  "alwaysThinkingEnabled": true
+  "alwaysThinkingEnabled": true,
+  "model": "claude-opus-4-5"
 }
