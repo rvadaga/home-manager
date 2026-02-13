@@ -74,52 +74,32 @@ this flake exports reusable modules that other configurations can import:
 * `homeManagerModules.mac` - macos-specific configuration
 * `homeManagerModules.linux` - linux-specific configuration
 * `homeManagerModules.nixos` - nixos-specific configuration
+* `homeManagerModules.nix-index` - comma and nix-index with pre-built database
 
 ## comma and nix-index
 
-[comma](https://github.com/nix-community/comma) (`,`) and [nix-index](https://github.com/nix-community/nix-index) are included in the base configuration. comma lets you run any program from nixpkgs without installing it, and `nix-locate` (provided by nix-index) lets you search for which package provides a given file:
+[comma](https://github.com/nix-community/comma) (`,`) lets you run any program from nixpkgs without installing it, and `nix-locate` (provided by nix-index) lets you search for which package provides a given file:
 
 ```bash
 , jshell                    # runs jshell via nix shell
 , cowsay                    # runs cowsay via nix shell
-nix-locate -w bin/jshell    # find which packages provide jshell
+nix-locate cowsay           # find which packages provide cowsay
 ```
 
-comma uses [nix-index](https://github.com/nix-community/nix-index) to look up which package provides a given binary. nixpkgs doesn't have a built-in reverse mapping from binary name to package attribute, so nix-index builds a precomputed index of every file path across all packages. without this database, comma has no way to resolve e.g. `jshell` → `openjdk` without evaluating all 80,000+ packages.
+the database is provided automatically by the [nix-index-database](https://github.com/nix-community/nix-index-database) flake input — no manual setup or periodic rebuilds needed. the database is updated weekly upstream; run `nix flake update nix-index-database` to pull the latest.
 
-the nix-index database must be built or downloaded before comma will work.
+the `homeManagerModules.nix-index` export bundles the nix-index-database home-manager module with the configuration, so downstream configs just need one import line:
 
-### setup (prebuilt database — recommended)
-
-download the prebuilt database from [nix-index-database](https://github.com/Mic92/nix-index-database):
-
-```bash
-mkdir -p ~/.cache/nix-index
-
-# for apple silicon macs (aarch64-darwin)
-curl -L -o ~/.cache/nix-index/files \
-  https://github.com/Mic92/nix-index-database/releases/latest/download/index-aarch64-darwin
-
-# for intel macs (x86_64-darwin)
-curl -L -o ~/.cache/nix-index/files \
-  https://github.com/Mic92/nix-index-database/releases/latest/download/index-x86_64-darwin
-
-# for linux (x86_64-linux)
-curl -L -o ~/.cache/nix-index/files \
-  https://github.com/Mic92/nix-index-database/releases/latest/download/index-x86_64-linux
+```nix
+imports = [
+  inputs.personal-config.homeManagerModules.nix-index
+];
 ```
 
-### setup (build from source)
-
-this indexes all of nixpkgs locally. it's thorough but slow (~30+ minutes):
-
-```bash
-nix run 'nixpkgs#nix-index'
-```
-
-### updating the database
-
-re-run either method above periodically to pick up new packages. the prebuilt database is rebuilt weekly. to check which nixpkgs commit a prebuilt release was built against, inspect the [flake.lock](https://github.com/Mic92/nix-index-database/blob/main/flake.lock) in the nix-index-database repo.
+this enables:
+- `comma` wrapped with the pre-built database
+- `nix-locate` wrapped with the pre-built database
+- command-not-found shell integration (suggests packages when a missing command is typed)
 
 ## available configurations
 

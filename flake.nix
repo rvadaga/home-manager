@@ -17,6 +17,7 @@
 
     # external tools
     cloudflare-speed-cli.url = "github:kavehtehrani/cloudflare-speed-cli";
+    nix-index-database.url = "github:nix-community/nix-index-database";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-25.11";
@@ -24,7 +25,7 @@
     };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, ... }:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, nix-index-database, ... }:
     let
       mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? null }:
         let
@@ -74,7 +75,11 @@
               config.allowUnfreePredicate = _: true;
               overlays = [ unstable-overlay staging-overlay staging-next-overlay cloudflare-speed-cli-overlay ];
             };
-            modules = [ homeManagerModule ];
+            modules = [
+              homeManagerModule
+              nix-index-database.homeModules.nix-index
+              { programs.nix-index.enable = true; programs.nix-index-database.comma.enable = true; }
+            ];
           };
     in {
       homeConfigurations = {
@@ -95,6 +100,11 @@
         mac = ./os-configs/mac.nix;
         linux = ./os-configs/linux.nix;
         nixos = ./os-configs/nixos.nix;
+        nix-index = {
+          imports = [ nix-index-database.homeModules.nix-index ];
+          programs.nix-index.enable = true;
+          programs.nix-index-database.comma.enable = true;
+        };
       };
     };
 }

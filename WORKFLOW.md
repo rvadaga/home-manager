@@ -21,6 +21,7 @@ homeManagerModules = {
   mac = ./os-configs/mac.nix;
   linux = ./os-configs/linux.nix;
   nixos = ./os-configs/nixos.nix;
+  nix-index = { ... };  # comma + nix-index with pre-built database
 };
 ```
 
