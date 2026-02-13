@@ -42,7 +42,7 @@
 
       # json/yaml/xml tools
       pkgs.jq
-      pkgs.yq
+      pkgs.yq-go
       (pkgs.writeShellScriptBin "xless" ''
         xq . $1 | jless
       '')
