@@ -1,6 +1,8 @@
 # base instructions
 
 * when writing ANY new content, always use lower case.
+    * when editing existing docs, follow the casing and styling conventions already used in that doc
+    * when creating new docs, use the default lower case style
     * when editing, preserve case for code, variable names, identifiers, abbreviations and actual code
     * product names are lower case too
 * when working on pull requests:
