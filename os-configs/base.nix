@@ -44,7 +44,7 @@
       pkgs.jq
       pkgs.yq-go
       (pkgs.writeShellScriptBin "xless" ''
-        xq . $1 | jless
+        yq -p xml -o json . $1 | jless
       '')
 
       # build and task runners
