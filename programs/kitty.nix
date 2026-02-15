@@ -66,10 +66,6 @@
       "ctrl+q" = "quit";
       "ctrl+shift+f" = "toggle_fullscreen";
 
-      # line navigation (physical cmd)
-      "ctrl+left" = "send_text all \\x01";  # beginning of line
-      "ctrl+right" = "send_text all \\x05";  # end of line
-
       # clear screen (physical cmd)
       "ctrl+k" = "clear_terminal reset active";
       "ctrl+l" = "clear_terminal scrollback active";

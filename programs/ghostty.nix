@@ -52,10 +52,6 @@
         "ctrl+k=reset"
         "ctrl+l=clear_screen"
 
-        # line navigation (physical cmd)
-        "ctrl+left=text:\\x01"
-        "ctrl+right=text:\\x05"
-
         # terminal control sequences (physical ctrl → super after keyd)
         "super+c=text:\\x03"
         "super+d=text:\\x04"
