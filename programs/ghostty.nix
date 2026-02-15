@@ -1,6 +1,12 @@
-{config, pkgs,...}: {
+{config, pkgs, lib,...}:
+let
+  isDarwin = pkgs.stdenv.isDarwin;
+in
+{
   programs.ghostty = {
     enable = true;
+    # ghostty nixpkg only supports linux; on macOS install via DMG
+    package = lib.mkIf isDarwin null;
 
     settings = {
       font-family = "FiraCode Nerd Font Mono";
