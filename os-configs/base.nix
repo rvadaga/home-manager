@@ -2,6 +2,7 @@
   imports = [
     ../programs/claude.nix
     ../programs/fzf.nix
+    ../programs/ghostty.nix
     ../programs/kitty.nix
     ../programs/neovim.nix
     ../programs/npm.nix
