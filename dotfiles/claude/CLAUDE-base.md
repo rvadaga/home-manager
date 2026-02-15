@@ -17,6 +17,7 @@
     * run home-manager switch and always reload the shell by running `exec $SHELL` for changes to completely take effect
     * after confirming changes look good and expected, always follow up by committing and pushing to remote
 * always prefer fetching just the branch that was needed, if needed to fetch everything, get the users permission
+* use oh-my-zsh git plugin aliases for all git commands. always add an inline comment showing the equivalent full git command so the user learns the alias while also knowing the underlying command. example: `gcmsg "fix bug" # git commit --message`. the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 
 # home-manager configuration
 

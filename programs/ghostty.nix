@@ -5,7 +5,7 @@
     settings = {
       font-family = "FiraCode Nerd Font Mono";
       font-size = 13;
-      theme = "ayu";
+      theme = "Ayu";
 
       # window
       confirm-close-surface = false;
@@ -49,7 +49,7 @@
         "ctrl+q=quit"
 
         # clear screen (physical cmd)
-        "ctrl+k=reset_terminal"
+        "ctrl+k=reset"
         "ctrl+l=clear_screen"
 
         # line navigation (physical cmd)
