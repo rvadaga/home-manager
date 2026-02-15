@@ -49,6 +49,14 @@
     ];
 
     initContent = ''
+      # oh-my-zsh defines __git_prompt_git in lib/git.zsh but claude code's
+      # shell snapshot filters __ prefixed functions. redefine it here so
+      # aliases like ggpush/ggpull that depend on git_current_branch work
+      # in claude code's bash subshell.
+      function __git_prompt_git() {
+        GIT_OPTIONAL_LOCKS=0 command git "$@"
+      }
+
       # enable menu completion (cycle through options with tab)
       zstyle ':completion:*' menu select
 
