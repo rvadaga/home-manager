@@ -9,7 +9,8 @@
 
       # window
       confirm-close-surface = false;
-      window-decoration = false;
+      window-decoration = true;
+      gtk-tabs-location = "top";
 
       # keybindings - macos-like behavior
       # keyd swaps: physical ctrl→super, physical cmd→ctrl
