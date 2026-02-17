@@ -117,6 +117,7 @@
       BAT_THEME = "Nord";
       JAVA_HOME = "${pkgs.unstable.temurin-bin}";
       MAVEN_OPTS = "-Djavax.net.ssl.trustStore=${pkgs.unstable.temurin-bin}/lib/openjdk/lib/security/cacerts";
+      OP_BIOMETRIC_UNLOCK_ENABLED = "true";
     };
   };
 
