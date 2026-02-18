@@ -3,6 +3,9 @@
 complete reference of all aliases from the oh-my-zsh git plugin, organized by category.
 each entry shows: `alias` = `full git command`
 
+**tip:** aliases expand to normal git commands, so you can append extra flags.
+e.g., `gcmsg "trigger rebuild" --allow-empty` expands to `git commit --message "trigger rebuild" --allow-empty`
+
 ## basics
 
 | alias | full command |
