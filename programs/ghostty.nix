@@ -16,13 +16,13 @@ in
       # window
       confirm-close-surface = false;
       window-decoration = true;
+    } // lib.optionalAttrs (!isDarwin) {
       gtk-tabs-location = "top";
 
-      # keybindings - macos-like behavior
-      # keyd swaps: physical ctrl→super, physical cmd→ctrl
-
-      # clipboard (physical cmd)
+      # keybindings for linux only (keyd swaps: physical ctrl→super, physical cmd→ctrl)
+      # on macOS, ghostty's native keybindings are used instead
       keybind = [
+        # clipboard (physical cmd → ctrl after keyd)
         "ctrl+c=copy_to_clipboard"
         "ctrl+v=paste_from_clipboard"
 
