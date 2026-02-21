@@ -13,10 +13,6 @@
     ];
   };
 
-  imports = [
-    ../programs/vscode.nix
-  ];
-
   programs = {
     zsh = {
       shellAliases = {
