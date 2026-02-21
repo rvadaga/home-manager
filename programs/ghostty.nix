@@ -46,7 +46,8 @@ in
 
         # window/split management (physical cmd)
         "ctrl+n=new_window"
-        "ctrl+shift+n=new_split:right"
+        "ctrl+d=new_split:right"
+        "ctrl+shift+d=new_split:down"
         "ctrl+shift+w=close_surface"
 
         # font size (physical cmd)
