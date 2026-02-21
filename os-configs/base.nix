@@ -6,6 +6,7 @@
     ../programs/kitty.nix
     ../programs/neovim.nix
     ../programs/npm.nix
+    ../programs/starship.nix
     ../programs/zsh.nix
   ];
 
@@ -21,8 +22,6 @@
     packages = [
       # shell and terminal
       pkgs.bash
-      pkgs.zsh-powerlevel10k
-      pkgs.starship
       pkgs.nerd-fonts.fira-code
 
       # system utilities
