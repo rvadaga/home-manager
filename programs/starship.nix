@@ -6,6 +6,7 @@
     settings = {
       # blank line before each prompt
       add_newline = true;
+      command_timeout = 2000;
 
       # prompt format: 2-line layout
       # line 1 left: os icon, directory, git
@@ -37,11 +38,10 @@
         };
       };
 
-      # directory
+      # directory (full path)
       directory = {
         style = "bold cyan";
-        truncation_length = 3;
-        truncation_symbol = "…/";
+        truncation_length = 0;
       };
 
       # git branch
@@ -83,12 +83,16 @@
         time_format = "%H:%M";
       };
 
-      # kubernetes
+      # kubernetes (shorten gke context names to last segment)
       kubernetes = {
         disabled = false;
         style = "bold blue";
         format = "[$symbol$context(/$namespace)]($style) ";
         symbol = "☸ ";
+        contexts = [
+          { context_pattern = "gke_etsy-.*_us-central1_(?P<name>.*)"; context_alias = "$name"; }
+          { context_pattern = "vespa-cloud-(?P<env>[^_]+)_(?P<name>.*)"; context_alias = "vespa:$env/$name"; }
+        ];
       };
 
       # python virtualenv
