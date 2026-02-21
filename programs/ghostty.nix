@@ -9,9 +9,10 @@ in
     package = lib.mkIf isDarwin null;
 
     settings = {
-      font-family = "FiraCode Nerd Font Mono";
-      font-size = 13;
-      theme = "Ayu";
+      font-family = "SF Mono";
+      font-size = 14;
+      font-style = "Semibold";
+      theme = "Starlight";
 
       # window
       confirm-close-surface = false;
