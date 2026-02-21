@@ -19,6 +19,7 @@ in
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;
+      window-save-state = "always";
     } // lib.optionalAttrs (!isDarwin) {
       gtk-tabs-location = "top";
 
