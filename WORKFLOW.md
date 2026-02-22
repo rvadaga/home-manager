@@ -78,7 +78,17 @@ claude settings are managed via split configuration files in `dotfiles/claude/`:
 
 files are merged during home-manager build (base → os-specific).
 
-to update settings:
+**CLAUDE.md** is managed as a read-only symlink — edit source files and rebuild.
+
+**settings.json and settings.local.json** use a seed-once model:
+- home-manager writes them only on first run (or if the file is missing/still a symlink)
+- after seeding, claude code owns the files and can modify them directly (plugin installs, permissions, etc.)
+- to re-seed from nix defaults, delete the file and run `home-manager switch`
+
+to update CLAUDE.md:
 1. edit the appropriate source file in `dotfiles/claude/`
 2. run `home-manager switch --flake ".#$HM_CONFIG_NAME"`
-3. verify changes in `~/.claude/settings.json`
+3. verify changes in `~/.claude/CLAUDE.md`
+
+to update settings directly:
+- edit `~/.claude/settings.json` or `~/.claude/settings.local.json` — changes take effect immediately

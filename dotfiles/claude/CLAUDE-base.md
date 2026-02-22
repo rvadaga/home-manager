@@ -53,10 +53,15 @@ when editing this personal config on a machine with a downstream config:
 
 ### overview
 
-* files in ~/.claude are managed by home-manager and are read-only
+* CLAUDE.md is managed by home-manager as a read-only symlink — edit the source files and rebuild
+* settings.json and settings.local.json use a **seed-once** model:
+    * home-manager writes them only if they don't exist yet (or are still a symlink from an older config)
+    * after the initial seed, claude code owns these files and can modify them directly (plugin installs, permission grants, etc.)
+    * to reset either file to the nix-defined defaults, delete it and run `home-manager switch`
 * source files live in ~/.config/home-manager/dotfiles/claude/
 * settings are split by environment and merged together during home-manager build
-* to update settings, edit the appropriate source file(s) and run `home-manager switch`
+* **for CLAUDE.md changes:** edit the source file(s) and run `home-manager switch`
+* **for settings changes:** you can either edit the files directly in `~/.claude/` (takes effect immediately) or edit the nix source files to change the seed defaults for future machines/resets
 
 ## file structure
 
@@ -80,7 +85,17 @@ CLAUDE.md uses the same pattern:
 
 ## how to update settings programmatically
 
-### determine which file to edit
+### quick edits (settings.json and settings.local.json)
+
+since these files are owned by claude code after the initial seed, you can edit them directly:
+- `~/.claude/settings.json` - model, plugins, mcpServers, outputStyle, etc.
+- `~/.claude/settings.local.json` - permissions, enabledPlugins
+
+changes take effect immediately (no rebuild needed).
+
+### updating seed defaults or CLAUDE.md
+
+to change what gets seeded on new machines (or after a reset), or to update CLAUDE.md:
 
 1. **for settings that apply everywhere:** edit `settings-base.json` or `settings.local-base.json`
 2. **for os-specific settings:** edit the appropriate `settings-{os}.json` or `settings.local-{os}.json`
@@ -95,28 +110,35 @@ current system is **macos**, so you'll typically edit:
 
 ### update workflow
 
-1. read the appropriate source file from `~/.config/home-manager/dotfiles/claude/`
-2. edit the file with your changes
-3. run `home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME` to rebuild and apply changes
-4. verify the changes took effect by reading `~/.claude/settings.json` or `~/.claude/CLAUDE.md`
+**for CLAUDE.md (still managed as a symlink):**
+1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
+2. run `home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME`
+3. verify changes in `~/.claude/CLAUDE.md`
+
+**for settings.json / settings.local.json (direct edit):**
+1. edit the file directly in `~/.claude/`
+2. changes take effect immediately
+
+**for settings seed defaults (nix source):**
+1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
+2. run `home-manager switch` — note: this will NOT overwrite existing files (seed-once behavior)
+3. to force a re-seed, delete the target file first, then run `home-manager switch`
 
 the `$HM_CONFIG_NAME` environment variable is set in each machine config and identifies which configuration to use (e.g., "personal-laptop", "nixos-workstation")
 
 ### examples
 
-**adding a new global setting:**
+**adding a new global setting (direct):**
 ```
-# edit shared settings
-edit ~/.config/home-manager/dotfiles/claude/settings-base.json
-# rebuild
-home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
+# edit directly — takes effect immediately
+edit ~/.claude/settings.json
 ```
 
-**adding macos-specific permission:**
+**adding a new global setting (seed default):**
 ```
-# edit mac-specific local settings
-edit ~/.config/home-manager/dotfiles/claude/settings.local-mac.json
-# rebuild
+# edit shared settings source
+edit ~/.config/home-manager/dotfiles/claude/settings-base.json
+# rebuild (only seeds if file is missing)
 home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
 ```
 
