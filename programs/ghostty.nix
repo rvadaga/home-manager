@@ -81,9 +81,10 @@ in
         "ctrl+g=navigate_search:next"
         "ctrl+shift+g=navigate_search:previous"
 
-        # let ctrl+alt+arrows pass through to WM for window tiling
-        "ctrl+alt+left=unbind"
-        "ctrl+alt+right=unbind"
+        # let meta+alt+arrows pass through to WM for window tiling
+        # keyd sends Meta+Alt (not Ctrl+Alt) for physical ctrl+opt combos
+        "super+alt+left=unbind"
+        "super+alt+right=unbind"
       ];
     };
 
