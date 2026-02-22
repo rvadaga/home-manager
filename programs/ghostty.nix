@@ -21,6 +21,7 @@ in
       window-inherit-working-directory = false;
       window-save-state = "always";
     } // lib.optionalAttrs (!isDarwin) {
+      font-size = 12;
       gtk-tabs-location = "top";
 
       # keybindings for linux only (keyd swaps: physical ctrl→super, physical cmd→ctrl)
@@ -48,7 +49,7 @@ in
         "ctrl+n=new_window"
         "ctrl+d=new_split:right"
         "ctrl+shift+d=new_split:down"
-        "ctrl+shift+w=close_surface"
+        "ctrl+w=close_surface"
 
         # font size (physical cmd)
         "ctrl+equal=increase_font_size:2"
@@ -73,6 +74,10 @@ in
         "super+e=text:\\x05"
         "super+k=text:\\x0b"
         "super+r=text:\\x12"
+
+        # let ctrl+alt+arrows pass through to WM for window tiling
+        "ctrl+alt+left=unbind"
+        "ctrl+alt+right=unbind"
       ];
     };
 
