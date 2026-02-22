@@ -5,8 +5,9 @@ in
 {
   programs.ghostty = {
     enable = true;
-    # ghostty nixpkg only supports linux; on macOS install via DMG
-    package = lib.mkIf isDarwin null;
+    # on macOS: install via DMG (nix package doesn't support darwin)
+    # on linux: use tip channel from ghostty flake for latest features
+    package = if isDarwin then null else pkgs.ghostty-tip;
 
     settings = {
       font-family = "SF Mono";

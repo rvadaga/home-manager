@@ -17,6 +17,7 @@
 
     # external tools
     cloudflare-speed-cli.url = "github:kavehtehrani/cloudflare-speed-cli";
+    ghostty.url = "github:ghostty-org/ghostty";
     nix-index-database.url = "github:nix-community/nix-index-database";
 
     home-manager = {
@@ -25,7 +26,7 @@
     };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, nix-index-database, ... }:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, ghostty, nix-index-database, ... }:
     let
       mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? null }:
         let
@@ -67,13 +68,17 @@
           };
 
           cloudflare-speed-cli-overlay = cloudflare-speed-cli.overlays.default;
+
+          ghostty-overlay = final: prev: {
+            ghostty-tip = ghostty.packages.${system}.default;
+          };
         in
           home-manager.lib.homeManagerConfiguration {
             pkgs = import selectedPkgsInput {
               inherit system;
               config.allowUnfree = true;
               config.allowUnfreePredicate = _: true;
-              overlays = [ unstable-overlay staging-overlay staging-next-overlay cloudflare-speed-cli-overlay ];
+              overlays = [ unstable-overlay staging-overlay staging-next-overlay cloudflare-speed-cli-overlay ghostty-overlay ];
             };
             modules = [
               homeManagerModule
@@ -90,6 +95,13 @@
         nixos-workstation = mkHomeManagerConfiguration {
           system = "x86_64-linux";
           homeManagerModule = ./machines/nixos-workstation.nix;
+        };
+      };
+
+      # exported overlays that other flakes can use
+      overlays = {
+        ghostty-tip = final: prev: {
+          ghostty-tip = ghostty.packages.${prev.stdenv.hostPlatform.system}.default;
         };
       };
 
