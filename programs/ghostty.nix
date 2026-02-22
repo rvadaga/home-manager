@@ -76,6 +76,11 @@ in
         "super+k=text:\\x0b"
         "super+r=text:\\x12"
 
+        # search (physical cmd+f → ctrl+f after keyd)
+        "ctrl+f=start_search"
+        "ctrl+g=navigate_search:next"
+        "ctrl+shift+g=navigate_search:previous"
+
         # let ctrl+alt+arrows pass through to WM for window tiling
         "ctrl+alt+left=unbind"
         "ctrl+alt+right=unbind"
