@@ -117,6 +117,8 @@
       JAVA_HOME = "${pkgs.unstable.temurin-bin}";
       MAVEN_OPTS = "-Djavax.net.ssl.trustStore=${pkgs.unstable.temurin-bin}/lib/openjdk/lib/security/cacerts";
       OP_BIOMETRIC_UNLOCK_ENABLED = "true";
+      # nix-managed terminfo (ghostty, kitty) lives in the profile — tell ncurses where to find it
+      TERMINFO_DIRS = "$HOME/.nix-profile/share/terminfo:/usr/share/terminfo";
     };
   };
 
