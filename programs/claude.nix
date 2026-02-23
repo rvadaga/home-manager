@@ -24,13 +24,14 @@ let
         (lib.intersectAttrs a b)
     ));
 
-  mergedSettings = builtins.toJSON (
+  nixMergedSettingsJson = builtins.toJSON (
     lib.foldl deepMerge {} config.claude.settingsPieces
   );
+  nixMergedSettings = pkgs.writeText "claude-settings-nix-merged.json" nixMergedSettingsJson;
   jq = "${pkgs.jq}/bin/jq";
 
   # jq filter: deep merge two objects with array union.
-  # baseline (.[0]) provides new keys; live file (.[1]) wins on scalar conflicts.
+  # nix merged settings (.[0]) provide new keys; live file (.[1]) wins on scalar conflicts.
   # uses two-argument def form to avoid jq scoping issues with reduce.
   deepMergeFilter = ''
     def deep_merge(a; b):
@@ -64,23 +65,23 @@ in
     home.activation.mergeClaudeSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       merge_claude_file() {
         local target="$1"
-        local baseline="$2"
+        local nix_merged="$2"
 
         if [ ! -f "$target" ] || [ -L "$target" ]; then
-          # first run or leftover symlink — seed from baseline
+          # first run or leftover symlink — seed from nix merged settings
           [ -L "$target" ] && rm "$target"
-          echo "$baseline" > "$target"
+          cp "$nix_merged" "$target"
           echo "seeded $target from nix config"
         else
-          # additive merge: baseline brings new keys/entries, live wins on conflicts
+          # additive merge: nix merged settings bring new keys/entries, live wins on conflicts
           local merged
-          merged=$(${jq} -s '${deepMergeFilter}' <(echo "$baseline") "$target")
+          merged=$(${jq} -s '${deepMergeFilter}' "$nix_merged" "$target")
           echo "$merged" > "$target"
-          echo "merged nix baseline into $target"
+          echo "merged nix settings into $target"
         fi
       }
 
-      merge_claude_file "$HOME/.claude/settings.json" '${mergedSettings}'
+      merge_claude_file "$HOME/.claude/settings.json" "${nixMergedSettings}"
     '';
   };
 }

@@ -17,6 +17,7 @@
       ".claude/CLAUDE.md".text = builtins.readFile ../dotfiles/claude/CLAUDE-base.md;
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
+      ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
     };
 
     packages = [
