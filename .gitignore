@@ -9,9 +9,8 @@ result-*
 *.bak
 *.backup
 
-# claude code internals (allow skills and settings)
+# claude code internals (allow settings.json for nix merge)
 .claude/*
-!.claude/skills/
 !.claude/settings.json
 
 # OS files
