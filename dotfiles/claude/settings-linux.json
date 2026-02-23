@@ -1,2 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(dbus-send:*)",
+      "Bash(echo DE: $XDG_CURRENT_DESKTOP:*)",
+      "Bash(fc-list:*)",
+      "Bash(grep inet :*)",
+      "Bash(ip route:*)",
+      "Bash(pgrep:*)",
+      "Bash(spectacle:*)",
+      "WebFetch(domain:man.archlinux.org)"
+    ]
+  }
 }

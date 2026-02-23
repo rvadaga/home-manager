@@ -9,5 +9,10 @@ result-*
 *.bak
 *.backup
 
+# claude code internals (allow skills and settings)
+.claude/*
+!.claude/skills/
+!.claude/settings.json
+
 # OS files
 .DS_Store

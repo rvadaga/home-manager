@@ -1,8 +1,6 @@
 { config, pkgs, lib, ... }: {
   # claude configuration
   claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-linux.json)) ];
-  claude.settingsLocalPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings.local-linux.json)) ];
-
   home = {
     file.".claude/CLAUDE.md".text = lib.mkAfter (
       "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-linux.md

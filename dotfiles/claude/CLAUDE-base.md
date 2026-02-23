@@ -49,32 +49,32 @@ when editing this personal config on a machine with a downstream config:
 
 **never rebuild a downstream flake without `--override-input` after editing this repo - it will silently use the old locked revision.**
 
-## updating CLAUDE.md, settings.json or settings.local.json in ~/.claude folder
+## updating CLAUDE.md or settings.json in ~/.claude folder
 
 ### overview
 
 * CLAUDE.md is managed by home-manager as a read-only symlink — edit the source files and rebuild
-* settings.json and settings.local.json use a **seed-once** model:
-    * home-manager writes them only if they don't exist yet (or are still a symlink from an older config)
-    * after the initial seed, claude code owns these files and can modify them directly (plugin installs, permission grants, etc.)
-    * to reset either file to the nix-defined defaults, delete it and run `home-manager switch`
+* settings.json uses an **additive merge** model:
+    * on every `home-manager switch` / `nixos-rebuild switch`, the nix baseline is deep-merged into the live file
+    * objects merge recursively — live values win on scalar conflicts
+    * arrays are union-merged (concat + deduplicate) — new nix permissions appear without losing locally-approved ones
+    * on first run (or if the file is missing/still a symlink), the file is seeded from the nix baseline
+* settings.local.json is **not managed by nix** — claude code owns it entirely
+* to export live settings back to nix source files, use the `/sync-claude-settings` skill
+* to compare live vs nix source without modifying anything, use the `/diff-claude-settings` skill
 * source files live in ~/.config/home-manager/dotfiles/claude/
 * settings are split by environment and merged together during home-manager build
 * **for CLAUDE.md changes:** edit the source file(s) and run `home-manager switch`
-* **for settings changes:** you can either edit the files directly in `~/.claude/` (takes effect immediately) or edit the nix source files to change the seed defaults for future machines/resets
+* **for settings changes:** edit files directly in `~/.claude/` (takes effect immediately), then run `/sync-claude-settings` to propagate back to nix source files
 
 ## file structure
 
 settings are organized into environment-specific pieces:
 
-* `settings-base.json` - shared settings across all environments
-* `settings-mac.json` - macos-specific settings
-* `settings-linux.json` - linux-specific settings
-* `settings-nixos.json` - nixos-specific settings
-* `settings.local-base.json` - shared local settings (permissions, etc)
-* `settings.local-mac.json` - macos-specific local settings
-* `settings.local-linux.json` - linux-specific local settings
-* `settings.local-nixos.json` - nixos-specific local settings
+* `settings-base.json` - shared settings across all environments (model, plugins, permissions, mcp servers, etc.)
+* `settings-mac.json` - macos-specific settings (mac-only permissions)
+* `settings-linux.json` - linux-specific settings (linux-only permissions)
+* `settings-nixos.json` - nixos-specific settings (nixos-only permissions)
 
 CLAUDE.md uses the same pattern:
 
@@ -83,63 +83,63 @@ CLAUDE.md uses the same pattern:
 * `CLAUDE-linux.md` - linux-specific instructions
 * `CLAUDE-nixos.md` - nixos-specific instructions
 
-## how to update settings programmatically
+## how to update settings
 
-### quick edits (settings.json and settings.local.json)
+### quick edits (settings.json)
 
-since these files are owned by claude code after the initial seed, you can edit them directly:
-- `~/.claude/settings.json` - model, plugins, mcpServers, outputStyle, etc.
-- `~/.claude/settings.local.json` - permissions, enabledPlugins
+edit `~/.claude/settings.json` directly — changes take effect immediately.
 
-changes take effect immediately (no rebuild needed).
+### propagating live settings to nix source files
 
-### updating seed defaults or CLAUDE.md
+use the `/sync-claude-settings` skill to export live settings back to the nix source files. it auto-routes permissions to os-specific files by keyword matching:
+- linux: `spectacle`, `dbus-send`, `pgrep`, `fc-list`, `xdg`, `kde`, etc.
+- nixos: `nixos-rebuild`, `nix-env`, `journalctl`, `systemctl`, `nix profile`, etc.
+- mac: `open -a`, `pbcopy`, `pbpaste`, `defaults write`, `osascript`, etc.
+- everything else → base
 
-to change what gets seeded on new machines (or after a reset), or to update CLAUDE.md:
+plugins, mcp servers, and all other top-level keys always go to base.
 
-1. **for settings that apply everywhere:** edit `settings-base.json` or `settings.local-base.json`
-2. **for os-specific settings:** edit the appropriate `settings-{os}.json` or `settings.local-{os}.json`
+use `/diff-claude-settings` for a read-only comparison without making changes.
+
+### updating nix source files directly
+
+1. **for settings that apply everywhere:** edit `settings-base.json`
+2. **for os-specific permissions:** edit the appropriate `settings-{os}.json`
 3. **for instructions:** edit the appropriate `CLAUDE-{os}.md` file
-
-current system is **macos**, so you'll typically edit:
-- `~/.config/home-manager/dotfiles/claude/settings-base.json`
-- `~/.config/home-manager/dotfiles/claude/settings-mac.json`
-- `~/.config/home-manager/dotfiles/claude/settings.local-base.json` (for permissions)
-- `~/.config/home-manager/dotfiles/claude/CLAUDE-base.md` (for shared instructions)
-- `~/.config/home-manager/dotfiles/claude/CLAUDE-mac.md` (for macos instructions)
 
 ### update workflow
 
-**for CLAUDE.md (still managed as a symlink):**
+**for CLAUDE.md (managed as a symlink):**
 1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
 2. run `home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME`
 3. verify changes in `~/.claude/CLAUDE.md`
 
-**for settings.json / settings.local.json (direct edit):**
-1. edit the file directly in `~/.claude/`
-2. changes take effect immediately
-
-**for settings seed defaults (nix source):**
+**for settings (additive merge on rebuild):**
 1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
-2. run `home-manager switch` — note: this will NOT overwrite existing files (seed-once behavior)
-3. to force a re-seed, delete the target file first, then run `home-manager switch`
+2. run `home-manager switch` — merges nix baseline into live file (live values win on conflicts, arrays are unioned)
+
+**for syncing locally-approved permissions to nix source:**
+1. run `/sync-claude-settings` to export and route permissions
+2. commit and push the updated source files
+3. on other machines: pull and rebuild to pick up the changes
 
 the `$HM_CONFIG_NAME` environment variable is set in each machine config and identifies which configuration to use (e.g., "personal-laptop", "nixos-workstation")
 
 ### examples
 
-**adding a new global setting (direct):**
+**adding a permission via nix source:**
 ```
-# edit directly — takes effect immediately
-edit ~/.claude/settings.json
+# edit shared settings
+edit ~/.config/home-manager/dotfiles/claude/settings-base.json
+# rebuild — merges into live file without losing existing permissions
+home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
 ```
 
-**adding a new global setting (seed default):**
+**syncing locally-approved permissions back to nix:**
 ```
-# edit shared settings source
-edit ~/.config/home-manager/dotfiles/claude/settings-base.json
-# rebuild (only seeds if file is missing)
-home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
+# use the skill — it shows a diff and writes on confirmation
+/sync-claude-settings
+# then commit and push
 ```
 
 **updating instructions:**

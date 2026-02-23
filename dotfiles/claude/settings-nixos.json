@@ -1,2 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(journalctl:*)",
+      "Bash(nix profile:*)",
+      "Bash(nix why-depends:*)",
+      "Bash(nix-store:*)",
+      "Bash(sudo iptables:*)",
+      "Bash(sudo nix-env:*)",
+      "Bash(sudo nixos-rebuild:*)",
+      "Bash(sudo systemctl restart firewall && sudo iptables -L nixos-fw -n -v 2>&1)",
+      "Bash(systemctl list-timers:*)",
+      "Bash(xargs nix-store --query:*)"
+    ]
+  }
 }

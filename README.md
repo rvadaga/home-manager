@@ -13,9 +13,9 @@ personal nix home-manager configuration for managing development environments ac
 * `machines/`: per-machine configurations
   * `personal-laptop.nix`: macos configuration
   * `nixos-workstation.nix`: nixos configuration
-* `programs/`: program-specific configurations (zsh, kitty, fzf)
+* `programs/`: program-specific configurations (zsh, kitty, fzf, claude)
 * `scripts/`: bash scripts and helper functions
-* `dotfiles/`: managed dotfiles (claude settings, etc.)
+* `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
 
 ## installation
 
@@ -100,6 +100,24 @@ this enables:
 - `comma` wrapped with the pre-built database
 - `nix-locate` wrapped with the pre-built database
 - command-not-found shell integration (suggests packages when a missing command is typed)
+
+## claude code settings sync
+
+claude code's `settings.json` is a mutable file that claude code modifies at runtime (permissions, plugins, mcp servers). this config uses bidirectional sync to keep it in line across machines. `settings.local.json` is not managed by nix.
+
+### import (nix → live) — automatic on every rebuild
+
+on `home-manager switch` / `nixos-rebuild switch`, the activation script additively merges nix-managed baseline settings into the live file. objects merge recursively (live wins on conflicts), arrays are union-merged (new entries from nix appear without losing locally-approved ones).
+
+settings source files in `dotfiles/claude/` are split by os:
+- `settings-base.json` - shared across all environments (model, plugins, permissions, mcp servers, etc.)
+- `settings-{mac,linux,nixos}.json` - os-specific (os-only permissions)
+
+### export (live → nix source) — on-demand via skills
+
+use `/sync-claude-settings` in claude code to export live settings back to the nix source files. it reads `~/.claude/settings.json`, classifies permissions by os keyword, routes them to the correct file, shows a diff, and writes on confirmation.
+
+use `/diff-claude-settings` for a read-only comparison without modifying anything.
 
 ## available configurations
 
