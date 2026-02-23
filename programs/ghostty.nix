@@ -10,7 +10,7 @@ in
     package = if isDarwin then null else pkgs.ghostty-tip;
 
     settings = {
-      font-family = "SF Mono";
+      font-family = "FiraCode Nerd Font Mono";
       font-size = 14;
       font-style = "Semibold";
       theme = "Starlight";
