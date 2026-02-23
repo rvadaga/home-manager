@@ -79,5 +79,13 @@
     "ask": [],
     "deny": []
   },
+  "hooks": {
+    "SessionEnd": [
+      {
+        "type": "command",
+        "command": "git worktree prune 2>/dev/null; git branch --list 'worktree-*' | while read b; do git branch -d \"$b\" 2>/dev/null; done"
+      }
+    ]
+  },
   "verbose": true
 }
