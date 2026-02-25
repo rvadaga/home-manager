@@ -190,8 +190,8 @@
 
         diff = {
           algorithm = "histogram";
-          cordMoved = "plain";
-          menmonicPrefix = true;
+          colorMoved = "plain";
+          mnemonicPrefix = true;
           renames = true;
         };
 

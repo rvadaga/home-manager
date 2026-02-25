@@ -143,12 +143,12 @@ function code() {
 # Or via env vars:
 #   LEFT_SPEC=... RIGHT_SPEC=... OUT_DIR=... cdiff
 
-cdiff() {
+cdiff() (
   set -euo pipefail
 
-  local left_spec=${1:-${LEFT_SPEC}}
-  local right_spec=${2:-${RIGHT_SPEC}}
-  local out_dir=${OUT_DIR:-"/tmp/git-diff"}
+  left_spec=${1:-${LEFT_SPEC}}
+  right_spec=${2:-${RIGHT_SPEC}}
+  out_dir=${OUT_DIR:-"/tmp/git-diff"}
 
   mkdir -p "$out_dir"
 
@@ -158,16 +158,14 @@ cdiff() {
     basename "$path_part"
   }
 
-  local left_basename
-  local right_basename
   left_basename="$(_cdiff_basename "$left_spec")"
   right_basename="$(_cdiff_basename "$right_spec")"
 
-  local left_path="$out_dir/left_$left_basename"
-  local right_path="$out_dir/right_$right_basename"
+  left_path="$out_dir/left_$left_basename"
+  right_path="$out_dir/right_$right_basename"
 
   git show "$left_spec" > "$left_path"
   git show "$right_spec" > "$right_path"
 
   code --diff "$left_path" "$right_path"
-}
+)
