@@ -45,7 +45,6 @@ in {
         "$nix_shell"
         # right — infra (purple pills)
         "$kubernetes"
-        "$gcloud"
         "$docker_context"
         "$container"
         # right — perf (bg3 pill)
@@ -134,6 +133,18 @@ in {
       git_status = {
         style = "bg:color_aqua";
         format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
+        # p10k-style symbols with counts
+        ahead = "⇡\${count}";
+        behind = "⇣\${count}";
+        diverged = "⇡\${ahead_count}⇣\${behind_count}";
+        up_to_date = "=";
+        conflicted = "~\${count}";
+        stashed = "*\${count}";
+        staged = "+\${count}";
+        modified = "!\${count}";
+        untracked = "?\${count}";
+        deleted = "✘\${count}";
+        renamed = "»\${count}";
       };
 
       status = {
@@ -197,13 +208,6 @@ in {
           { context_pattern = "gke_etsy-.*_us-central1_(?P<name>.*)"; context_alias = "$name"; }
           { context_pattern = "vespa-cloud-(?P<env>[^_]+)_(?P<name>.*)"; context_alias = "vespa:$env/$name"; }
         ];
-      };
-
-      gcloud = {
-        disabled = false;
-        symbol = "☁️ ";
-        style = "bg:color_purple";
-        format = " [${lc}](fg:color_purple)[ $symbol$project ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
       };
 
       docker_context = {
