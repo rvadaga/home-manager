@@ -20,6 +20,8 @@ in
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;
+      tab-inherit-working-directory = false;
+      split-inherit-working-directory = true;
       window-save-state = "always";
     } // lib.optionalAttrs (!isDarwin) {
       font-size = 12;
