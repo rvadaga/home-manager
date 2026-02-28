@@ -16,7 +16,7 @@ in {
 
       # gruvbox rainbow — two-prompt layout
       # left: identity -> location -> git (continuous powerline)
-      # right: self-contained pills via $fill (no artifacts from empty modules)
+      # right: native RPROMPT via right_format (auto-hides on overflow)
       format = lib.concatStrings [
         # left — identity (orange)
         "[${lc}](color_orange)"
@@ -32,32 +32,31 @@ in {
         "$git_state"
         "$git_status"
         "[${rc}](fg:color_aqua)"
-        # fill pushes everything after it to the right edge
-        "$fill"
-        # right — languages (blue pills)
-        "$c"
-        "$cpp"
-        "$rust"
-        "$java"
-        "$python"
-        # right — dev env (aqua pills)
-        "$direnv"
-        "$nix_shell"
-        # right — infra (purple pills)
-        "$kubernetes"
-        "$docker_context"
-        "$container"
-        # right — perf (bg3 pill)
-        "$cmd_duration"
-        # right — clock (bg1 pill)
-        "$time"
         # line 2
         "$line_break"
         "$status"
         "$character"
       ];
 
-      fill.symbol = " ";
+      right_format = lib.concatStrings [
+        # languages (blue pills)
+        "$c"
+        "$cpp"
+        "$rust"
+        "$java"
+        "$python"
+        # dev env (aqua pills)
+        "$direnv"
+        "$nix_shell"
+        # infra (purple pills)
+        "$kubernetes"
+        "$docker_context"
+        "$container"
+        # perf (bg3 pill)
+        "$cmd_duration"
+        # clock (bg1 pill)
+        "$time"
+      ];
 
       palette = "gruvbox_dark";
 
@@ -189,7 +188,7 @@ in {
       direnv = {
         disabled = false;
         style = "bg:color_aqua";
-        format = " [${lc}](fg:color_aqua)[ $loaded$allowed ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
+        format = " [${lc}](fg:color_aqua)[ $loaded/$allowed ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
       };
 
       nix_shell = {
