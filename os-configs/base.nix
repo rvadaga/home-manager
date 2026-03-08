@@ -18,6 +18,7 @@
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
+      ".claude/commands/save-notes.md".source = ../dotfiles/claude/commands/save-notes.md;
     };
 
     packages = [
@@ -114,6 +115,7 @@
     ];
 
     sessionVariables = {
+      SCRATCHPAD_DIR = lib.mkDefault "$HOME/development/scratchpad";
       BAT_THEME = "Nord";
       JAVA_HOME = "${pkgs.unstable.temurin-bin}";
       MAVEN_OPTS = "-Djavax.net.ssl.trustStore=${pkgs.unstable.temurin-bin}/lib/openjdk/lib/security/cacerts";
