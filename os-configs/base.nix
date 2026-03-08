@@ -51,6 +51,7 @@
 
       # build and task runners
       pkgs.just
+      pkgs.go-jsonnet
 
       # benchmarking
       pkgs.hyperfine
@@ -70,6 +71,7 @@
       # kubernetes
       pkgs.kubectl
       pkgs.kubectx
+      pkgs.kubernetes-helm
 
       # cloud providers
       (pkgs.unstable.google-cloud-sdk.withExtraComponents [
