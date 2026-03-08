@@ -18,7 +18,7 @@
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
-      ".claude/commands/save-notes.md".source = ../dotfiles/claude/commands/save-notes.md;
+      ".claude/commands/notes.md".source = ../dotfiles/claude/commands/notes.md;
     };
 
     packages = [
