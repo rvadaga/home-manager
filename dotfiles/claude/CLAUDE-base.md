@@ -19,8 +19,7 @@
     * after confirming changes look good and expected, always follow up by committing and pushing to remote
 * always prefer fetching just the branch that was needed, if needed to fetch everything, get the users permission
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
-* never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`. for non-git cases, use separate bash tool calls or absolute paths
-
+* never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`
 # home-manager configuration
 
 ## multi-repo structure
