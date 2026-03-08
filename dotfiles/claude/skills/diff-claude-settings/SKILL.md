@@ -5,17 +5,19 @@ read-only comparison of live `~/.claude/settings.json` against nix source files.
 ## steps
 
 1. read `~/.claude/settings.json` (live file)
-2. read all source files: `dotfiles/claude/settings-{base,linux,nixos,mac}.json`
-3. mentally merge the source files (base + os-specific for current platform) to reconstruct what nix would produce
-4. compare against the live file and report:
-   - **in live but not in dotfiles:** keys, permissions, plugins, mcp servers that exist in the live file but are missing from the source files
+2. read all source files from `~/.config/home-manager/dotfiles/claude/`: `settings-{base,linux,nixos,mac}.json`
+3. check CLAUDE.md for any downstream config instructions that specify additional settings files to include
+4. mentally merge all applicable source files (base + os-specific + any downstream) to reconstruct what nix would produce
+5. compare against the live file and report:
+   - **in live but not in dotfiles:** keys, permissions, plugins, mcp servers that exist in the live file but are missing from all source files
    - **in dotfiles but not in live:** entries in source files that are absent from the live file
    - **conflicts:** values that differ between live and source files
-5. present findings clearly, grouped by category
+6. present findings clearly, grouped by category
 
 ## important notes
 
 - this is read-only — do NOT modify any files
-- do NOT touch `settings.local.json`
+- do NOT modify `settings.local.json`
+- DO read `settings.local.json` and report any non-empty `permissions.allow` entries as "stale session permissions that should be routed to nix source files"
 - check `$HM_CONFIG_NAME` or system type to determine which os-specific file applies
 - suggest running `/sync-claude-settings` if there are differences the user wants to propagate
