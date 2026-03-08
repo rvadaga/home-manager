@@ -1,13 +1,18 @@
 ---
-allowed-tools: Bash(git *), Bash(mkdir *), Bash(ls *), Bash(echo $SCRATCHPAD_DIR)
-description: save findings/notes from the current conversation to the scratchpad repo as markdown
+allowed-tools: Bash(git *), Bash(mkdir *), Bash(ls *), Bash(echo $SCRATCHPAD_DIR), Read
+description: read or save notes in the scratchpad repo. "read <topic>" to pull up notes, "save <topic>" to save from conversation.
 ---
 
 ## your task
 
-save findings, analysis, or notes from the current conversation to the scratchpad repo as markdown.
+manage notes in the scratchpad repo. two modes based on the first argument word:
 
-## steps
+- **read \<topic\>**: find and display existing notes matching the topic
+- **save \<topic\>**: save findings from the current conversation as markdown
+
+if no mode word is given, default to **save**.
+
+## common setup
 
 1. determine scratchpad directory:
    - run `echo $SCRATCHPAD_DIR` to get the repo root directory
@@ -19,6 +24,18 @@ save findings, analysis, or notes from the current conversation to the scratchpa
    - clone to `$SCRATCHPAD_DIR`
 3. create the notes directory if it doesn't exist: `mkdir -p $SCRATCHPAD_DIR/claude-notes`
 4. list existing `.md` files in `$SCRATCHPAD_DIR/claude-notes/`
+
+## read mode
+
+5. find notes matching the topic keywords:
+   - match against filenames first (e.g., "vespa otel" matches `vespa-otel-exporter-analysis.md`)
+   - if no filename matches, read the first 15 lines of each doc and match against content
+6. read and display all matching notes in full using the Read tool
+7. if no matches found, tell the user what notes exist so they can refine their query
+8. done — no git operations needed
+
+## save mode
+
 5. determine if the current topic matches an existing doc:
    - read the first 15 lines of each existing doc
    - if a doc covers the same topic or system, ask the user whether to:
