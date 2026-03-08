@@ -133,6 +133,7 @@
       "Bash(hostname:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
+      "Bash(nix flake:*)",
       "Bash(node:*)",
       "Bash(nslookup:*)",
       "Bash(ping:*)",
@@ -152,7 +153,9 @@
       "Bash(which:*)",
       "WebFetch(domain:code.claude.com)",
       "WebSearch",
-      "mcp__plugin_Notion_notion__notion-fetch"
+      "mcp__plugin_Notion_notion__notion-fetch",
+      "mcp__plugin_slack_slack__slack_read_thread",
+      "mcp__plugin_slack_slack__slack_search_public"
     ],
     "ask": [],
     "deny": []
