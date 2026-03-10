@@ -16,7 +16,7 @@ in
       theme = "Starlight";
 
       # window
-      confirm-close-surface = false;
+      confirm-close-surface = true;
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;
