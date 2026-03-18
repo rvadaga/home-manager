@@ -13,6 +13,9 @@
       # bat
       b = "bat -P";
 
+      # chrome
+      chrome = "open -a 'Google Chrome' --args --remote-debugging-port=9222";
+
       # k8s
       k = "kubectl";
       ctx = "kubectx";
