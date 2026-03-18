@@ -9,6 +9,10 @@
     packages = [
       pkgs.pinentry-curses
     ];
+
+    sessionVariables = {
+      LANG = "C.UTF-8";
+    };
   };
 
   programs = {
