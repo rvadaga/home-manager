@@ -10,6 +10,9 @@
       # home-manager
       hmc = "cd $HOME/.config/home-manager";
 
+      # dev repos
+      dln = "cd $HOME/development/llm-notes";
+
       # bat
       b = "bat -P";
 
