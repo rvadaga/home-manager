@@ -9,21 +9,21 @@
     "explanatory-output-style@claude-plugins-official": true,
     "feature-dev@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": false,
     "hookify@claude-plugins-official": false,
     "jdtls-lsp@claude-plugins-official": true,
-    "learning-output-style@claude-plugins-official": true,
-    "lua-lsp@claude-plugins-official": true,
-    "Notion@claude-plugins-official": true,
+    "learning-output-style@claude-plugins-official": false,
+    "lua-lsp@claude-plugins-official": false,
+    "claude-md-management@claude-plugins-official": true,
     "plugin-dev@claude-plugins-official": true,
     "pr-review-toolkit@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,
     "ralph-loop@claude-plugins-official": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
+    "rust-analyzer-lsp@claude-plugins-official": false,
     "security-guidance@claude-plugins-official": true,
     "slack@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": false,
+    "typescript-lsp@claude-plugins-official": false
   },
   "hooks": {
     "SessionEnd": [
@@ -60,7 +60,6 @@
   "permissions": {
     "allow": [
       "Bash(bq:*)",
-      "Bash(cd:*)",
       "Bash(chmod 600:*)",
       "Bash(claude plugin:*)",
       "Bash(colima:*)",
@@ -69,7 +68,6 @@
       "Bash(docker-compose:*)",
       "Bash(echo:*)",
       "Bash(env)",
-      "Bash(find:*)",
       "Bash(ga:*)",
       "Bash(gaa:*)",
       "Bash(gb:*)",
@@ -127,7 +125,6 @@
       "Bash(gpsup:*)",
       "Bash(grb:*)",
       "Bash(grbm:*)",
-      "Bash(grep:*)",
       "Bash(gsh:*)",
       "Bash(gss:*)",
       "Bash(gst:*)",
@@ -136,7 +133,6 @@
       "Bash(gstp:*)",
       "Bash(gsw:*)",
       "Bash(gswc:*)",
-      "Bash(head:*)",
       "Bash(home-manager switch:*)",
       "Bash(hostname:*)",
       "Bash(kubectl * get:*)",
@@ -154,7 +150,6 @@
       "Bash(sort:*)",
       "Bash(sqlfluff:*)",
       "Bash(sudo timeout:*)",
-      "Bash(tail:*)",
       "Bash(time node:*)",
       "Bash(time:*)",
       "Bash(touch:*)",
@@ -171,5 +166,5 @@
     "deny": []
   },
   "skipAutoPermissionPrompt": true,
-  "verbose": true
+  "verbose": false
 }
