@@ -17,7 +17,9 @@
     * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then run `home-manager switch` to apply
     * only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
-* always prefer fetching just the branch that was needed, if needed to fetch everything, get the users permission
+* never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gf origin main`, never `gf --all` or bare `gf`). fetching everything pollutes `git branch --all` output
+* prefer merge over rebase — use merge commits to integrate changes (e.g., merge main into feature branch). rebase is a last resort; always ask for permission before rebasing
+
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 * never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`
 # home-manager configuration

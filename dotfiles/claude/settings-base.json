@@ -94,7 +94,6 @@
       "Bash(git -C * merge:*)",
       "Bash(git -C * pull:*)",
       "Bash(git -C * push:*)",
-      "Bash(git -C * rebase:*)",
       "Bash(git -C * show:*)",
       "Bash(git -C * stash:*)",
       "Bash(git -C * status:*)",
@@ -110,7 +109,6 @@
       "Bash(git merge:*)",
       "Bash(git pull:*)",
       "Bash(git push:*)",
-      "Bash(git rebase:*)",
       "Bash(git show:*)",
       "Bash(git stash:*)",
       "Bash(git status:*)",
@@ -123,8 +121,6 @@
       "Bash(gm:*)",
       "Bash(gp:*)",
       "Bash(gpsup:*)",
-      "Bash(grb:*)",
-      "Bash(grbm:*)",
       "Bash(gsh:*)",
       "Bash(gss:*)",
       "Bash(gst:*)",
@@ -161,9 +157,19 @@
       "mcp__plugin_slack_slack__slack_read_thread",
       "mcp__plugin_slack_slack__slack_search_public"
     ],
-    "ask": [],
+    "ask": [
+      "Bash(grb:*)",
+      "Bash(grbm:*)",
+      "Bash(git rebase:*)",
+      "Bash(git -C * rebase:*)"
+    ],
     "defaultMode": "auto",
-    "deny": []
+    "deny": [
+      "Bash(gf --all:*)",
+      "Bash(gfo --all:*)",
+      "Bash(git fetch --all:*)",
+      "Bash(git -C * fetch --all:*)"
+    ]
   },
   "skipAutoPermissionPrompt": true,
   "verbose": false
