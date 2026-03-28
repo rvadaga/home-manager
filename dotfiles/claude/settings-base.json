@@ -38,6 +38,14 @@
     ]
   },
   "mcpServers": {
+    "chrome-devtools": {
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--browserUrl=http://localhost:9222"
+      ],
+      "command": "npx"
+    },
     "slack": {
       "oauth": {
         "callbackPort": 3118,
@@ -131,6 +139,7 @@
       "Bash(head:*)",
       "Bash(home-manager switch:*)",
       "Bash(hostname:*)",
+      "Bash(kubectl * get:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(nix flake:*)",
@@ -158,7 +167,9 @@
       "mcp__plugin_slack_slack__slack_search_public"
     ],
     "ask": [],
+    "defaultMode": "auto",
     "deny": []
   },
+  "skipAutoPermissionPrompt": true,
   "verbose": true
 }
