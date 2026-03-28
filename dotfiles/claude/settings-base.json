@@ -161,7 +161,19 @@
       "Bash(grb:*)",
       "Bash(grbm:*)",
       "Bash(git rebase:*)",
-      "Bash(git -C * rebase:*)"
+      "Bash(git -C * rebase:*)",
+      "Bash(gp --force:*)",
+      "Bash(gp --force-with-lease:*)",
+      "Bash(gp -f:*)",
+      "Bash(gpsup --force:*)",
+      "Bash(gpsup --force-with-lease:*)",
+      "Bash(gpsup -f:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push -f:*)",
+      "Bash(git -C * push --force:*)",
+      "Bash(git -C * push --force-with-lease:*)",
+      "Bash(git -C * push -f:*)"
     ],
     "defaultMode": "auto",
     "deny": [
