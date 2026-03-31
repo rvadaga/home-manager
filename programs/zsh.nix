@@ -38,6 +38,12 @@
     };
 
     initContent = ''
+      # fall back to xterm-256color if the current TERM has no matching terminfo entry
+      # (common when SSH'ing from ghostty into a machine without its terminfo installed)
+      if ! infocmp "$TERM" &>/dev/null 2>&1; then
+        export TERM=xterm-256color
+      fi
+
       # oh-my-zsh defines __git_prompt_git in lib/git.zsh but claude code's
       # shell snapshot filters __ prefixed functions. redefine it here so
       # aliases like ggpush/ggpull that depend on git_current_branch work
