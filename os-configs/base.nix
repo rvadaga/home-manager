@@ -243,6 +243,7 @@
     # shell
     zsh = {
       shellAliases = {
+        dph = "cd $HOME/development/paneherd";
         dvsp = "cd $HOME/development/vespa";
       };
     };
