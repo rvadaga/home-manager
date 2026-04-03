@@ -124,6 +124,8 @@
       OP_BIOMETRIC_UNLOCK_ENABLED = "true";
       # nix-managed terminfo (ghostty, kitty) lives in the profile — tell ncurses where to find it
       TERMINFO_DIRS = "$HOME/.nix-profile/share/terminfo:/usr/share/terminfo";
+      # disable flickering in claude code terminal output
+      CLAUDE_CODE_NO_FLICKER = "1";
     };
   };
 
