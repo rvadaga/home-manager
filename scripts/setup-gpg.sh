@@ -17,6 +17,14 @@ EMAIL="$2"
 DATE=$(date +%Y-%m-%d)
 TITLE="${LABEL} - ${DATE}"
 
+# check if a signing key already exists for this email
+EXISTING_KEY=$(gpg --list-secret-keys --keyid-format long "$EMAIL" 2>/dev/null | grep -oE '[A-F0-9]{40}' | head -1 || true)
+if [ -n "$EXISTING_KEY" ]; then
+  echo "GPG signing key already exists for ${EMAIL}: ${EXISTING_KEY}"
+  echo "delete it first if you want to regenerate: gpg --delete-secret-and-public-key ${EXISTING_KEY}"
+  exit 1
+fi
+
 echo "==> generating ed25519 GPG key..."
 GPG_OUTPUT=$(gpg --batch --gen-key 2>&1 <<GPGEOF
 Key-Type: eddsa
@@ -70,3 +78,8 @@ $OP_OK && echo "  1password: stored as 'GPG key - ${TITLE}'" || echo "  1passwor
 echo ""
 echo "next: set this in your machine config's git signing:"
 echo "  signing.key = \"${KEYID}\";"
+
+# mark step complete
+STATE_DIR="$(dirname "$0")/../.state"
+mkdir -p "$STATE_DIR"
+date > "${STATE_DIR}/gpg-setup-done"

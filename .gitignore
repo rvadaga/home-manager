@@ -13,5 +13,8 @@ result-*
 .claude/*
 !.claude/settings.json
 
+# bootstrap state (sentinel files tracking completed one-time steps)
+.state/
+
 # OS files
 .DS_Store

@@ -6,6 +6,8 @@ set -euo pipefail
 
 CONFIG_DIR="$HOME/.config/home-manager"
 CONFIG_REPO="git@github.com:rahulvadaga/home-manager.git"
+STATE_DIR="${CONFIG_DIR}/.state"
+mkdir -p "$STATE_DIR"
 
 echo "=== macOS bootstrap ==="
 echo ""
@@ -71,19 +73,41 @@ for f in /etc/nix/nix.conf /etc/bashrc /etc/zshrc; do
   fi
 done
 
-# step 7: first darwin-rebuild switch
-echo "==> running first darwin-rebuild switch..."
-echo "    (this will take a while on first run)"
-nix --extra-experimental-features "nix-command flakes" \
-  run nix-darwin -- switch --flake "${CONFIG_DIR}#mac-workstation"
+# step 7: darwin-rebuild switch
+echo "==> running darwin-rebuild switch..."
+if command -v darwin-rebuild &>/dev/null; then
+  darwin-rebuild switch --flake "${CONFIG_DIR}#mac-workstation"
+else
+  echo "    (first run — bootstrapping nix-darwin, this will take a while)"
+  nix --extra-experimental-features "nix-command flakes" \
+    run nix-darwin -- switch --flake "${CONFIG_DIR}#mac-workstation"
+fi
 
 echo ""
 echo "=== bootstrap complete ==="
-echo ""
-echo "next steps (manual, one-time):"
-echo "  1. open 1password app and sign in"
-echo "  2. run: ${CONFIG_DIR}/scripts/setup-ssh.sh \"<name>\" \"<email>\""
-echo "  3. run: ${CONFIG_DIR}/scripts/setup-gpg.sh \"<name>\" \"<email>\""
-echo "  4. update machines/mac-workstation.nix with your GPG key ID"
-echo "  5. run: darwin-rebuild switch --flake ${CONFIG_DIR}#mac-workstation"
-echo "  6. run: ${CONFIG_DIR}/scripts/setup-licenses.sh"
+
+# show remaining one-time steps
+NEXT_STEPS=()
+if [ ! -f "${STATE_DIR}/ssh-setup-done" ]; then
+  NEXT_STEPS+=("open 1password app and sign in")
+  NEXT_STEPS+=("run: ${CONFIG_DIR}/scripts/setup-ssh.sh \"<name>\" \"<email>\"")
+fi
+if [ ! -f "${STATE_DIR}/gpg-setup-done" ]; then
+  NEXT_STEPS+=("run: ${CONFIG_DIR}/scripts/setup-gpg.sh \"<name>\" \"<email>\"")
+  NEXT_STEPS+=("update machines/mac-workstation.nix with your GPG key ID")
+  NEXT_STEPS+=("run: darwin-rebuild switch --flake ${CONFIG_DIR}#mac-workstation")
+fi
+if [ ! -f "${STATE_DIR}/licenses-setup-done" ]; then
+  NEXT_STEPS+=("run: ${CONFIG_DIR}/scripts/setup-licenses.sh")
+fi
+
+if [ ${#NEXT_STEPS[@]} -gt 0 ]; then
+  echo ""
+  echo "remaining one-time steps:"
+  for i in "${!NEXT_STEPS[@]}"; do
+    echo "  $((i + 1)). ${NEXT_STEPS[$i]}"
+  done
+else
+  echo ""
+  echo "all setup steps complete — nothing left to do."
+fi

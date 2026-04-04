@@ -25,3 +25,8 @@ fi
 
 echo ""
 echo "done."
+
+# mark step complete
+STATE_DIR="$(dirname "$0")/../.state"
+mkdir -p "$STATE_DIR"
+date > "${STATE_DIR}/licenses-setup-done"

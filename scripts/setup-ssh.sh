@@ -57,3 +57,8 @@ echo "  public:  ${KEYFILE}.pub"
 echo "  private: ${KEYFILE}"
 $GITHUB_OK && echo "  github:  uploaded as '${TITLE}'" || echo "  github:  NOT uploaded (see error above)"
 $OP_OK && echo "  1password: stored as 'SSH key - ${TITLE}'" || echo "  1password: NOT stored (see error above)"
+
+# mark step complete
+STATE_DIR="$(dirname "$0")/../.state"
+mkdir -p "$STATE_DIR"
+date > "${STATE_DIR}/ssh-setup-done"
