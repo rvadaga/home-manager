@@ -1,4 +1,7 @@
-{ ... }: {
+{ config, ... }:
+let
+  user = config.users.users.${config.system.primaryUser};
+in {
   system.defaults = {
     dock = {
       autohide = true;
@@ -30,7 +33,7 @@
       ];
 
       persistent-others = [
-        "/Users/rvadaga/Downloads"
+        "${user.home}/Downloads"
       ];
     };
 
