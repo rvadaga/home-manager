@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # generate a fresh ed25519 SSH key, upload to github, store in 1password
-# usage: setup-ssh.sh <name>
-# example: setup-ssh.sh "personal macbook"
+# usage: setup-ssh.sh <name> <email>
+# example: setup-ssh.sh "personal macbook" "rahul.vadaga@gmail.com"
 
-if [ -z "${1:-}" ]; then
-  echo "usage: setup-ssh.sh <name>"
-  echo "example: setup-ssh.sh \"personal macbook\""
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+  echo "usage: setup-ssh.sh <name> <email>"
+  echo "example: setup-ssh.sh \"personal macbook\" \"rahul.vadaga@gmail.com\""
   exit 1
 fi
 
 KEYFILE="$HOME/.ssh/id_ed25519"
-EMAIL="rahul.vadaga@gmail.com"
 LABEL="$1"
+EMAIL="$2"
 DATE=$(date +%Y-%m-%d)
 TITLE="${LABEL} - ${DATE}"
 
