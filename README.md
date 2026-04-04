@@ -11,10 +11,10 @@ personal nix home-manager and nix-darwin configuration for managing development 
   * `linux.nix`: linux-specific configuration
   * `nixos.nix`: nixos-specific configuration
 * `darwin/`: nix-darwin system-level modules (macos only)
-  * `default.nix`: umbrella module (stateVersion, primaryUser, touch ID sudo)
+  * `default.nix`: umbrella module (stateVersion, primaryUser, touch ID sudo, launchd agents)
   * `nix.nix`: system-level nix settings
   * `homebrew.nix`: declarative homebrew casks
-  * `system-defaults.nix`: macos system preferences (dock, finder, trackpad, keyboard)
+  * `system-defaults.nix`: macos system preferences (dock, finder, trackpad, keyboard, app settings for itsycal, meetingbar, ice)
 * `machines/`: per-machine configurations
   * `personal-laptop.nix`: macos standalone home-manager configuration
   * `mac-workstation.nix`: macos nix-darwin + home-manager configuration
@@ -25,6 +25,7 @@ personal nix home-manager and nix-darwin configuration for managing development 
   * `setup-ssh.sh`: generate SSH key, upload to github, store in 1password
   * `setup-gpg.sh`: generate GPG key, upload to github, store in 1password
   * `setup-licenses.sh`: fetch app license keys from 1password
+  * `backup-app-configs.sh`: daily backup of btt, bettermouse, and control center configs to google drive
 * `shared/`: configuration shared between nix-darwin and standalone home-manager
   * `nix-settings.nix`: nix daemon settings (experimental features, buffer size)
 * `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
@@ -133,7 +134,7 @@ this flake exports reusable modules that other configurations can import:
 
 ### darwin modules
 * `darwinModules.base` - system-level nix settings
-* `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad)
+* `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad, app settings)
 * `darwinModules.homebrew` - declarative homebrew casks
 
 ## homebrew management
@@ -226,6 +227,22 @@ killall ControlCenter  # restarts automatically
 ### what's managed declaratively in nix
 
 app settings for itsycal, meetingbar, and ice are managed via `system.defaults.CustomUserPreferences` in `darwin/system-defaults.nix` — these are applied automatically on `darwin-rebuild switch`.
+
+## architecture notes
+
+### dual-context modules (`osConfig ? null`)
+
+`os-configs/base.nix` uses the `osConfig ? null` pattern so the same module works in both standalone home-manager and nix-darwin contexts. when running under nix-darwin (`osConfig` is set):
+- `programs.home-manager.enable` is disabled (nix-darwin manages activation)
+- the `nix` settings block is skipped (nix-darwin owns these at system level via `darwin/nix.nix`)
+
+nix settings are shared via `shared/nix-settings.nix` to avoid drift between the two contexts.
+
+### ssh and gpg on macos
+
+ssh config and gpg-agent are set up in `os-configs/mac.nix` since `services.gpg-agent` and `programs.ssh` have systemd dependencies that don't exist on macos:
+- `gpg-agent.conf` is written directly via `home.file` with `pinentry-mac`
+- `programs.ssh.enableDefaultConfig = false` suppresses the home-manager deprecation warning about `~/.ssh/config` management
 
 ## available configurations
 
