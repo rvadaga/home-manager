@@ -15,6 +15,7 @@
       "ghostty"
       "google-chrome"
       "spotify"
+      "visual-studio-code"
     ];
 
     masApps = {
