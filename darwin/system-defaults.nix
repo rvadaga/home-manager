@@ -74,6 +74,21 @@
         SizePreference = 0;
       };
 
+      "com.jordanbaird.Ice" = {
+        AutoRehide = 1;
+        RehideInterval = 15;
+        RehideStrategy = 2;
+        HideApplicationMenus = 1;
+        EnableAlwaysHiddenSection = 0;
+        CanToggleAlwaysHiddenSection = 1;
+        EnableSecondaryContextMenu = 1;
+        ShowAllSectionsOnUserDrag = 1;
+        SectionDividerStyle = 0;
+        IceBarLocation = 2;
+        ItemSpacingOffset = 0;
+        CustomIceIconIsTemplate = 0;
+      };
+
       "leits.MeetingBar" = {
         allDayEvents = "\"show\"";
         nonAllDayEvents = "\"show\"";

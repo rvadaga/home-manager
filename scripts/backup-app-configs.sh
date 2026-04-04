@@ -1,5 +1,5 @@
 #!/bin/bash
-# backs up bettertouchtool and bettermouse configs to google drive
+# backs up app configs and system plists to google drive
 # runs daily via launchd agent
 
 set -euo pipefail
@@ -35,3 +35,8 @@ rsync -au --delete "$BM_SRC/" "$BM_DST/"
 
 # also copy bettermouse preferences plist (only if newer)
 rsync -au "$HOME/Library/Preferences/com.naotanhaocan.BetterMouse.plist" "$BM_DST/" 2>/dev/null || true
+
+# control center and menubar — binary blobs that can't be managed declaratively
+MACOS_DST="$GDRIVE/macos-system"
+mkdir -p "$MACOS_DST"
+rsync -au "$HOME/Library/Preferences/com.apple.controlcenter.plist" "$MACOS_DST/" 2>/dev/null || true
