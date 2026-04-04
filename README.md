@@ -36,12 +36,22 @@ personal nix home-manager and nix-darwin configuration for managing development 
 
 prerequisites: internet connection, signed into apple account in system settings.
 
+on a fresh mac (no git yet), run this single command to kick off the full bootstrap:
+
 ```bash
-git clone https://github.com/rvadaga/home-manager ~/.config/home-manager
-cd ~/.config/home-manager
+curl -fsSL https://raw.githubusercontent.com/rvadaga/home-manager/main/bootstrap.sh | bash
 ```
 
-create `machine.json` with your machine name, full name, and email (an example ships with the repo but is not tracked — edit it to match your identity):
+the bootstrap script will:
+1. install xcode CLT, nix, and homebrew
+2. authenticate the github CLI (opens browser)
+3. clone this repo to `~/.config/home-manager`
+4. prompt you to create `machine.json` with your identity
+5. run `darwin-rebuild switch` (installs all casks, applies system defaults)
+6. prompt you to sign into 1password, then run SSH/GPG/license setup scripts
+7. print remaining manual steps (app logins, permissions, config restore)
+
+`machine.json` format (created during bootstrap):
 
 ```json
 {
@@ -51,29 +61,13 @@ create `machine.json` with your machine name, full name, and email (an example s
 }
 ```
 
-then run:
+after bootstrap, the only manual step is updating `machines/mac-workstation.nix` with the GPG key ID printed by the script, then rebuilding:
 
 ```bash
-sudo ./bootstrap.sh
+darwin-rebuild switch --flake ~/.config/home-manager#mac-workstation
 ```
 
-the bootstrap script installs xcode CLT, nix (determinate systems), homebrew, authenticates the github CLI, and runs the first `darwin-rebuild switch`.
-
-after bootstrap, sign into the 1password app, then run the one-time setup scripts (they read identity from `machine.json` — no args needed):
-
-```bash
-./scripts/setup-ssh.sh      # generate SSH key, upload to github, store in 1password
-./scripts/setup-gpg.sh      # generate GPG key, upload to github, store in 1password
-./scripts/setup-licenses.sh # apply app license keys from 1password
-```
-
-after `setup-gpg.sh`, update `machines/mac-workstation.nix` with the printed GPG key ID, then rebuild:
-
-```bash
-sudo darwin-rebuild switch --flake .#mac-workstation
-```
-
-the bootstrap script tracks completed steps in `.state/` — re-running it is safe and only shows remaining work.
+the bootstrap tracks completed steps in `.state/` — re-running it is safe and skips already-completed steps.
 
 ## installation (standalone home-manager)
 
