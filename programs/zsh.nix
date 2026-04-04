@@ -11,6 +11,7 @@
       hmc = "cd $HOME/.config/home-manager";
 
       # dev repos
+      dev = "cd $HOME/development";
       dln = "cd $HOME/development/llm-notes";
 
       # bat
