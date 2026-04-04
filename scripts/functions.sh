@@ -169,6 +169,8 @@ function code() {
     code_bin="$HOME/.nix-profile/bin/code"
   elif [ -z "$code_bin" ] && [ -x /usr/local/bin/code ]; then
     code_bin="/usr/local/bin/code"
+  elif [ -z "$code_bin" ] && [ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]; then
+    code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
   fi
 
   if [ -z "$code_bin" ]; then
