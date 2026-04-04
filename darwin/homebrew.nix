@@ -12,8 +12,12 @@
       "1password"
       "bettermouse"
       "bettertouchtool"
+      "chatgpt"
+      "claude"
       "ghostty"
       "google-chrome"
+      "notion"
+      "obsidian"
       "spotify"
       "visual-studio-code"
     ];
