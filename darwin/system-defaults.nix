@@ -113,7 +113,4 @@
     };
   };
 
-  system.keyboard = {
-    enableKeyMapping = true;
-  };
 }

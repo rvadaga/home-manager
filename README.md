@@ -29,7 +29,7 @@ personal nix home-manager and nix-darwin configuration for managing development 
 * `shared/`: configuration shared between nix-darwin and standalone home-manager
   * `nix-settings.nix`: nix daemon settings (experimental features, buffer size)
 * `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
-* `machine.json`: per-machine identity (machine name, user name, email) — used by setup scripts
+* `machine.json`: per-machine identity (machine name, user name, email) — gitignored, created locally during bootstrap
 * `bootstrap.sh`: full macos bootstrap from a fresh machine
 
 ## macos bootstrap (fresh machine)
@@ -41,7 +41,17 @@ git clone https://github.com/rvadaga/home-manager ~/.config/home-manager
 cd ~/.config/home-manager
 ```
 
-edit `machine.json` with your machine name, full name, and email, then run:
+create `machine.json` with your machine name, full name, and email (an example ships with the repo but is not tracked — edit it to match your identity):
+
+```json
+{
+  "machine": "my macbook",
+  "name": "Your Name",
+  "email": "you@example.com"
+}
+```
+
+then run:
 
 ```bash
 sudo ./bootstrap.sh

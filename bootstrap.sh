@@ -5,7 +5,7 @@ set -euo pipefail
 # prerequisites: internet connection, signed into apple account in system settings (for xcode CLT and app store apps)
 
 CONFIG_DIR="$HOME/.config/home-manager"
-CONFIG_REPO="git@github.com:rahulvadaga/home-manager.git"
+CONFIG_REPO="https://github.com/rvadaga/home-manager.git"
 
 echo "=== macOS bootstrap ==="
 echo ""

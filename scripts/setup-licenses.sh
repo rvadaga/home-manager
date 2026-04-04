@@ -13,7 +13,7 @@ BETTERMOUSE_LICENSE=$(op read "op://Private/BetterMouse License/license-key" 2>/
 BTT_LICENSE=$(op read "op://Private/BetterTouchTool License/license-key" 2>/dev/null || echo "")
 
 if [ -n "$BETTERMOUSE_LICENSE" ]; then
-  defaults write com.hegenberg.BetterMouse licenseKey "$BETTERMOUSE_LICENSE"
+  defaults write com.naotanhaocan.BetterMouse licenseKey "$BETTERMOUSE_LICENSE"
   echo "  bettermouse: applied"
 else
   echo "  bettermouse: not found in 1password (skipped)"
