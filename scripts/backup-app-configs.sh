@@ -8,6 +8,11 @@ GDRIVE="$HOME/Library/CloudStorage/GoogleDrive-rahul.vadaga@gmail.com/My Drive/g
 BTT_SRC="$HOME/Library/Application Support/BetterTouchTool"
 BM_SRC="$HOME/Library/Application Support/BetterMouse"
 
+if [[ ! -d "$GDRIVE" ]]; then
+  echo "google drive not available at: $GDRIVE"
+  exit 0
+fi
+
 # bettertouchtool — copy database files, license, presets
 BTT_DST="$GDRIVE/bettertouchtool"
 mkdir -p "$BTT_DST"
