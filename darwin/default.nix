@@ -14,4 +14,13 @@
   };
 
   security.pam.services.sudo_local.touchIdAuth = true;
+
+  launchd.user.agents.backup-app-configs = {
+    command = toString ../scripts/backup-app-configs.sh;
+    serviceConfig = {
+      StartCalendarInterval = [{ Hour = 12; Minute = 0; }];
+      StandardOutPath = "/tmp/backup-app-configs.log";
+      StandardErrorPath = "/tmp/backup-app-configs.log";
+    };
+  };
 }
