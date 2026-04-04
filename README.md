@@ -187,6 +187,46 @@ use `/sync-claude-settings` in claude code to export live settings back to the n
 
 use `/diff-claude-settings` for a read-only comparison without modifying anything.
 
+## app config backups
+
+a daily launchd agent (`backup-app-configs`) backs up app configs that can't be managed declaratively to google drive (`gdrive documents/software/`). it only overwrites when the local copy is newer, and skips gracefully if google drive isn't mounted.
+
+### what's backed up
+
+| app | location on gdrive | contents |
+|-----|-------------------|----------|
+| bettertouchtool | `software/bettertouchtool/` | sqlite databases, license, presets, preferences plist |
+| bettermouse | `software/bettermouse/` | config files (`.padl`, `.spadl`), preferences plist |
+| control center | `software/macos-system/` | `com.apple.controlcenter.plist` (menubar items, order, control center layout) |
+
+### restoring from backup
+
+**bettertouchtool:**
+```bash
+GDRIVE="$HOME/Library/CloudStorage/GoogleDrive-rahul.vadaga@gmail.com/My Drive/gdrive documents/software"
+# quit btt first, then:
+rsync -a "$GDRIVE/bettertouchtool/" "$HOME/Library/Application Support/BetterTouchTool/"
+cp "$GDRIVE/bettertouchtool/com.hegenberg.BetterTouchTool.plist" "$HOME/Library/Preferences/"
+```
+
+**bettermouse:**
+```bash
+# quit bettermouse first, then:
+rsync -a "$GDRIVE/bettermouse/" "$HOME/Library/Application Support/BetterMouse/"
+cp "$GDRIVE/bettermouse/com.naotanhaocan.BetterMouse.plist" "$HOME/Library/Preferences/"
+```
+
+**control center (menubar items + order):**
+```bash
+# close system settings first, then:
+cp "$GDRIVE/macos-system/com.apple.controlcenter.plist" "$HOME/Library/Preferences/"
+killall ControlCenter  # restarts automatically
+```
+
+### what's managed declaratively in nix
+
+app settings for itsycal, meetingbar, and ice are managed via `system.defaults.CustomUserPreferences` in `darwin/system-defaults.nix` — these are applied automatically on `darwin-rebuild switch`.
+
 ## available configurations
 
 | name | system | type | description |
