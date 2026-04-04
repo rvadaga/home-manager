@@ -40,21 +40,33 @@ fi
 
 echo "==> generated key: $KEYID"
 
+GITHUB_OK=false
+OP_OK=false
+
 echo "==> uploading public key to github..."
-gpg --armor --export "$KEYID" | gh gpg-key add -
+if gpg --armor --export "$KEYID" | gh gpg-key add -; then
+  GITHUB_OK=true
+else
+  echo "  failed — fix the issue and re-run:"
+  echo "    gpg --armor --export $KEYID | gh gpg-key add -"
+fi
 
 echo "==> storing private key in 1password..."
-op item create \
+if op item create \
   --category="Secure Note" \
   --title="GPG key - ${TITLE}" \
   --vault="Private" \
-  "notesPlain=$(gpg --armor --export-secret-keys "$KEYID")"
+  "notesPlain=$(gpg --armor --export-secret-keys "$KEYID")"; then
+  OP_OK=true
+else
+  echo "  failed — fix the issue and re-run the op command manually"
+fi
 
 echo ""
-echo "done. GPG key configured:"
+echo "GPG key generated:"
 echo "  key ID:    ${KEYID}"
-echo "  github:    uploaded"
-echo "  1password: stored as 'GPG key - ${TITLE}'"
+$GITHUB_OK && echo "  github:  uploaded" || echo "  github:  NOT uploaded (see error above)"
+$OP_OK && echo "  1password: stored as 'GPG key - ${TITLE}'" || echo "  1password: NOT stored (see error above)"
 echo ""
 echo "next: set this in your machine config's git signing:"
 echo "  signing.key = \"${KEYID}\";"
