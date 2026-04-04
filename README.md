@@ -1,23 +1,57 @@
 # home-manager configuration
 
-personal nix home-manager configuration for managing development environments across machines.
+personal nix home-manager and nix-darwin configuration for managing development environments across machines.
 
 ## repository organization
 
 * `flake.nix`: entry point defining available configurations and exported modules
 * `os-configs/`: reusable configuration building blocks
   * `base.nix`: common packages and settings for all systems
-  * `mac.nix`: macos-specific configuration
+  * `mac.nix`: macos-specific configuration (gpg-agent, ssh, coreutils)
   * `linux.nix`: linux-specific configuration
   * `nixos.nix`: nixos-specific configuration
+* `darwin/`: nix-darwin system-level modules (macos only)
+  * `default.nix`: umbrella module (stateVersion, primaryUser, touch ID sudo)
+  * `nix.nix`: system-level nix settings
+  * `homebrew.nix`: declarative homebrew casks and app store apps
+  * `system-defaults.nix`: macos system preferences (dock, finder, trackpad, keyboard)
 * `machines/`: per-machine configurations
-  * `personal-laptop.nix`: macos configuration
+  * `personal-laptop.nix`: macos standalone home-manager configuration
+  * `mac-workstation.nix`: macos nix-darwin + home-manager configuration
   * `nixos-workstation.nix`: nixos configuration
 * `programs/`: program-specific configurations (zsh, kitty, fzf, claude)
-* `scripts/`: bash scripts and helper functions
+* `scripts/`: setup and helper scripts
+  * `setup-ssh.sh`: generate SSH key, upload to github, store in 1password
+  * `setup-gpg.sh`: generate GPG key, upload to github, store in 1password
+  * `setup-licenses.sh`: fetch app license keys from 1password
 * `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
+* `bootstrap.sh`: full macos bootstrap from a fresh machine
 
-## installation
+## macos bootstrap (fresh machine)
+
+run the bootstrap script on a new mac — it installs xcode CLT, nix, homebrew, clones this repo, and runs the first build:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rvadaga/home-manager/main/bootstrap.sh | bash
+```
+
+or clone manually and run:
+
+```bash
+git clone https://github.com/rvadaga/home-manager ~/.config/home-manager
+~/.config/home-manager/bootstrap.sh
+```
+
+after bootstrap, run the one-time setup scripts:
+
+```bash
+# sign into 1password app first, then:
+./scripts/setup-ssh.sh      # generate SSH key, upload to github
+./scripts/setup-gpg.sh      # generate GPG key, upload to github
+./scripts/setup-licenses.sh # apply app license keys
+```
+
+## installation (standalone home-manager)
 
 1. install nix: https://nixos.org/download/
 
@@ -35,6 +69,13 @@ nix run home-manager/release-25.11 -- switch --flake ".#personal-laptop"
 ## usage
 
 ### rebuild configuration
+
+for nix-darwin (mac-workstation):
+```bash
+darwin-rebuild switch --flake ".#mac-workstation"
+```
+
+for standalone home-manager:
 ```bash
 home-manager switch --flake ".#$HM_CONFIG_NAME"
 ```
@@ -70,11 +111,23 @@ home.packages = [
 
 this flake exports reusable modules that other configurations can import:
 
+### home-manager modules
 * `homeManagerModules.base` - common packages and settings
 * `homeManagerModules.mac` - macos-specific configuration
 * `homeManagerModules.linux` - linux-specific configuration
 * `homeManagerModules.nixos` - nixos-specific configuration
 * `homeManagerModules.nix-index` - comma and nix-index with pre-built database
+
+### darwin modules
+* `darwinModules.base` - system-level nix settings
+* `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad)
+* `darwinModules.homebrew` - declarative homebrew casks and app store apps
+
+## homebrew management
+
+nix-darwin manages homebrew declaratively — casks and app store apps are declared in `darwin/homebrew.nix`. homebrew is intentionally kept off `$PATH` to prevent it from interfering with the nix-managed dev environment. nix-darwin calls brew directly via absolute path during activation.
+
+`cleanup = "zap"` ensures the mac converges to exactly what's declared — any unlisted cask or app store app is removed on rebuild.
 
 ## comma and nix-index
 
@@ -107,7 +160,7 @@ claude code's `settings.json` is a mutable file that claude code modifies at run
 
 ### import (nix → live) — automatic on every rebuild
 
-on `home-manager switch` / `nixos-rebuild switch`, the activation script additively merges nix-managed baseline settings into the live file. objects merge recursively (live wins on conflicts), arrays are union-merged (new entries from nix appear without losing locally-approved ones).
+on `home-manager switch` / `darwin-rebuild switch`, the activation script additively merges nix-managed baseline settings into the live file. objects merge recursively (live wins on conflicts), arrays are union-merged (new entries from nix appear without losing locally-approved ones).
 
 settings source files in `dotfiles/claude/` are split by os:
 - `settings-base.json` - shared across all environments (model, plugins, permissions, mcp servers, etc.)
@@ -121,5 +174,8 @@ use `/diff-claude-settings` for a read-only comparison without modifying anythin
 
 ## available configurations
 
-- `personal-laptop` (aarch64-darwin) - personal macbook
-- `nixos-workstation` (x86_64-linux) - nixos workstation
+| name | system | type | description |
+|------|--------|------|-------------|
+| `mac-workstation` | aarch64-darwin | nix-darwin + home-manager | full macos bootstrap with system settings, homebrew, and user config |
+| `personal-laptop` | aarch64-darwin | standalone home-manager | user-level config only (no system settings) |
+| `nixos-workstation` | x86_64-linux | standalone home-manager | nixos workstation |
