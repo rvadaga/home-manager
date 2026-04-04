@@ -4,6 +4,31 @@
       autohide = true;
       mru-spaces = false;
       minimize-to-application = true;
+
+      # keep in sync with casks in homebrew.nix — only list apps that are
+      # either brew-managed or built-in system apps
+      persistent-apps = [
+        "/System/Applications/Mail.app"
+        "/Applications/Google Chrome.app"
+        "/System/Applications/Calendar.app"
+        "/Applications/ChatGPT.app"
+        "/Applications/Obsidian.app"
+        "/Applications/Claude.app"
+        "/Applications/1Password.app"
+        "/Applications/Spotify.app"
+        "/System/Applications/Music.app"
+        "/Applications/Notion.app"
+        "/Applications/Ghostty.app"
+        "/Applications/Visual Studio Code.app"
+        "/System/Applications/Messages.app"
+        "/System/Applications/FindMy.app"
+        "/System/Applications/FaceTime.app"
+        "/System/Applications/iPhone Mirroring.app"
+      ];
+
+      persistent-others = [
+        "/Users/rvadaga/Downloads"
+      ];
     };
 
     finder = {
