@@ -18,8 +18,7 @@
       "visual-studio-code"
     ];
 
-    masApps = {
-      Monosnap = 540348655;
-    };
+    # masApps disabled — mas 2.x CLI is incompatible with nix-darwin's brew bundle integration
+    # install manually: Monosnap (App Store ID 540348655)
   };
 }

@@ -164,7 +164,7 @@
 
       # signing
       signing = {
-        key = null;
+        key = lib.mkDefault null;
         signByDefault = true;
       };
 

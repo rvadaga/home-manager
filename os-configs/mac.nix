@@ -23,16 +23,19 @@
 
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = false;
     matchBlocks = {
+      "*" = {
+        extraOptions = {
+          AddKeysToAgent = "yes";
+          IdentitiesOnly = "yes";
+        };
+      };
       "github.com" = {
         hostname = "github.com";
         user = "git";
         identityFile = "~/.ssh/id_ed25519";
       };
     };
-    extraConfig = ''
-      AddKeysToAgent yes
-      IdentitiesOnly yes
-    '';
   };
 }

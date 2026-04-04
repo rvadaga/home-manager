@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # full macOS bootstrap — from a fresh mac to a fully configured machine
-# prerequisites: internet connection, apple ID signed in (for app store apps)
+# prerequisites: internet connection, signed into apple account in system settings (for xcode CLT and app store apps)
 
 CONFIG_DIR="$HOME/.config/home-manager"
 CONFIG_REPO="git@github.com:rahulvadaga/home-manager.git"
@@ -62,10 +62,20 @@ else
   echo "==> config repo: already exists at $CONFIG_DIR"
 fi
 
-# step 6: first darwin-rebuild switch
+# step 6: rename files that nix-darwin needs to own
+echo "==> preparing system files for nix-darwin..."
+for f in /etc/nix/nix.conf /etc/bashrc /etc/zshrc; do
+  if [ -f "$f" ] && [ ! -f "${f}.before-nix-darwin" ]; then
+    echo "    renaming $f -> ${f}.before-nix-darwin"
+    sudo mv "$f" "${f}.before-nix-darwin"
+  fi
+done
+
+# step 7: first darwin-rebuild switch
 echo "==> running first darwin-rebuild switch..."
 echo "    (this will take a while on first run)"
-nix run nix-darwin -- switch --flake "${CONFIG_DIR}#mac-workstation"
+nix --extra-experimental-features "nix-command flakes" \
+  run nix-darwin -- switch --flake "${CONFIG_DIR}#mac-workstation"
 
 echo ""
 echo "=== bootstrap complete ==="

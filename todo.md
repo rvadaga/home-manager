@@ -32,7 +32,8 @@
 - [ ] run `setup-ssh.sh` and `setup-gpg.sh` on first machine
 - [ ] set GPG signing key in `machines/mac-workstation.nix` after key generation
 - [ ] run `setup-licenses.sh` after 1password sign-in
-- [ ] verify monosnap app store ID (540348655) is correct
+- [ ] fix masApps — `brew bundle` calls `mas get` which doesn't exist in mas 2.x; blocked on homebrew-bundle upstream fix. monosnap (540348655) must be installed manually for now
+- [ ] consider adding apple account sign-in to bootstrap prerequisites — needed for app store installs (mas) and possibly xcode CLT
 - [ ] update notion pages with final implementation details
 - [ ] tune system.defaults to personal preferences (current values are sensible defaults)
 - [ ] decide whether to remove `homeConfigurations.personal-laptop` once fully on nix-darwin
