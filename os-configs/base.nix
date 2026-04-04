@@ -254,9 +254,6 @@
   # nix settings only in standalone home-manager (nix-darwin owns these at system level)
   nix = lib.mkIf (osConfig == null) {
     package = pkgs.nix;
-    settings = {
-      experimental-features = [ "nix-command" "flakes" ];
-      download-buffer-size = 134217728;  # 128 MB
-    };
+    settings = import ../shared/nix-settings.nix;
   };
 }

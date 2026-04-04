@@ -33,11 +33,6 @@
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = true;
     };
-
-    CustomUserPreferences = {
-      # app-specific settings and license keys go here
-      # populated by scripts/setup-licenses.sh via defaults write
-    };
   };
 
   system.keyboard = {

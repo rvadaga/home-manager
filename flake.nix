@@ -33,6 +33,11 @@
 
   outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, nix-index-database, ... }:
     let
+      unfreeConfig = {
+        allowUnfree = true;
+        allowUnfreePredicate = _: true;
+      };
+
       mkOverlays = system:
         let
           isLinux = builtins.match ".*-linux" system != null;
@@ -41,22 +46,19 @@
           (final: prev: {
             unstable = import unstableInput {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
           })
           (final: prev: {
             staging = import staging {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
           })
           (final: prev: {
             staging-next = import staging-next {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
           })
           cloudflare-speed-cli.overlays.default
@@ -73,8 +75,7 @@
                           else darwin-stable;
         in import selectedInput {
           inherit system;
-          config.allowUnfree = true;
-          config.allowUnfreePredicate = _: true;
+          config = unfreeConfig;
           overlays = mkOverlays system;
         };
 
@@ -111,8 +112,7 @@
           home-manager.darwinModules.home-manager
           {
             nixpkgs.overlays = mkOverlays "aarch64-darwin";
-            nixpkgs.config.allowUnfree = true;
-            nixpkgs.config.allowUnfreePredicate = _: true;
+            nixpkgs.config = unfreeConfig;
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
             home-manager.users.rahul = import ./machines/mac-workstation.nix;

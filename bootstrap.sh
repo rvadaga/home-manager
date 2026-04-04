@@ -27,12 +27,13 @@ if ! command -v nix &>/dev/null; then
   echo "==> installing nix (determinate systems)..."
   curl --proto '=https' --tlsv1.2 -sSf -L \
     https://install.determinate.systems/nix | sh -s -- install
-  # source nix in current shell
-  if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
-    . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
-  fi
 else
   echo "==> nix: already installed"
+fi
+
+# ensure nix is on PATH in this shell session
+if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+  . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 fi
 
 # step 3: homebrew (nix-darwin manages it declaratively, but it must exist first)
