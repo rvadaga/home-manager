@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }: {
+{ config, pkgs, lib, osConfig ? null, ... }: {
   imports = [
     ../programs/claude.nix
     ../programs/fzf.nix
@@ -140,9 +140,9 @@
   };
 
   programs = {
-    # home manager
+    # home manager (disabled under nix-darwin which manages activation itself)
     home-manager = {
-      enable = true;
+      enable = lib.mkDefault (osConfig == null);
     };
 
     # development environment
@@ -164,7 +164,7 @@
 
       # signing
       signing = {
-        key = null;
+        key = lib.mkDefault null;
         signByDefault = true;
       };
 
@@ -251,11 +251,9 @@
     };
   };
 
-  nix = {
+  # nix settings only in standalone home-manager (nix-darwin owns these at system level)
+  nix = lib.mkIf (osConfig == null) {
     package = pkgs.nix;
-    settings = {
-      experimental-features = [ "nix-command" "flakes" ];
-      download-buffer-size = 134217728;  # 128 MB
-    };
+    settings = import ../shared/nix-settings.nix;
   };
 }

@@ -1,5 +1,66 @@
 #!/usr/bin/env bash
 
+# --- bootstrap helpers ---
+
+HM_CONFIG_DIR="${HM_CONFIG_DIR:-$HOME/.config/home-manager}"
+MACHINE_JSON="${HM_CONFIG_DIR}/machine.json"
+
+# load machine identity from machine.json
+load_machine_config() {
+  if [ ! -f "$MACHINE_JSON" ]; then
+    echo "error: ${MACHINE_JSON} not found"
+    echo "create it with: machine, name, and email fields"
+    exit 1
+  fi
+  MACHINE_NAME=$(jq -r .machine "$MACHINE_JSON")
+  USER_NAME=$(jq -r .name "$MACHINE_JSON")
+  USER_EMAIL=$(jq -r .email "$MACHINE_JSON")
+}
+
+# resolve the .state directory
+_state_dir() {
+  echo "${HM_CONFIG_DIR}/.state"
+}
+
+# mark a bootstrap step as complete
+mark_step_done() {
+  local state_dir
+  state_dir="$(_state_dir)"
+  mkdir -p "$state_dir"
+  date > "${state_dir}/${1}"
+}
+
+# upload a key to github, returning success/failure
+upload_to_github() {
+  local cmd="$1"
+  local retry_hint="$2"
+  echo "==> uploading public key to github..."
+  if eval "$cmd"; then
+    return 0
+  else
+    echo "  failed — fix the issue and re-run:"
+    echo "    ${retry_hint}"
+    return 1
+  fi
+}
+
+# store a secret in 1password, returning success/failure
+store_in_1password() {
+  local title="$1"
+  local value="$2"
+  echo "==> storing in 1password..."
+  if op item create \
+    --category="Secure Note" \
+    --title="$title" \
+    --vault="Private" \
+    "notesPlain=${value}"; then
+    return 0
+  else
+    echo "  failed — fix the issue and re-run the op command manually"
+    return 1
+  fi
+}
+
 function rbe() {
   local machine=${1}
   local branch=${2:-$(git rev-parse --abbrev-ref HEAD)}
@@ -108,6 +169,8 @@ function code() {
     code_bin="$HOME/.nix-profile/bin/code"
   elif [ -z "$code_bin" ] && [ -x /usr/local/bin/code ]; then
     code_bin="/usr/local/bin/code"
+  elif [ -z "$code_bin" ] && [ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]; then
+    code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
   fi
 
   if [ -z "$code_bin" ]; then

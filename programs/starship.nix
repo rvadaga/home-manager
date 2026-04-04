@@ -58,6 +58,7 @@ in {
         "$time"
       ];
 
+      command_timeout = 1000;
       palette = "gruvbox_dark";
 
       palettes.gruvbox_dark = {

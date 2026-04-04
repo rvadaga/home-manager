@@ -24,78 +24,101 @@
       url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "darwin-stable";
     };
+
+    nix-darwin = {
+      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      inputs.nixpkgs.follows = "darwin-stable";
+    };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, cloudflare-speed-cli, ghostty, nix-index-database, ... }:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, nix-index-database, ... }:
     let
-      mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? null }:
+      unfreeConfig = {
+        allowUnfree = true;
+        allowUnfreePredicate = _: true;
+      };
+
+      mkOverlays = system:
         let
           isLinux = builtins.match ".*-linux" system != null;
-
-          # select appropriate stable channel based on platform (can be overridden via pkgsInput)
-          defaultPkgsInput = if isLinux then nixos-stable else darwin-stable;
-          selectedPkgsInput = if pkgsInput != null then pkgsInput else defaultPkgsInput;
-
-          # select appropriate unstable channel based on platform
           unstableInput = if isLinux then nixos-unstable else darwin-unstable;
-
-          # staging channels are unified (no platform-specific branches)
-          stagingInput = staging;
-          stagingNextInput = staging-next;
-
-          unstable-overlay = final: prev: {
+        in [
+          (final: prev: {
             unstable = import unstableInput {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
-          };
-
-          staging-overlay = final: prev: {
-            staging = import stagingInput {
+          })
+          (final: prev: {
+            staging = import staging {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
-          };
-
-          staging-next-overlay = final: prev: {
-            staging-next = import stagingNextInput {
+          })
+          (final: prev: {
+            staging-next = import staging-next {
               inherit (prev.stdenv.hostPlatform) system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
+              config = unfreeConfig;
             };
-          };
-
-          cloudflare-speed-cli-overlay = cloudflare-speed-cli.overlays.default;
-
-          ghostty-overlay = final: prev: {
+          })
+          cloudflare-speed-cli.overlays.default
+          (final: prev: {
             ghostty-tip = ghostty.packages.${system}.default;
-          };
-        in
-          home-manager.lib.homeManagerConfiguration {
-            pkgs = import selectedPkgsInput {
-              inherit system;
-              config.allowUnfree = true;
-              config.allowUnfreePredicate = _: true;
-              overlays = [ unstable-overlay staging-overlay staging-next-overlay cloudflare-speed-cli-overlay ghostty-overlay ];
-            };
-            modules = [
-              homeManagerModule
-              nix-index-database.homeModules.nix-index
-              { programs.nix-index.enable = true; programs.nix-index-database.comma.enable = true; }
-            ];
-          };
+          })
+        ];
+
+      mkPkgs = { system, pkgsInput ? null }:
+        let
+          isLinux = builtins.match ".*-linux" system != null;
+          selectedInput = if pkgsInput != null then pkgsInput
+                          else if isLinux then nixos-stable
+                          else darwin-stable;
+        in import selectedInput {
+          inherit system;
+          config = unfreeConfig;
+          overlays = mkOverlays system;
+        };
+
+      hmModules = [
+        nix-index-database.homeModules.nix-index
+        { programs.nix-index.enable = true; programs.nix-index-database.comma.enable = true; }
+      ];
+
+      mkHomeManagerConfiguration = { homeManagerModule, system, pkgsInput ? null }:
+        home-manager.lib.homeManagerConfiguration {
+          pkgs = mkPkgs { inherit system pkgsInput; };
+          modules = [ homeManagerModule ] ++ hmModules;
+        };
     in {
       homeConfigurations = {
         personal-laptop = mkHomeManagerConfiguration {
           system = "aarch64-darwin";
           homeManagerModule = ./machines/personal-laptop.nix;
         };
+        mac-workstation = mkHomeManagerConfiguration {
+          system = "aarch64-darwin";
+          homeManagerModule = ./machines/mac-workstation.nix;
+        };
         nixos-workstation = mkHomeManagerConfiguration {
           system = "x86_64-linux";
           homeManagerModule = ./machines/nixos-workstation.nix;
         };
+      };
+
+      darwinConfigurations.mac-workstation = nix-darwin.lib.darwinSystem {
+        system = "aarch64-darwin";
+        modules = [
+          ./darwin/default.nix
+          home-manager.darwinModules.home-manager
+          {
+            nixpkgs.overlays = mkOverlays "aarch64-darwin";
+            nixpkgs.config = unfreeConfig;
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.rahul = import ./machines/mac-workstation.nix;
+            home-manager.sharedModules = hmModules;
+          }
+        ];
       };
 
       # exported overlays that other flakes can use
@@ -117,6 +140,14 @@
           programs.nix-index.enable = true;
           programs.nix-index-database.comma.enable = true;
         };
+      };
+
+      # exported darwin modules for downstream nix-darwin configs
+      # example: inputs.personal-config.darwinModules.base
+      darwinModules = {
+        base = ./darwin/nix.nix;
+        desktop = ./darwin/system-defaults.nix;
+        homebrew = ./darwin/homebrew.nix;
       };
     };
 }

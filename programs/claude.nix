@@ -76,6 +76,7 @@ in
           # additive merge: nix merged settings bring new keys/entries, live wins on conflicts
           local merged
           merged=$(${jq} -s '${deepMergeFilter}' "$nix_merged" "$target")
+          chmod u+w "$target"
           echo "$merged" > "$target"
           echo "merged nix settings into $target"
         fi

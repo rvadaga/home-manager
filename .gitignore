@@ -13,5 +13,11 @@ result-*
 .claude/*
 !.claude/settings.json
 
+# bootstrap state (sentinel files tracking completed one-time steps)
+.state/
+
+# per-machine identity (not portable across machines)
+machine.json
+
 # OS files
 .DS_Store
