@@ -8,7 +8,7 @@
       # keep in sync with casks in homebrew.nix — only list apps that are
       # either brew-managed or built-in system apps
       persistent-apps = [
-        "/System/Applications/Launchpad.app"
+        "/System/Applications/Apps.app"
         "/System/Applications/Mail.app"
         "/Applications/Google Chrome.app"
         "/System/Applications/Calendar.app"
