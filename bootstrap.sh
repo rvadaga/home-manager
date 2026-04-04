@@ -45,7 +45,15 @@ else
   echo "==> homebrew: already installed"
 fi
 
-# step 4: clone config repo
+# step 4: github CLI auth (with scopes needed by setup scripts)
+if ! gh auth status &>/dev/null; then
+  echo "==> authenticating github CLI..."
+  gh auth login -p https -w -s admin:public_key,write:gpg_key
+else
+  echo "==> github CLI: already authenticated"
+fi
+
+# step 5: clone config repo
 if [ ! -d "$CONFIG_DIR" ]; then
   echo "==> cloning config repo..."
   mkdir -p "$(dirname "$CONFIG_DIR")"
@@ -54,7 +62,7 @@ else
   echo "==> config repo: already exists at $CONFIG_DIR"
 fi
 
-# step 5: first darwin-rebuild switch
+# step 6: first darwin-rebuild switch
 echo "==> running first darwin-rebuild switch..."
 echo "    (this will take a while on first run)"
 nix run nix-darwin -- switch --flake "${CONFIG_DIR}#mac-workstation"
