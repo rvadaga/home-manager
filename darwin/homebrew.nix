@@ -14,7 +14,7 @@
       "bettertouchtool"
       "chatgpt"
       "claude"
-      "docker"
+      "docker-desktop"
       "ghostty"
       "google-chrome"
       "itsycal"

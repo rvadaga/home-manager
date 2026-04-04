@@ -13,7 +13,7 @@ personal nix home-manager and nix-darwin configuration for managing development 
 * `darwin/`: nix-darwin system-level modules (macos only)
   * `default.nix`: umbrella module (stateVersion, primaryUser, touch ID sudo)
   * `nix.nix`: system-level nix settings
-  * `homebrew.nix`: declarative homebrew casks and app store apps
+  * `homebrew.nix`: declarative homebrew casks
   * `system-defaults.nix`: macos system preferences (dock, finder, trackpad, keyboard)
 * `machines/`: per-machine configurations
   * `personal-laptop.nix`: macos standalone home-manager configuration
@@ -21,35 +21,48 @@ personal nix home-manager and nix-darwin configuration for managing development 
   * `nixos-workstation.nix`: nixos configuration
 * `programs/`: program-specific configurations (zsh, kitty, fzf, claude)
 * `scripts/`: setup and helper scripts
+  * `functions.sh`: shared helpers (machine config loading, 1password, github uploads, state tracking)
   * `setup-ssh.sh`: generate SSH key, upload to github, store in 1password
   * `setup-gpg.sh`: generate GPG key, upload to github, store in 1password
   * `setup-licenses.sh`: fetch app license keys from 1password
+* `shared/`: configuration shared between nix-darwin and standalone home-manager
+  * `nix-settings.nix`: nix daemon settings (experimental features, buffer size)
 * `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
+* `machine.json`: per-machine identity (machine name, user name, email) — used by setup scripts
 * `bootstrap.sh`: full macos bootstrap from a fresh machine
 
 ## macos bootstrap (fresh machine)
 
-run the bootstrap script on a new mac — it installs xcode CLT, nix, homebrew, clones this repo, and runs the first build:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rvadaga/home-manager/main/bootstrap.sh | bash
-```
-
-or clone manually and run:
+prerequisites: internet connection, signed into apple account in system settings.
 
 ```bash
 git clone https://github.com/rvadaga/home-manager ~/.config/home-manager
-~/.config/home-manager/bootstrap.sh
+cd ~/.config/home-manager
 ```
 
-after bootstrap, run the one-time setup scripts:
+edit `machine.json` with your machine name, full name, and email, then run:
 
 ```bash
-# sign into 1password app first, then:
-./scripts/setup-ssh.sh      # generate SSH key, upload to github
-./scripts/setup-gpg.sh      # generate GPG key, upload to github
-./scripts/setup-licenses.sh # apply app license keys
+sudo ./bootstrap.sh
 ```
+
+the bootstrap script installs xcode CLT, nix (determinate systems), homebrew, authenticates the github CLI, and runs the first `darwin-rebuild switch`.
+
+after bootstrap, sign into the 1password app, then run the one-time setup scripts (they read identity from `machine.json` — no args needed):
+
+```bash
+./scripts/setup-ssh.sh      # generate SSH key, upload to github, store in 1password
+./scripts/setup-gpg.sh      # generate GPG key, upload to github, store in 1password
+./scripts/setup-licenses.sh # apply app license keys from 1password
+```
+
+after `setup-gpg.sh`, update `machines/mac-workstation.nix` with the printed GPG key ID, then rebuild:
+
+```bash
+sudo darwin-rebuild switch --flake .#mac-workstation
+```
+
+the bootstrap script tracks completed steps in `.state/` — re-running it is safe and only shows remaining work.
 
 ## installation (standalone home-manager)
 
@@ -72,7 +85,7 @@ nix run home-manager/release-25.11 -- switch --flake ".#personal-laptop"
 
 for nix-darwin (mac-workstation):
 ```bash
-darwin-rebuild switch --flake ".#mac-workstation"
+sudo darwin-rebuild switch --flake ".#mac-workstation"
 ```
 
 for standalone home-manager:
@@ -121,13 +134,15 @@ this flake exports reusable modules that other configurations can import:
 ### darwin modules
 * `darwinModules.base` - system-level nix settings
 * `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad)
-* `darwinModules.homebrew` - declarative homebrew casks and app store apps
+* `darwinModules.homebrew` - declarative homebrew casks
 
 ## homebrew management
 
-nix-darwin manages homebrew declaratively — casks and app store apps are declared in `darwin/homebrew.nix`. homebrew is intentionally kept off `$PATH` to prevent it from interfering with the nix-managed dev environment. nix-darwin calls brew directly via absolute path during activation.
+nix-darwin manages homebrew declaratively — casks are declared in `darwin/homebrew.nix`. homebrew is intentionally kept off `$PATH` to prevent it from interfering with the nix-managed dev environment. nix-darwin calls brew directly via absolute path during activation.
 
-`cleanup = "zap"` ensures the mac converges to exactly what's declared — any unlisted cask or app store app is removed on rebuild.
+`cleanup = "zap"` ensures the mac converges to exactly what's declared — any unlisted cask is removed on rebuild.
+
+note: `masApps` (mac app store apps) is currently disabled due to a compatibility issue between `mas` 2.x and `brew bundle`. app store apps must be installed manually for now.
 
 ## comma and nix-index
 
