@@ -11,7 +11,7 @@ BM_SRC="$HOME/Library/Application Support/BetterMouse"
 # bettertouchtool — copy database files, license, presets
 BTT_DST="$GDRIVE/bettertouchtool"
 mkdir -p "$BTT_DST"
-rsync -a --delete \
+rsync -au --delete \
   --include='btt_data_store.*' \
   --include='bettertouchtool.bttlicense' \
   --include='btt_user_variables.plist' \
@@ -20,13 +20,13 @@ rsync -a --delete \
   --exclude='*' \
   "$BTT_SRC/" "$BTT_DST/"
 
-# also copy btt preferences plist
-cp -f "$HOME/Library/Preferences/com.hegenberg.BetterTouchTool.plist" "$BTT_DST/" 2>/dev/null || true
+# also copy btt preferences plist (only if newer)
+rsync -au "$HOME/Library/Preferences/com.hegenberg.BetterTouchTool.plist" "$BTT_DST/" 2>/dev/null || true
 
-# bettermouse — copy everything (small directory)
+# bettermouse — copy everything (small directory, only if newer)
 BM_DST="$GDRIVE/bettermouse"
 mkdir -p "$BM_DST"
-rsync -a --delete "$BM_SRC/" "$BM_DST/"
+rsync -au --delete "$BM_SRC/" "$BM_DST/"
 
-# also copy bettermouse preferences plist
-cp -f "$HOME/Library/Preferences/com.naotanhaocan.BetterMouse.plist" "$BM_DST/" 2>/dev/null || true
+# also copy bettermouse preferences plist (only if newer)
+rsync -au "$HOME/Library/Preferences/com.naotanhaocan.BetterMouse.plist" "$BM_DST/" 2>/dev/null || true
