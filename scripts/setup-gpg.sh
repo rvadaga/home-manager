@@ -2,13 +2,20 @@
 set -euo pipefail
 
 # generate a fresh ed25519 GPG key, upload to github, store in 1password
-# run once per machine after first darwin-rebuild switch
+# usage: setup-gpg.sh <name>
+# example: setup-gpg.sh "personal macbook"
+
+if [ -z "${1:-}" ]; then
+  echo "usage: setup-gpg.sh <name>"
+  echo "example: setup-gpg.sh \"personal macbook\""
+  exit 1
+fi
 
 NAME="Rahul Vadaga"
 EMAIL="rahul.vadaga@gmail.com"
-HOSTNAME=$(hostname -s)
+LABEL="$1"
 DATE=$(date +%Y-%m-%d)
-TITLE="${HOSTNAME} - ${DATE}"
+TITLE="${LABEL} - ${DATE}"
 
 echo "==> generating ed25519 GPG key..."
 GPG_OUTPUT=$(gpg --batch --gen-key 2>&1 <<GPGEOF

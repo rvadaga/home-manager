@@ -2,13 +2,20 @@
 set -euo pipefail
 
 # generate a fresh ed25519 SSH key, upload to github, store in 1password
-# run once per machine after first darwin-rebuild switch
+# usage: setup-ssh.sh <name>
+# example: setup-ssh.sh "personal macbook"
+
+if [ -z "${1:-}" ]; then
+  echo "usage: setup-ssh.sh <name>"
+  echo "example: setup-ssh.sh \"personal macbook\""
+  exit 1
+fi
 
 KEYFILE="$HOME/.ssh/id_ed25519"
 EMAIL="rahul.vadaga@gmail.com"
-HOSTNAME=$(hostname -s)
+LABEL="$1"
 DATE=$(date +%Y-%m-%d)
-TITLE="${HOSTNAME} - ${DATE}"
+TITLE="${LABEL} - ${DATE}"
 
 if [ -f "$KEYFILE" ]; then
   echo "SSH key already exists at $KEYFILE"
