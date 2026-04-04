@@ -2,20 +2,15 @@
 set -euo pipefail
 
 # generate a fresh ed25519 SSH key, upload to github, store in 1password
-# usage: setup-ssh.sh <name> <email>
-# example: setup-ssh.sh "personal macbook" "rahul.vadaga@gmail.com"
+# reads machine name and email from machine.json
 
-if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
-  echo "usage: setup-ssh.sh <name> <email>"
-  echo "example: setup-ssh.sh \"personal macbook\" \"rahul.vadaga@gmail.com\""
-  exit 1
-fi
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/functions.sh"
+load_machine_config
 
 KEYFILE="$HOME/.ssh/id_ed25519"
-LABEL="$1"
-EMAIL="$2"
 DATE=$(date +%Y-%m-%d)
-TITLE="${LABEL} - ${DATE}"
+TITLE="${MACHINE_NAME} - ${DATE}"
 
 if [ -f "$KEYFILE" ]; then
   echo "SSH key already exists at $KEYFILE"
@@ -27,29 +22,18 @@ mkdir -p "$HOME/.ssh"
 chmod 700 "$HOME/.ssh"
 
 echo "==> generating ed25519 SSH key..."
-ssh-keygen -t ed25519 -C "$EMAIL" -f "$KEYFILE" -N ""
+ssh-keygen -t ed25519 -C "$USER_EMAIL" -f "$KEYFILE" -N ""
 
 GITHUB_OK=false
 OP_OK=false
 
-echo "==> uploading public key to github..."
-if gh ssh-key add "${KEYFILE}.pub" --title "$TITLE"; then
-  GITHUB_OK=true
-else
-  echo "  failed — fix the issue and re-run:"
-  echo "    gh ssh-key add ${KEYFILE}.pub --title \"${TITLE}\""
-fi
+upload_to_github \
+  "gh ssh-key add '${KEYFILE}.pub' --title '${TITLE}'" \
+  "gh ssh-key add ${KEYFILE}.pub --title \"${TITLE}\"" \
+  && GITHUB_OK=true
 
-echo "==> storing private key in 1password..."
-if op item create \
-  --category="Secure Note" \
-  --title="SSH key - ${TITLE}" \
-  --vault="Private" \
-  "notesPlain=$(cat "$KEYFILE")"; then
-  OP_OK=true
-else
-  echo "  failed — fix the issue and re-run the op command manually"
-fi
+store_in_1password "SSH key - ${TITLE}" "$(cat "$KEYFILE")" \
+  && OP_OK=true
 
 echo ""
 echo "SSH key generated:"
@@ -58,7 +42,4 @@ echo "  private: ${KEYFILE}"
 $GITHUB_OK && echo "  github:  uploaded as '${TITLE}'" || echo "  github:  NOT uploaded (see error above)"
 $OP_OK && echo "  1password: stored as 'SSH key - ${TITLE}'" || echo "  1password: NOT stored (see error above)"
 
-# mark step complete
-STATE_DIR="$(dirname "$0")/../.state"
-mkdir -p "$STATE_DIR"
-date > "${STATE_DIR}/ssh-setup-done"
+mark_step_done "ssh-setup-done"

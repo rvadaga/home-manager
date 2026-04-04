@@ -9,7 +9,6 @@
     };
 
     finder = {
-      AppleShowAllExtensions = true;
       FXPreferredViewStyle = "clmv";
       ShowPathbar = true;
       ShowStatusBar = true;

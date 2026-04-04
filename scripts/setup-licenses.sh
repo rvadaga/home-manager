@@ -4,6 +4,9 @@ set -euo pipefail
 # fetch license keys from 1password and apply via defaults write
 # safe to run multiple times — idempotent
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/functions.sh"
+
 echo "==> fetching license keys from 1password..."
 
 BETTERMOUSE_LICENSE=$(op read "op://Private/BetterMouse License/license-key" 2>/dev/null || echo "")
@@ -26,7 +29,4 @@ fi
 echo ""
 echo "done."
 
-# mark step complete
-STATE_DIR="$(dirname "$0")/../.state"
-mkdir -p "$STATE_DIR"
-date > "${STATE_DIR}/licenses-setup-done"
+mark_step_done "licenses-setup-done"
