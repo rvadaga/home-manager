@@ -1,4 +1,7 @@
-{ ... }: {
+{ config, ... }:
+let
+  user = config.users.users.${config.system.primaryUser};
+in {
   imports = [
     ./nix.nix
     ./homebrew.nix
@@ -17,7 +20,7 @@
 
   environment.etc."sudoers.d/darwin-rebuild" = {
     text = ''
-      rahul ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
+      ${user.name} ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
     '';
   };
 
