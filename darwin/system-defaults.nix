@@ -32,6 +32,9 @@ in {
         "/System/Applications/System Settings.app"
       ];
 
+      wvous-tl-corner = 3;  # application windows (app exposé)
+      wvous-tr-corner = 12; # notification center
+
       persistent-others = [
         "${user.home}/Downloads"
       ];
