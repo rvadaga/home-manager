@@ -11,12 +11,9 @@
 
     sessionVariables = {
       HM_CONFIG_NAME = "mac-workstation";
+      CLAUDE_DANGEROUSLY_SKIP_PERMISSIONS = "1";
     };
   };
-
-  claude.settingsPieces = lib.mkAfter [{
-    dangerouslySkipPermissions = true;
-  }];
 
   programs.git.signing.key = "0CA84231BC45DEC79B5D3045281566EDEF2E7A00";
 }
