@@ -15,6 +15,12 @@
 
   security.pam.services.sudo_local.touchIdAuth = true;
 
+  environment.etc."sudoers.d/darwin-rebuild" = {
+    text = ''
+      rahul ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
+    '';
+  };
+
   launchd.user.agents.backup-app-configs = {
     command = toString ../scripts/backup-app-configs.sh;
     serviceConfig = {
