@@ -141,6 +141,15 @@ this flake exports reusable modules that other configurations can import:
 * `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad, app settings)
 * `darwinModules.homebrew` - declarative homebrew casks
 
+all darwin module values use `lib.mkDefault` so downstream configs can override without `lib.mkForce`.
+
+to bootstrap nix-darwin for the first time on a downstream config:
+```bash
+nix run nix-darwin -- switch --flake <path>#<config-name>
+```
+
+subsequent rebuilds use `darwin-rebuild switch` directly (installed by nix-darwin).
+
 ## homebrew management
 
 nix-darwin manages homebrew declaratively — casks are declared in `darwin/homebrew.nix`. homebrew is intentionally kept off `$PATH` to prevent it from interfering with the nix-managed dev environment. nix-darwin calls brew directly via absolute path during activation.
