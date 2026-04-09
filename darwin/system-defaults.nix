@@ -5,8 +5,13 @@ in {
   system.defaults = {
     dock = {
       autohide = lib.mkDefault true;
+      mineffect = lib.mkDefault "scale";
+      minimize-to-application = lib.mkDefault false;
+      launchanim = lib.mkDefault true;
+      show-process-indicators = lib.mkDefault true;
+      show-recents = lib.mkDefault true;
       mru-spaces = lib.mkDefault false;
-      minimize-to-application = lib.mkDefault true;
+      expose-group-apps = lib.mkDefault false;
 
       # keep in sync with casks in homebrew.nix — only list apps that are
       # either brew-managed or built-in system apps
@@ -48,15 +53,24 @@ in {
     };
 
     NSGlobalDomain = {
+      # keyboard
       AppleShowAllExtensions = lib.mkDefault true;
       InitialKeyRepeat = lib.mkDefault 15;
       KeyRepeat = lib.mkDefault 2;
+
+      # text input
       NSAutomaticCapitalizationEnabled = lib.mkDefault false;
       NSAutomaticSpellingCorrectionEnabled = lib.mkDefault false;
       NSAutomaticPeriodSubstitutionEnabled = lib.mkDefault false;
       NSAutomaticDashSubstitutionEnabled = lib.mkDefault false;
       NSAutomaticQuoteSubstitutionEnabled = lib.mkDefault false;
+
+      # scrolling
       "com.apple.swipescrolldirection" = lib.mkDefault true;
+
+      # windows
+      AppleWindowTabbingMode = lib.mkDefault "fullscreen";
+      AppleSpacesSwitchOnActivate = lib.mkDefault true;
     };
 
     trackpad = {
@@ -65,7 +79,33 @@ in {
       TrackpadThreeFingerDrag = lib.mkDefault true;
     };
 
+    WindowManager = {
+      GloballyEnabled = lib.mkDefault false;
+      EnableStandardClickToShowDesktop = lib.mkDefault true;
+      EnableTilingByEdgeDrag = lib.mkDefault true;
+      EnableTiledWindowMargins = lib.mkDefault true;
+    };
+
+    spaces.spans-displays = lib.mkDefault false; # displays have separate spaces
+
+    screensaver = {
+      askForPassword = lib.mkDefault true;
+      askForPasswordDelay = lib.mkDefault 5;
+    };
+
+    loginwindow = {
+      SHOWFULLNAME = lib.mkDefault true; # login window shows name and password
+    };
+
     CustomUserPreferences = lib.mkDefault {
+      NSGlobalDomain = {
+        AppleActionOnDoubleClick = "Maximize"; # window title bar double-click: zoom
+        NSCloseAlwaysConfirmsChanges = false;   # ask to keep changes: off
+        NSQuitAlwaysKeepsWindows = true;         # close windows when quitting: off
+        "com.apple.trackpad.scaling" = 1.0;
+        "com.apple.mouse.scaling" = 1.0;
+      };
+
       "com.mowglii.ItsycalApp" = {
         HideIcon = 0;
         HighlightedDOWs = 65;
