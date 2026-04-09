@@ -2,6 +2,9 @@
   programs.vscode = {
     enable = true;
     package = pkgs.unstable.vscode;
+    profiles.default.userSettings = {
+      "editor.fontFamily" = "FiraMono Nerd Font Mono, FiraCode Nerd Font Mono";
+    };
     profiles.default.keybindings = [
       # terminal control sequences (physical ctrl → super after keyd)
       { key = "meta+c"; command = "workbench.action.terminal.sendSequence"; args = { text = "\\u0003"; }; when = "terminalFocus"; }

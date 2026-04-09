@@ -7,6 +7,7 @@
     ../programs/neovim.nix
     ../programs/npm.nix
     ../programs/starship.nix
+    ../programs/vscode.nix
     ../programs/zsh.nix
   ];
 
@@ -25,6 +26,7 @@
       # shell and terminal
       pkgs.bash
       pkgs.nerd-fonts.fira-code
+      pkgs.nerd-fonts.fira-mono
 
       # system utilities
       pkgs.htop
