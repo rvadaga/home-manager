@@ -48,7 +48,6 @@ in {
     };
 
     NSGlobalDomain = {
-      AppleShowAllExtensions = lib.mkDefault true;
       InitialKeyRepeat = lib.mkDefault 15;
       KeyRepeat = lib.mkDefault 2;
       NSAutomaticCapitalizationEnabled = lib.mkDefault false;
