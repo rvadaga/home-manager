@@ -1,16 +1,16 @@
-{ config, ... }:
+{ config, lib, ... }:
 let
   user = config.users.users.${config.system.primaryUser};
 in {
   system.defaults = {
     dock = {
-      autohide = true;
-      mru-spaces = false;
-      minimize-to-application = true;
+      autohide = lib.mkDefault true;
+      mru-spaces = lib.mkDefault false;
+      minimize-to-application = lib.mkDefault true;
 
       # keep in sync with casks in homebrew.nix — only list apps that are
       # either brew-managed or built-in system apps
-      persistent-apps = [
+      persistent-apps = lib.mkDefault [
         "/System/Applications/Apps.app"
         "/System/Applications/Mail.app"
         "/Applications/Google Chrome.app"
@@ -32,40 +32,40 @@ in {
         "/System/Applications/System Settings.app"
       ];
 
-      wvous-tl-corner = 2;  # mission control
-      wvous-tr-corner = 12; # notification center
+      wvous-tl-corner = lib.mkDefault 2;  # mission control
+      wvous-tr-corner = lib.mkDefault 12; # notification center
 
-      persistent-others = [
+      persistent-others = lib.mkDefault [
         "${user.home}/Downloads"
       ];
     };
 
     finder = {
-      FXPreferredViewStyle = "clmv";
-      ShowPathbar = true;
-      ShowStatusBar = true;
-      FXDefaultSearchScope = "SCcf";
+      FXPreferredViewStyle = lib.mkDefault "clmv";
+      ShowPathbar = lib.mkDefault true;
+      ShowStatusBar = lib.mkDefault true;
+      FXDefaultSearchScope = lib.mkDefault "SCcf";
     };
 
     NSGlobalDomain = {
-      AppleShowAllExtensions = true;
-      InitialKeyRepeat = 15;
-      KeyRepeat = 2;
-      NSAutomaticCapitalizationEnabled = false;
-      NSAutomaticSpellingCorrectionEnabled = false;
-      NSAutomaticPeriodSubstitutionEnabled = false;
-      NSAutomaticDashSubstitutionEnabled = false;
-      NSAutomaticQuoteSubstitutionEnabled = false;
-      "com.apple.swipescrolldirection" = true;
+      AppleShowAllExtensions = lib.mkDefault true;
+      InitialKeyRepeat = lib.mkDefault 15;
+      KeyRepeat = lib.mkDefault 2;
+      NSAutomaticCapitalizationEnabled = lib.mkDefault false;
+      NSAutomaticSpellingCorrectionEnabled = lib.mkDefault false;
+      NSAutomaticPeriodSubstitutionEnabled = lib.mkDefault false;
+      NSAutomaticDashSubstitutionEnabled = lib.mkDefault false;
+      NSAutomaticQuoteSubstitutionEnabled = lib.mkDefault false;
+      "com.apple.swipescrolldirection" = lib.mkDefault true;
     };
 
     trackpad = {
-      Clicking = true;
-      TrackpadRightClick = true;
-      TrackpadThreeFingerDrag = true;
+      Clicking = lib.mkDefault true;
+      TrackpadRightClick = lib.mkDefault true;
+      TrackpadThreeFingerDrag = lib.mkDefault true;
     };
 
-    CustomUserPreferences = {
+    CustomUserPreferences = lib.mkDefault {
       "com.mowglii.ItsycalApp" = {
         HideIcon = 0;
         HighlightedDOWs = 65;

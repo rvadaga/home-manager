@@ -1,3 +1,3 @@
-{ ... }: {
-  nix.settings = import ../shared/nix-settings.nix;
+{ lib, ... }: {
+  nix.settings = lib.mkDefault (import ../shared/nix-settings.nix);
 }
