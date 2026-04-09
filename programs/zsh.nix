@@ -65,6 +65,11 @@
 
       # source some helper functions
       source ~/.config/home-manager/scripts/functions.sh;
+
+      # fetch github PAT from 1password for MCP plugins (silent — no prompt if app is locked)
+      if command -v op &>/dev/null; then
+        export GITHUB_PERSONAL_ACCESS_TOKEN="$(op read 'op://Private/claude code github personal access token/password' --account vadaga.1password.com 2>/dev/null)"
+      fi
     '';
   };
 }
