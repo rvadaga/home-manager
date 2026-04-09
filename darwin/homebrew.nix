@@ -1,14 +1,14 @@
-{ ... }: {
+{ lib, ... }: {
   homebrew = {
     enable = true;
 
     onActivation = {
       autoUpdate = false;
       upgrade = false;
-      cleanup = "zap";
+      cleanup = lib.mkDefault "zap";
     };
 
-    casks = [
+    casks = lib.mkDefault [
       "1password"
       "bettermouse"
       "bettertouchtool"
