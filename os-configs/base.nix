@@ -25,7 +25,7 @@
       # shell and terminal
       pkgs.bash
       pkgs.nerd-fonts.fira-code
-      pkgs.nerd-fonts.fira-mono
+      pkgs.fira
 
       # system utilities
       pkgs.htop
