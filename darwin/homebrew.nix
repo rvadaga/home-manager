@@ -14,6 +14,7 @@
       "bettertouchtool"
       "chatgpt"
       "claude"
+      "codex"
       "docker-desktop"
       "ghostty"
       "google-chrome"
@@ -26,6 +27,7 @@
       "spotify"
       "visual-studio-code"
       "whatsapp"
+      "zoom"
     ];
 
     # masApps disabled — mas 2.x CLI is incompatible with nix-darwin's brew bundle integration
