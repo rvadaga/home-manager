@@ -7,7 +7,6 @@
     ../programs/neovim.nix
     ../programs/npm.nix
     ../programs/starship.nix
-    ../programs/vscode.nix
     ../programs/zsh.nix
   ];
 
