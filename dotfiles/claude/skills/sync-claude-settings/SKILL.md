@@ -6,23 +6,26 @@ export live `~/.claude/settings.json` back to nix source files in `dotfiles/clau
 
 1. read `~/.claude/settings.json` (live file)
 2. read all source files from `~/.config/home-manager/dotfiles/claude/`: `settings-{base,linux,nixos,mac}.json`
-3. check CLAUDE.md for any downstream config instructions that specify additional settings files to include and their routing rules
-4. classify each `permissions.allow`, `permissions.deny`, and `permissions.ask` entry by keyword:
+3. read `~/.config/home-manager/dotfiles/claude/desired-plugins.json`
+4. check CLAUDE.md for any downstream config instructions that specify additional settings files to include and their routing rules
+5. classify each `permissions.allow`, `permissions.deny`, and `permissions.ask` entry by keyword:
    - **linux:** spectacle, dbus-send, pgrep, fc-list, xdg, kde, xclip, xsel, wmctrl, xdotool, grep inet, ip route, man.archlinux.org
    - **nixos:** nixos-rebuild, nix-env, nix-store, nix-build, journalctl, systemctl, nix flake, nix profile, nix why-depends, sudo iptables, sudo nix
    - **mac:** open -a, pbcopy, pbpaste, defaults write, osascript, launchctl, diskutil, softwareupdate
    - **downstream:** route per downstream config instructions (if any)
    - **base:** everything else
-5. classify top-level keys:
+6. classify top-level keys:
+   - **enabledPlugins** → route to `desired-plugins.json` (NOT to settings-base.json — this key is not nix-managed)
    - route per downstream config instructions for keys that belong to a downstream settings file
-   - **base:** `enabledPlugins`, `mcpServers`, and all other top-level keys go to base by default
+   - **base:** `mcpServers` and all other top-level keys go to base by default
    - when a key exists in multiple files with different values, ask the user where it should go
-6. write to dotfiles, lexicographically sorted
-7. show diff, write on confirmation
-8. remind user to commit/push — if downstream configs are in separate repos, note that each needs its own commit
+7. write to dotfiles, lexicographically sorted
+8. show diff, write on confirmation
+9. remind user to commit/push — if downstream configs are in separate repos, note that each needs its own commit
 
 ## important notes
 
+- `enabledPlugins` is NOT nix-managed — it lives in `desired-plugins.json` and is applied at runtime by `/bootstrap-plugins`. when syncing, write only the `enabledPlugins` object value (not wrapped in another key) to `desired-plugins.json`
 - os-specific settings files should only contain `permissions` — all other keys go to base
 - downstream config settings files may contain both permissions AND top-level keys — follow their routing rules
 - nix merges pieces with a custom deep merge that concatenates arrays, so os-specific permissions are additive (they don't replace base permissions)
