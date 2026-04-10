@@ -15,6 +15,12 @@ in
       font-style = "Semibold";
       theme = "Starlight";
 
+      # bell
+      bell = "none";
+
+      # clipboard
+      clipboard-paste-protection = false;
+
       # window
       confirm-close-surface = true;
       window-decoration = true;
