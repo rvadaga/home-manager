@@ -28,6 +28,7 @@
       pkgs.fira
 
       # system utilities
+      pkgs.btop
       pkgs.htop
       pkgs.procs
       pkgs.tree
