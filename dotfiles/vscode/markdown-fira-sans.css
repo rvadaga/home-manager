@@ -16,12 +16,8 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
-/* mermaid diagram text */
-.mermaid text,
-.mermaid .nodeLabel,
-.mermaid .edgeLabel,
-.mermaid .label,
-.mermaid .cluster-label,
-.mermaid .titleText {
-  font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
-}
+/* mermaid: do NOT override fonts via CSS — mermaid calculates box sizes
+   using its default font at render time. overriding via CSS causes text
+   to overflow boxes. to use Fira Sans in a mermaid diagram, set it at
+   the mermaid level so layout accounts for the font metrics:
+   %%{init: {'theme': 'base', 'themeVariables': {'fontFamily': 'Fira Sans'}}}%% */
