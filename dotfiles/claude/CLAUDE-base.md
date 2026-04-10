@@ -21,6 +21,17 @@
 * prefer merge over rebase — use merge commits to integrate changes (e.g., merge main into feature branch). rebase is a last resort; always ask for permission before rebasing
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
 
+## multi-pr workflow
+
+when a change is large enough to warrant multiple prs:
+
+* assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
+* number each pr sequentially — pr1, pr2, etc.
+* include the number in the branch name: e.g., `rahul/pr1-change-abc`, `rahul/pr2-fix-bug` (follows existing branch prefix conventions per repo)
+* track the full pr sequence in project-level memory: pr number (pr1, pr2…), github pr #, branch name, and status
+* when the project is complete and the user asks, clean up the associated project memory
+* if a pr sequence seems stale or stuck, proactively ask the user about it
+
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 * never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`
 # home-manager configuration
