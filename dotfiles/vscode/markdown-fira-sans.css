@@ -1,7 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 /* markdown body text */
-body {
+body,
+p,
+li,
+td,
+th,
+blockquote,
+dl, dt, dd,
+.vscode-body {
   font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
