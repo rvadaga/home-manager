@@ -13,8 +13,9 @@
     * always read the pr description from github before updating it (user may have made changes via github ui)
 * when creating a branch
     * prefix the name with rahul/
-* when making any home-manager config changes:
-    * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then run `home-manager switch` to apply
+* when making any nix config changes:
+    * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then rebuild to apply
+    * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
     * only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gf origin main`, never `gf --all` or bare `gf`). fetching everything pollutes `git branch --all` output
@@ -34,7 +35,7 @@ when a change is large enough to warrant multiple prs:
 
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 * never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`
-# home-manager configuration
+# nix configuration
 
 ## key rules
 
@@ -45,9 +46,14 @@ when a change is large enough to warrant multiple prs:
 * use `/diff-claude-settings` for read-only comparison
 * check `$HM_CONFIG_NAME` to determine which flake to rebuild against
 
+## rebuild commands by os
+
+* **macos (nix-darwin):** `darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
+* **linux (home-manager):** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
+
 ## multi-repo structure
 
-this personal/base home-manager config (`~/.config/home-manager`) can be imported as a flake input by other configs (e.g., work-specific configs). on machines with layered configs:
+the personal/base config (`~/.config/home-manager`) can be imported as a flake input by other configs (e.g., work-specific configs). on machines with layered configs:
 
 * the downstream config imports this repo as `inputs.personal-config`
 * CLAUDE.md files from both repos get combined
