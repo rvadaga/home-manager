@@ -18,7 +18,7 @@
     * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
     * only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
-* never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gf origin main`, never `gf --all` or bare `gf`). fetching everything pollutes `git branch --all` output
+* never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
 * prefer merge over rebase — use merge commits to integrate changes (e.g., merge main into feature branch). rebase is a last resort; always ask for permission before rebasing
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
 
