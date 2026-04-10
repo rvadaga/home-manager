@@ -15,8 +15,8 @@ in
       font-style = "Semibold";
       theme = "Starlight";
 
-      # bell
-      bell = "none";
+      # bell — disable audible bell, keep notification features
+      bell-features = "no-audio";
 
       # clipboard
       clipboard-paste-protection = false;
