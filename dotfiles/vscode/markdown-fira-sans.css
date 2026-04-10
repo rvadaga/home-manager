@@ -16,6 +16,15 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Fira Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
+/* code blocks — use the same mono font as ghostty/editor */
+code,
+pre,
+pre code,
+code[class*="language-"],
+pre[class*="language-"] {
+  font-family: 'FiraCode Nerd Font Mono', 'Fira Code', monospace !important;
+}
+
 /* mermaid fonts are set via markdown-mermaid.fontFamily in VS Code settings,
    which passes fontFamily to mermaid.initialize() so layout uses the correct
    font metrics. no CSS override needed. */
