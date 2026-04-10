@@ -21,6 +21,7 @@
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
 * prefer merge over rebase — use merge commits to integrate changes (e.g., merge main into feature branch). rebase is a last resort; always ask for permission before rebasing
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
+* use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 
 ## multi-pr workflow
 
@@ -33,8 +34,6 @@ when a change is large enough to warrant multiple prs:
 * when the project is complete and the user asks, clean up the associated project memory
 * if a pr sequence seems stale or stuck, proactively ask the user about it
 
-* use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
-* never chain commands with `&&` or `;` in bash tool calls — compound commands break permission matching even when each individual command is allowed. if you need to run git commands in a different repo, prefer `git -C <path>` instead of `cd <path> && git ...`
 # nix configuration
 
 ## key rules
@@ -61,3 +60,35 @@ the personal/base config (`~/.config/home-manager`) can be imported as a flake i
 * downstream configs pin this repo by git revision — in most cases, just commit, push, and rebuild normally. only use `--override-input` when making significant changes to `*.nix` files that warrant local testing before pushing
 
 for detailed workflows, file structure, and examples: read `~/.config/home-manager/dotfiles/claude/home-manager-reference.md`
+
+# knowledge base (llm wiki)
+
+structured markdown knowledge bases maintained by LLMs, following karpathy's llm wiki pattern. instead of re-deriving knowledge from raw sources on every query (like RAG), the LLM incrementally builds and maintains a persistent wiki — a compounding artifact of interlinked markdown files.
+
+reference: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+
+## vaults
+
+all obsidian vaults live under `~/development/obsidian/`:
+
+* `personal-software` — general software engineering, architecture, programming
+* `oss-vespa` — vespa open-source search engine
+
+## workflow
+
+1. **ingest**: raw sources (articles, papers, docs) go into `raw/` — use obsidian web clipper for web content
+2. **compile**: read raw sources, produce/update structured wiki pages with `[[wikilinks]]`, update index and log
+3. **query**: answer questions using the wiki, file valuable answers back as new pages
+4. **lint**: check for contradictions, orphaned pages, gaps, stale claims, missing cross-references
+
+## file conventions
+
+* one topic per file, descriptive kebab-case filenames (e.g., `distributed-consensus.md`)
+* each file: summary line, tags in YAML frontmatter, related notes via `[[wikilinks]]`
+* `index.md` at wiki root — content-organized catalog of all pages
+* `log.md` — chronological append-only record (format: `## [YYYY-MM-DD] action | description`)
+* keep notes focused and atomic — many small files over few large ones
+
+## vault schema
+
+each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-evolve over time to define structure, conventions, and domain-specific rules
