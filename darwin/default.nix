@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, lib, ... }:
 let
   user = config.users.users.${config.system.primaryUser};
 in {
@@ -20,6 +20,10 @@ in {
 
   # mac-workstation has screen real estate to spare — keep dock always visible
   system.defaults.dock.autohide = false;
+
+  # betterdisplay lets the headless mac mini offer higher resolutions over screen sharing
+  # by emulating a virtual display (no physical monitor attached, so EDID is missing)
+  homebrew.casks = lib.mkDefault [ "betterdisplay" ];
 
   environment.etc."sudoers.d/darwin-rebuild" = {
     text = ''
