@@ -89,6 +89,23 @@
           pkgs = mkPkgs { inherit system pkgsInput; };
           modules = [ homeManagerModule ] ++ hmModules;
         };
+
+      mkDarwinConfiguration = { darwinModule, homeManagerModule, system, user }:
+        nix-darwin.lib.darwinSystem {
+          inherit system;
+          modules = [
+            darwinModule
+            home-manager.darwinModules.home-manager
+            {
+              nixpkgs.overlays = mkOverlays system;
+              nixpkgs.config = unfreeConfig;
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
+              home-manager.users.${user} = import homeManagerModule;
+              home-manager.sharedModules = hmModules;
+            }
+          ];
+        };
     in {
       homeConfigurations = {
         personal-laptop = mkHomeManagerConfiguration {
@@ -105,20 +122,19 @@
         };
       };
 
-      darwinConfigurations.mac-workstation = nix-darwin.lib.darwinSystem {
-        system = "aarch64-darwin";
-        modules = [
-          ./darwin/default.nix
-          home-manager.darwinModules.home-manager
-          {
-            nixpkgs.overlays = mkOverlays "aarch64-darwin";
-            nixpkgs.config = unfreeConfig;
-            home-manager.useGlobalPkgs = true;
-            home-manager.useUserPackages = true;
-            home-manager.users.rahul = import ./machines/mac-workstation.nix;
-            home-manager.sharedModules = hmModules;
-          }
-        ];
+      darwinConfigurations = {
+        mac-workstation = mkDarwinConfiguration {
+          system = "aarch64-darwin";
+          user = "rahul";
+          darwinModule = ./darwin/mac-workstation.nix;
+          homeManagerModule = ./machines/mac-workstation.nix;
+        };
+        personal-laptop = mkDarwinConfiguration {
+          system = "aarch64-darwin";
+          user = "rvadaga";
+          darwinModule = ./darwin/personal-laptop.nix;
+          homeManagerModule = ./machines/personal-laptop.nix;
+        };
       };
 
       # exported overlays that other flakes can use
