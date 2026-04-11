@@ -29,6 +29,7 @@ in {
         "/System/Applications/Messages.app"
         "/System/Applications/FindMy.app"
         "/System/Applications/iPhone Mirroring.app"
+        "/System/Applications/Utilities/Screen Sharing.app"
         "/System/Applications/System Settings.app"
       ];
 
