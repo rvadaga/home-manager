@@ -14,14 +14,15 @@ in {
     settings = {
       "$schema" = "https://starship.rs/config-schema.json";
 
-      # gruvbox rainbow — two-prompt layout
-      # left: identity -> location -> git (continuous powerline)
-      # right: native RPROMPT via right_format (auto-hides on overflow)
+      # gruvbox rainbow — single-line layout with fill
+      # left: os -> location -> git (continuous powerline)
+      # fill: spaces between left and right
+      # right: pills for languages, infra, status, clock (no RPROMPT — avoids
+      #        clipboard pollution and keeps left/right on the same line)
       format = lib.concatStrings [
-        # left — identity (orange)
+        # left — os (orange)
         "[${lc}](color_orange)"
         "$os"
-        "$username"
         "[${rc}](bg:color_yellow fg:color_orange)"
         # left — location (yellow)
         "$directory"
@@ -32,30 +33,30 @@ in {
         "$git_state"
         "$git_status"
         "[${rc}](fg:color_aqua)"
-        # line 2
-        "$line_break"
-        "$status"
-        "$character"
-      ];
-
-      right_format = lib.concatStrings [
-        # languages (blue pills)
+        # fill between left and right
+        "$fill"
+        # right — languages (blue pills)
         "$c"
         "$cpp"
         "$rust"
         "$java"
         "$python"
-        # dev env (aqua pills)
+        # right — dev env (aqua pills)
         "$direnv"
         "$nix_shell"
-        # infra (purple pills)
+        # right — infra (purple pills)
         "$kubernetes"
         "$docker_context"
         "$container"
-        # perf (bg3 pill)
+        # right — status (red pill, error only)
+        "$status"
+        # right — perf (bg3 pill)
         "$cmd_duration"
-        # clock (bg1 pill)
+        # right — clock (bg1 pill)
         "$time"
+        # line 2
+        "$line_break"
+        "$character"
       ];
 
       command_timeout = 1000;
@@ -74,9 +75,12 @@ in {
         color_yellow = "#d79921";
       };
 
+      fill.symbol = " ";
+
       os = {
         disabled = false;
         style = "bg:color_orange fg:color_fg0";
+        format = "[ $symbol ]($style)";
         symbols = {
           Macos = "󰀵";
           NixOS = "";
@@ -90,12 +94,7 @@ in {
         };
       };
 
-      username = {
-        show_always = true;
-        style_user = "bg:color_orange fg:color_fg0";
-        style_root = "bg:color_orange fg:color_fg0";
-        format = "[ $ssh_symbol$user ]($style)";
-      };
+      username.disabled = true;
 
       directory = {
         style = "fg:color_fg0 bg:color_yellow";
@@ -149,7 +148,7 @@ in {
 
       status = {
         disabled = false;
-        format = "[$symbol$status ]($style)";
+        format = " [${lc}](fg:color_red)[ $symbol$status ](fg:color_fg0 bg:color_red)[${rc}](fg:color_red)";
         symbol = "✘ ";
         style = "fg:color_red";
       };
