@@ -21,6 +21,7 @@ in {
   environment.etc."sudoers.d/darwin-rebuild" = {
     text = ''
       ${user.name} ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
+      ${user.name} ALL=(root) NOPASSWD: /usr/sbin/installer *
     '';
   };
 
