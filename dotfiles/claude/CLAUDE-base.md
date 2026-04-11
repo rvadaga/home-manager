@@ -21,6 +21,7 @@
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
 * prefer merge over rebase — use merge commits to integrate changes (e.g., merge main into feature branch). rebase is a last resort; always ask for permission before rebasing
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
+* commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 
 ## multi-pr workflow
