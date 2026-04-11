@@ -24,8 +24,8 @@ in {
         "[${lc}](color_orange)"
         "$os"
         "[${rc}](bg:color_yellow fg:color_orange)"
-        # left — location (yellow)
-        "$directory"
+        # left — location (yellow) — adaptive via custom.dir
+        "\${custom.dir}"
         "[${rc}](fg:color_yellow bg:color_aqua)"
         # left — git (aqua)
         "$git_branch"
@@ -96,18 +96,27 @@ in {
 
       username.disabled = true;
 
-      directory = {
+      # adaptive cwd: full path (with ~ for $HOME) when the terminal is wide
+      # enough, otherwise `…/<basename>` — starship's built-in directory module
+      # can't branch on terminal width, so we shell out via a custom module.
+      custom.dir = {
+        when = true;
+        command = ''
+          cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}')
+          : "''${cols:=80}"
+          p=$PWD
+          case "$p" in
+            "$HOME") p="~" ;;
+            "$HOME"/*) p="~''${p#$HOME}" ;;
+          esac
+          if [ "$cols" -ge 120 ]; then
+            printf '%s' "$p"
+          else
+            printf '…/%s' "$(basename "$p")"
+          fi
+        '';
         style = "fg:color_fg0 bg:color_yellow";
-        format = "[ $path ]($style)";
-        truncation_length = 3;
-        truncation_symbol = "…/";
-        substitutions = {
-          Documents = "󰈙 ";
-          Downloads = " ";
-          Music = "󰝚 ";
-          Pictures = " ";
-          Developer = "󰲋 ";
-        };
+        format = "[ $output ]($style)";
       };
 
       git_branch = {
