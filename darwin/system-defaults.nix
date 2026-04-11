@@ -55,6 +55,8 @@ in {
       NSAutomaticPeriodSubstitutionEnabled = lib.mkDefault false;
       NSAutomaticDashSubstitutionEnabled = lib.mkDefault false;
       NSAutomaticQuoteSubstitutionEnabled = lib.mkDefault false;
+      # full keyboard access — tab cycles focus through all controls in dialogs
+      AppleKeyboardUIMode = lib.mkDefault 3;
     };
 
     trackpad = {
