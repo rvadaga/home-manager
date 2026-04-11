@@ -18,6 +18,9 @@ in {
 
   security.pam.services.sudo_local.touchIdAuth = true;
 
+  # mac-workstation has screen real estate to spare — keep dock always visible
+  system.defaults.dock.autohide = false;
+
   environment.etc."sudoers.d/darwin-rebuild" = {
     text = ''
       ${user.name} ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
