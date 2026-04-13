@@ -29,6 +29,14 @@ in
       tab-inherit-working-directory = false;
       split-inherit-working-directory = true;
       window-save-state = "always";
+
+      # undo close — 60s window to recover closed tabs/splits/windows
+      undo-timeout = "60s";
+    } // lib.optionalAttrs isDarwin {
+      # cmd+z works natively; add browser-style cmd+shift+t as well
+      keybind = [
+        "cmd+shift+t=undo"
+      ];
     } // lib.optionalAttrs (!isDarwin) {
       font-size = 12;
       gtk-tabs-location = "top";
@@ -53,6 +61,9 @@ in
         "ctrl+7=goto_tab:7"
         "ctrl+8=goto_tab:8"
         "ctrl+9=goto_tab:9"
+
+        # undo close (physical cmd+shift+t / cmd+z)
+        "ctrl+shift+t=undo"
 
         # window/split management (physical cmd)
         "ctrl+n=new_window"
