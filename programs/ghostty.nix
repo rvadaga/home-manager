@@ -31,7 +31,7 @@ in
       window-save-state = "always";
 
       # undo close — 60s window to recover closed tabs/splits/windows
-      undo-timeout = 60;
+      undo-timeout = "60s";
     } // lib.optionalAttrs isDarwin {
       # cmd+z works natively; add browser-style cmd+shift+t as well
       keybind = [
