@@ -33,6 +33,7 @@ in {
         "/System/Applications/System Settings.app"
       ];
 
+      showAppExposeGestureEnabled = lib.mkDefault true;
       wvous-tl-corner = lib.mkDefault 2;  # mission control
       wvous-tr-corner = lib.mkDefault 12; # notification center
 
