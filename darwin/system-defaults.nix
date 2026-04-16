@@ -70,6 +70,10 @@ in {
     loginwindow.SHOWFULLNAME = lib.mkDefault true;
 
     CustomUserPreferences = lib.mkDefault {
+      "com.apple.dock" = {
+        showAppExposeGestureEnabled = true;
+      };
+
       "com.mowglii.ItsycalApp" = {
         HideIcon = 0;
         HighlightedDOWs = 65;
