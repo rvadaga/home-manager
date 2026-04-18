@@ -1,64 +1,68 @@
 ---
-allowed-tools: Bash(git *), Bash(mkdir *), Bash(ls *), Bash(echo $SCRATCHPAD_DIR), Read
-description: read or save notes in the scratchpad repo. "read <topic>" to pull up notes, "save <topic>" to save from conversation.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mkdir *), Bash(ls *)
+description: read or save notes in obsidian vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings from the conversation.
 ---
 
 ## your task
 
-manage notes in the scratchpad repo. two modes based on the first argument word:
+manage notes in the user's obsidian vaults at `~/development/obsidian/`. two modes based on the first argument word:
 
 - **read \<topic\>**: find and display existing notes matching the topic
-- **save \<topic\>**: save findings from the current conversation as markdown
+- **save \<topic\>**: save durable findings from the current conversation as a wiki page
 
 if no mode word is given, default to **save**.
 
+## vaults
+
+- `personal-software` — general software engineering, architecture, programming
+- `oss-vespa` — vespa open-source search engine (source-code reading wiki)
+
+each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`) — **always read it first** before writing, since conventions (directory layout, frontmatter, tags) differ by vault.
+
+## vault selection
+
+- vespa open-source internals (proton, distributor, bucket-distribution, etc.) → `oss-vespa`
+- general software/engineering topics → `personal-software`
+- if ambiguous, ask the user which vault to use
+
 ## common setup
 
-1. determine scratchpad directory:
-   - run `echo $SCRATCHPAD_DIR` to get the repo root directory
-   - if not set or empty, tell the user to set it via home-manager (`sessionVariables.SCRATCHPAD_DIR`) and stop
-   - notes go in `$SCRATCHPAD_DIR/claude-notes/`
-2. if `$SCRATCHPAD_DIR` doesn't exist, clone the repo first:
-   - extract the repo name from the path (last component of `$SCRATCHPAD_DIR`)
-   - ask the user for the git clone URL (e.g., `git@github.com:rvadaga/scratchpad.git`)
-   - clone to `$SCRATCHPAD_DIR`
-3. create the notes directory if it doesn't exist: `mkdir -p $SCRATCHPAD_DIR/claude-notes`
-4. list existing `.md` files in `$SCRATCHPAD_DIR/claude-notes/`
+1. pick the target vault per the rules above
+2. read the vault's schema file (`SCHEMA.md` or `CLAUDE.md`) for conventions — filename style, frontmatter template, directory layout
+3. skim the vault's `index.md` to see what's already catalogued
 
 ## read mode
 
-5. find notes matching the topic keywords:
-   - match against filenames first (e.g., "vespa otel" matches `vespa-otel-exporter-analysis.md`)
-   - if no filename matches, read the first 15 lines of each doc and match against content
-6. read and display all matching notes in full using the Read tool
-7. if no matches found, tell the user what notes exist so they can refine their query
-8. done — no git operations needed
+4. find notes matching the topic:
+   - search `index.md` first — it's the organized catalog of the vault
+   - match against filenames (e.g., "vespa proton" → `pages/proton.md`)
+   - if no filename match, use Grep to search content across the vault
+5. read and display all matching notes in full using the Read tool
+6. if no matches found, show the user the closest candidates so they can refine the query
+7. done — no write operations needed
 
 ## save mode
 
-5. determine if the current topic matches an existing doc:
-   - read the first 15 lines of each existing doc
-   - if a doc covers the same topic or system, ask the user whether to:
-     - **update** the existing doc (add/modify sections)
-     - **create a new** separate doc
-6. write the markdown file:
-   - filename: kebab-case, descriptive (e.g., `vespa-metrics-pipeline.md`)
-   - content: follow the user's lowercase writing conventions from CLAUDE.md
-   - focus on durable knowledge: findings, architecture, code traces, key takeaways
-   - do NOT include session-specific details (timestamps, conversation IDs, task progress)
-7. if updating an existing doc and the scope has changed significantly:
-   - suggest a new filename that better reflects the expanded scope
-   - ask user for confirmation before renaming
-   - use `git mv old-name.md new-name.md` to rename (preserves history)
-8. auto commit and push (from `$SCRATCHPAD_DIR`):
-   - `ga claude-notes/<file>` (git add)
-   - `gcmsg "add/update <filename>"` (git commit --message)
-   - `gp` (git push)
-   - if push fails, warn the user but don't error out
+4. check for an existing page on this topic:
+   - search `index.md` for related entries
+   - read the first 15 lines of likely candidates
+   - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one
+5. write the page per the vault's schema:
+   - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
+   - filename: lowercase, hyphenated, descriptive (e.g., `vespa-metrics-pipeline.md`)
+   - frontmatter: follow the vault's template (always includes a `tags` array; some vaults also include `created` or `source`)
+   - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
+   - cross-link to related pages using obsidian `[[wikilinks]]`
+   - mark uncertain or inferred claims with `[inferred]` (per oss-vespa schema)
+   - cite source code paths when relevant (e.g., `path/to/file.ext:line`)
+   - do NOT include session-specific details (timestamps in prose, conversation ids, task progress)
+6. update `index.md`: add a one-liner for the new page under the appropriate section — format matches existing entries (e.g., `- [[page-name]] — short description`). if no fitting section exists, add a new heading
+7. append an entry to `log.md` in the format: `## [YYYY-MM-DD] action | description` — use today's date from the session context
+8. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 
 ## important notes
 
-- use kebab-case for all filenames (e.g., `vespa-metrics-pipeline.md`)
-- follow the user's lowercase writing conventions (from CLAUDE.md)
-- when updating, preserve existing content structure — add/modify sections, don't rewrite from scratch unless asked
-- use omz git aliases with inline comments showing the full command
+- defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, and layout conventions
+- lowercase everything (filenames and content) per global CLAUDE.md
+- obsidian vaults are currently not git repos — do not run git commands against them
+- prefer atomic pages — many small focused files over one big file
