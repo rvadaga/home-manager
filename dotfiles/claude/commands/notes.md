@@ -60,6 +60,23 @@ each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`
 7. append an entry to `log.md` in the format: `## [YYYY-MM-DD] action | description` — use today's date from the session context
 8. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 
+## mermaid diagrams
+
+obsidian's mermaid renderer does **not** interpret `\n` as a line break in node labels or edge labels — it renders literally as `\n`. always use `<br/>` instead:
+
+```
+node["first line<br/>second line"]          ✓ correct
+node["first line\nsecond line"]             ✗ renders literally
+```
+
+specific rules by diagram element:
+- **node labels** (`["..."]`, `(["..."])`, `(["..."])`) — use `<br/>` for multi-line content
+- **edge labels** (`|"..."|`) — prefer a single-line label with ` · ` as separator rather than `<br/>`, since edge labels are narrow
+- **sequence diagram participant aliases** (`participant x as "..."`) — single-line only; `<br/>` does not work here; keep aliases short and descriptive
+- **subgraph titles** (`subgraph title["..."]`) — use `<br/>` if multi-line is needed
+
+when writing a new diagram, scan all node/edge label strings for `\n` before saving.
+
 ## important notes
 
 - defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, and layout conventions
