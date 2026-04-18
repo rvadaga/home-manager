@@ -60,6 +60,23 @@ each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`
 7. append an entry to `log.md` in the format: `## [YYYY-MM-DD] action | description` — use today's date from the session context
 8. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 
+## github permalinks
+
+when citing source code, always use commit-sha permalinks (pinned to a specific commit, not a branch). branch URLs break when files move; sha permalinks are permanent.
+
+**label format:** backtick code-formatted, `repo-name:path/to/file#LN`
+**url format:** `https://github.com/org/repo/blob/<40-char-sha>/path/to/file#LN`
+
+rendered in markdown:
+```
+[`repo-name:path/to/file.ext#L42`](https://github.com/org/repo/blob/<sha>/path/to/file.ext#L42)
+```
+
+rules:
+- omit `#LN` when linking to a whole file rather than a specific line
+- get the sha from `git log --format="%H" -1` in the repo, or via github's "copy permalink" button (y key on any github file view)
+- if line numbers would shift frequently (e.g., config files that change often), link to the file without `#LN` rather than an outdated line
+
 ## mermaid diagrams
 
 obsidian's mermaid renderer does **not** interpret `\n` as a line break in node labels or edge labels — it renders literally as `\n`. always use `<br/>` instead:
