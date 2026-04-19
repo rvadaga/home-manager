@@ -79,6 +79,16 @@ rules:
 
 ## mermaid diagrams
 
+**when to use mermaid vs ascii:** check the longest line in the diagram. if it exceeds ~60 characters, use mermaid — ascii diagrams wider than that wrap badly on mobile screens. below ~60 chars, a simple ascii diagram (e.g. `A → B → C`) is fine.
+
+```
+# too wide for ascii (~80 chars) → use mermaid
+prod-cluster.us-central1.internal.corp.example.com → managed-zone (dns-project)
+
+# fine as ascii (~30 chars)
+consumer → NAT subnet → producer
+```
+
 obsidian's mermaid renderer does **not** interpret `\n` as a line break in node labels or edge labels — it renders literally as `\n`. always use `<br/>` instead:
 
 ```
