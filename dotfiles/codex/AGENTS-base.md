@@ -1,7 +1,5 @@
 # base instructions
 
-* **this repo is personal - never include work-specific content.** no employer names, internal hostnames, project names, team names, or any other work-identifying details in any file under `~/.config/home-manager/`. use generic placeholders in examples (e.g. `example.com`, `my-project`, `corp-cluster`). work config lives in `~/.config/work-home-manager/` exclusively.
-
 * when writing any new content, always use lower case.
     * when editing existing docs, follow the casing and styling conventions already used in that doc. if the doc is internally inconsistent, match the nearest surrounding section
     * when creating new docs, use the default lower case style
