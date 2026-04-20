@@ -18,6 +18,7 @@
     # external tools
     cloudflare-speed-cli.url = "github:kavehtehrani/cloudflare-speed-cli";
     ghostty.url = "github:ghostty-org/ghostty";
+    googleworkspace-cli.url = "github:googleworkspace/cli";
     nix-index-database.url = "github:nix-community/nix-index-database";
 
     home-manager = {
@@ -31,7 +32,7 @@
     };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, nix-index-database, ... }:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, nix-index-database, ... }@inputs:
     let
       unfreeConfig = {
         allowUnfree = true;
@@ -88,6 +89,7 @@
         home-manager.lib.homeManagerConfiguration {
           pkgs = mkPkgs { inherit system pkgsInput; };
           modules = [ homeManagerModule ] ++ hmModules;
+          extraSpecialArgs = { inherit inputs; };
         };
 
       mkDarwinConfiguration = { darwinModule, homeManagerModule, system, user }:
@@ -103,6 +105,7 @@
               home-manager.useUserPackages = true;
               home-manager.users.${user} = import homeManagerModule;
               home-manager.sharedModules = hmModules;
+              home-manager.extraSpecialArgs = { inherit inputs; };
             }
           ];
         };

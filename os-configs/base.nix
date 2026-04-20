@@ -1,5 +1,7 @@
-{ config, pkgs, lib, osConfig ? null, ... }:
+{ config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
+  # gws is packaged by its upstream flake rather than nixpkgs.
+  gwsPackage = inputs.googleworkspace-cli.packages.${pkgs.stdenv.hostPlatform.system}.gws;
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -94,6 +96,7 @@ in {
       (pkgs.unstable.google-cloud-sdk.withExtraComponents [
         pkgs.unstable.google-cloud-sdk.components.gke-gcloud-auth-plugin
       ])
+      gwsPackage
 
       # infrastructure as code
       (pkgs.unstable.terraform.overrideAttrs (old: {

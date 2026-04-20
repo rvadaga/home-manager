@@ -15,6 +15,7 @@
     * prefix the name with `rahul/`
 * when making any nix config changes:
     * for most changes (AGENTS.md, dotfiles): edit, commit, push, then rebuild to apply
+    * do not ask whether to rebuild after nix config changes unless the user explicitly asks not to rebuild or the rebuild target is genuinely ambiguous
     * rebuild command depends on the os - see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
     * only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing
     * skip `exec $SHELL` - codex's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
