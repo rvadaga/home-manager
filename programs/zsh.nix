@@ -59,6 +59,12 @@
       # use gnu ls (gls) with LS_COLORS for better color support
       zstyle ':omz:lib:theme-and-appearance' gnu-ls yes
 
+      # Codex's built-in terminal can miss Nerd Font private-use glyphs, so
+      # switch it to a Starship config that uses plain Unicode caps.
+      if [ -n "''${CODEX_SHELL-}" ] && [ -z "''${STARSHIP_CONFIG-}" ] && [ -f "$HOME/.config/starship-codex.toml" ]; then
+        export STARSHIP_CONFIG="$HOME/.config/starship-codex.toml"
+      fi
+
       if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
         . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
       fi

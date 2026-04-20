@@ -1,25 +1,74 @@
 { config, pkgs, lib, ... }:
 let
   # powerline rounded glyphs (U+E0B4 , U+E0B6 )
-  # IMPORTANT: do NOT paste these characters literally — tools (including claude code's
-  # Write tool) silently strip private-use-area unicode. use builtins.fromJSON to
-  # generate them from codepoints at build time instead.
-  rc = builtins.fromJSON ''"\ue0b4"'';  # right cap  (closes a segment)
-  lc = builtins.fromJSON ''"\ue0b6"'';  # left cap   (opens a segment)
-in {
-  programs.starship = {
-    enable = true;
-    enableZshIntegration = true;
+  # IMPORTANT: do NOT paste these characters literally — tools can silently strip
+  # private-use-area unicode. use builtins.fromJSON to generate them at build time.
+  powerlineRc = builtins.fromJSON ''"\ue0b4"'';  # right cap  (closes a segment)
+  powerlineLc = builtins.fromJSON ''"\ue0b6"'';  # left cap   (opens a segment)
 
-    settings = {
-      "$schema" = "https://starship.rs/config-schema.json";
+  # Codex's built-in terminal does not always render Nerd Font private-use glyphs.
+  # Use plain Unicode fallbacks there while keeping the full powerline look in
+  # Ghostty/Kitty.
+  codexRc = "◗";
+  codexLc = "◖";
 
-      # gruvbox rainbow — single-line layout with fill
-      # left: os -> location -> git (continuous powerline)
-      # fill: spaces between left and right
-      # right: pills for languages, infra, status, clock (no RPROMPT — avoids
-      #        clipboard pollution and keeps left/right on the same line)
-      format = lib.concatStrings [
+  nerdOsSymbols = {
+    Macos = "󰀵";
+    NixOS = "";
+    Linux = "󰌽";
+    Windows = "󰍲";
+    Ubuntu = "󰕈";
+    Fedora = "󰣛";
+    Arch = "󰣇";
+    Debian = "󰣚";
+    Alpine = "";
+  };
+
+  codexOsSymbols = {
+    Macos = "⌘";
+    NixOS = "nix";
+    Linux = "lin";
+    Windows = "win";
+    Ubuntu = "ubu";
+    Fedora = "fed";
+    Arch = "arch";
+    Debian = "deb";
+    Alpine = "alp";
+  };
+
+  mkSettings = { lc, rc, osSymbols, codexCompatible ? false }: {
+    "$schema" = "https://starship.rs/config-schema.json";
+
+    # gruvbox rainbow — single-line layout with fill
+    # left: os -> location -> git
+    # fill: spaces between left and right
+    # right: pills for languages, infra, status, clock (no RPROMPT — avoids
+    #        clipboard pollution and keeps left/right on the same line)
+    format = lib.concatStrings (
+      if codexCompatible then [
+        "$os"
+        "$custom.dir"
+        "$git_branch"
+        "$git_commit"
+        "$git_state"
+        "$git_status"
+        "$fill"
+        "$c"
+        "$cpp"
+        "$rust"
+        "$java"
+        "$python"
+        "$direnv"
+        "$nix_shell"
+        "$kubernetes"
+        "$docker_context"
+        "$container"
+        "$status"
+        "$cmd_duration"
+        "$time"
+        "$line_break"
+        "$character"
+      ] else [
         # left — os (orange)
         "[${lc}](color_orange)"
         "$os"
@@ -57,206 +106,236 @@ in {
         # line 2
         "$line_break"
         "$character"
+      ]
+    );
+
+    command_timeout = 1000;
+    palette = "gruvbox_dark";
+
+    palettes.gruvbox_dark = {
+      color_fg0 = "#fbf1c7";
+      color_bg1 = "#3c3836";
+      color_bg3 = "#665c54";
+      color_blue = "#458588";
+      color_aqua = "#689d6a";
+      color_green = "#98971a";
+      color_orange = "#d65d0e";
+      color_purple = "#b16286";
+      color_red = "#cc241d";
+      color_yellow = "#d79921";
+    };
+
+    fill.symbol = " ";
+
+    os = {
+      disabled = false;
+      style = "bg:color_orange fg:color_fg0";
+      format =
+        if codexCompatible
+        then "[${lc}](fg:color_orange)[ $symbol ]($style)[${rc}](fg:color_orange)"
+        else "[ $symbol ]($style)";
+      symbols = osSymbols;
+    };
+
+    username.disabled = true;
+
+    # adaptive cwd: full path (with ~ for $HOME) when the terminal is wide
+    # enough, otherwise `…/<basename>` — starship's built-in directory module
+    # can't branch on terminal width, so we shell out via a custom module.
+    custom.dir = {
+      when = true;
+      command = ''
+        cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}')
+        : "''${cols:=80}"
+        p=$PWD
+        case "$p" in
+          "$HOME") p="~" ;;
+          "$HOME"/*) p="~''${p#$HOME}" ;;
+        esac
+        if [ "$cols" -ge 120 ]; then
+          printf '%s' "$p"
+        else
+          printf '…/%s' "$(basename "$p")"
+        fi
+      '';
+      style = "fg:color_fg0 bg:color_yellow";
+      format =
+        if codexCompatible
+        then " [${lc}](fg:color_yellow)[ $output ]($style)[${rc}](fg:color_yellow)"
+        else "[ $output ]($style)";
+    };
+
+    git_branch = {
+      symbol = "";
+      style = "bg:color_aqua";
+      format =
+        if codexCompatible
+        then " [${lc}](fg:color_aqua)[ $branch ](fg:color_fg0 bg:color_aqua)"
+        else "[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)";
+    };
+
+    git_commit = {
+      style = "bg:color_aqua";
+      format =
+        if codexCompatible
+        then " [${lc}](fg:color_aqua)[ $hash$tag ](fg:color_fg0 bg:color_aqua)"
+        else "[[ $hash$tag ](fg:color_fg0 bg:color_aqua)]($style)";
+      only_detached = true;
+      tag_disabled = false;
+      tag_symbol = " 🏷 ";
+    };
+
+    git_state = {
+      style = "bg:color_aqua";
+      format =
+        if codexCompatible
+        then "[ $state( $progress_current/$progress_total) ](fg:color_fg0 bg:color_aqua)"
+        else "[[ $state( $progress_current/$progress_total) ](fg:color_fg0 bg:color_aqua)]($style)";
+    };
+
+    git_status = {
+      style = "bg:color_aqua";
+      format =
+        if codexCompatible
+        then "[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)"
+        else "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
+      # p10k-style symbols with counts
+      ahead = "⇡\${count}";
+      behind = "⇣\${count}";
+      diverged = "⇡\${ahead_count}⇣\${behind_count}";
+      up_to_date = "=";
+      conflicted = "~\${count}";
+      stashed = "*\${count}";
+      staged = "+\${count}";
+      modified = "!\${count}";
+      untracked = "?\${count}";
+      deleted = "✘\${count}";
+      renamed = "»\${count}";
+    };
+
+    status = {
+      disabled = false;
+      format = " [${lc}](fg:color_red)[ $symbol$status ](fg:color_fg0 bg:color_red)[${rc}](fg:color_red)";
+      symbol = "✘ ";
+      style = "fg:color_red";
+    };
+
+    # right side — language pills (blue)
+    c = {
+      symbol = " ";
+      style = "bg:color_blue";
+      format = " [${lc}](fg:color_blue)[ $symbol($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
+    };
+
+    cpp = {
+      symbol = " ";
+      style = "bg:color_blue";
+      format = " [${lc}](fg:color_blue)[ $symbol($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
+    };
+
+    rust = {
+      symbol = "";
+      style = "bg:color_blue";
+      format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
+    };
+
+    java = {
+      symbol = "";
+      style = "bg:color_blue";
+      format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
+    };
+
+    python = {
+      symbol = "";
+      style = "bg:color_blue";
+      format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
+    };
+
+    # right side — dev env pills (aqua)
+    direnv = {
+      disabled = false;
+      style = "bg:color_aqua";
+      format = " [${lc}](fg:color_aqua)[ $loaded/$allowed ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
+    };
+
+    nix_shell = {
+      symbol = " ";
+      style = "bg:color_aqua";
+      format = " [${lc}](fg:color_aqua)[ $symbol$state ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
+    };
+
+    # right side — infra pills (purple)
+    kubernetes = {
+      disabled = false;
+      symbol = "☸ ";
+      style = "bg:color_purple";
+      format = " [${lc}](fg:color_purple)[ $symbol$namespace ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
+      contexts = [
+        { context_pattern = "gke_etsy-.*_us-central1_(?P<name>.*)"; context_alias = "$name"; }
+        { context_pattern = "vespa-cloud-(?P<env>[^_]+)_(?P<name>.*)"; context_alias = "vespa:$env/$name"; }
       ];
+    };
 
-      command_timeout = 1000;
-      palette = "gruvbox_dark";
+    docker_context = {
+      symbol = "";
+      style = "bg:color_purple";
+      format = " [${lc}](fg:color_purple)[ $symbol ($context) ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
+    };
 
-      palettes.gruvbox_dark = {
-        color_fg0 = "#fbf1c7";
-        color_bg1 = "#3c3836";
-        color_bg3 = "#665c54";
-        color_blue = "#458588";
-        color_aqua = "#689d6a";
-        color_green = "#98971a";
-        color_orange = "#d65d0e";
-        color_purple = "#b16286";
-        color_red = "#cc241d";
-        color_yellow = "#d79921";
-      };
+    container = {
+      disabled = false;
+      symbol = "⬡ ";
+      style = "bg:color_purple";
+      format = " [${lc}](fg:color_purple)[ $symbol$name ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
+    };
 
-      fill.symbol = " ";
+    # right side — perf pill (bg3)
+    cmd_duration = {
+      style = "bg:color_bg3";
+      format = " [${lc}](fg:color_bg3)[  $duration ](fg:color_fg0 bg:color_bg3)[${rc}](fg:color_bg3)";
+      min_time = 3000;
+    };
 
-      os = {
-        disabled = false;
-        style = "bg:color_orange fg:color_fg0";
-        format = "[ $symbol ]($style)";
-        symbols = {
-          Macos = "󰀵";
-          NixOS = "";
-          Linux = "󰌽";
-          Windows = "󰍲";
-          Ubuntu = "󰕈";
-          Fedora = "󰣛";
-          Arch = "󰣇";
-          Debian = "󰣚";
-          Alpine = "";
-        };
-      };
+    # right side — clock pill (bg1)
+    time = {
+      disabled = false;
+      time_format = "%R";
+      style = "bg:color_bg1";
+      format = " [${lc}](fg:color_bg1)[  $time ](fg:color_fg0 bg:color_bg1)[${rc}](fg:color_bg1)";
+    };
 
-      username.disabled = true;
+    line_break.disabled = false;
 
-      # adaptive cwd: full path (with ~ for $HOME) when the terminal is wide
-      # enough, otherwise `…/<basename>` — starship's built-in directory module
-      # can't branch on terminal width, so we shell out via a custom module.
-      custom.dir = {
-        when = true;
-        command = ''
-          cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}')
-          : "''${cols:=80}"
-          p=$PWD
-          case "$p" in
-            "$HOME") p="~" ;;
-            "$HOME"/*) p="~''${p#$HOME}" ;;
-          esac
-          if [ "$cols" -ge 120 ]; then
-            printf '%s' "$p"
-          else
-            printf '…/%s' "$(basename "$p")"
-          fi
-        '';
-        style = "fg:color_fg0 bg:color_yellow";
-        format = "[ $output ]($style)";
-      };
+    character = {
+      disabled = false;
+      success_symbol = "[❯](bold fg:color_green)";
+      error_symbol = "[❯](bold fg:color_red)";
+      vimcmd_symbol = "[❮](bold fg:color_green)";
+      vimcmd_replace_one_symbol = "[❮](bold fg:color_purple)";
+      vimcmd_replace_symbol = "[❮](bold fg:color_purple)";
+      vimcmd_visual_symbol = "[❮](bold fg:color_yellow)";
+    };
+  };
 
-      git_branch = {
-        symbol = "";
-        style = "bg:color_aqua";
-        format = "[[ $symbol $branch ](fg:color_fg0 bg:color_aqua)]($style)";
-      };
+  codexStarshipConfig = (pkgs.formats.toml {}).generate "starship-codex.toml" (
+    mkSettings {
+      lc = codexLc;
+      rc = codexRc;
+      osSymbols = codexOsSymbols;
+      codexCompatible = true;
+    }
+  );
+in {
+  xdg.configFile."starship-codex.toml".source = codexStarshipConfig;
 
-      git_commit = {
-        style = "bg:color_aqua";
-        format = "[[ $hash$tag ](fg:color_fg0 bg:color_aqua)]($style)";
-        only_detached = true;
-        tag_disabled = false;
-        tag_symbol = " 🏷 ";
-      };
+  programs.starship = {
+    enable = true;
+    enableZshIntegration = true;
 
-      git_state = {
-        style = "bg:color_aqua";
-        format = "[[ $state( $progress_current/$progress_total) ](fg:color_fg0 bg:color_aqua)]($style)";
-      };
-
-      git_status = {
-        style = "bg:color_aqua";
-        format = "[[($all_status$ahead_behind )](fg:color_fg0 bg:color_aqua)]($style)";
-        # p10k-style symbols with counts
-        ahead = "⇡\${count}";
-        behind = "⇣\${count}";
-        diverged = "⇡\${ahead_count}⇣\${behind_count}";
-        up_to_date = "=";
-        conflicted = "~\${count}";
-        stashed = "*\${count}";
-        staged = "+\${count}";
-        modified = "!\${count}";
-        untracked = "?\${count}";
-        deleted = "✘\${count}";
-        renamed = "»\${count}";
-      };
-
-      status = {
-        disabled = false;
-        format = " [${lc}](fg:color_red)[ $symbol$status ](fg:color_fg0 bg:color_red)[${rc}](fg:color_red)";
-        symbol = "✘ ";
-        style = "fg:color_red";
-      };
-
-      # right side — language pills (blue)
-      c = {
-        symbol = " ";
-        style = "bg:color_blue";
-        format = " [${lc}](fg:color_blue)[ $symbol($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
-      };
-
-      cpp = {
-        symbol = " ";
-        style = "bg:color_blue";
-        format = " [${lc}](fg:color_blue)[ $symbol($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
-      };
-
-      rust = {
-        symbol = "";
-        style = "bg:color_blue";
-        format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
-      };
-
-      java = {
-        symbol = "";
-        style = "bg:color_blue";
-        format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
-      };
-
-      python = {
-        symbol = "";
-        style = "bg:color_blue";
-        format = " [${lc}](fg:color_blue)[ $symbol ($version) ](fg:color_fg0 bg:color_blue)[${rc}](fg:color_blue)";
-      };
-
-      # right side — dev env pills (aqua)
-      direnv = {
-        disabled = false;
-        style = "bg:color_aqua";
-        format = " [${lc}](fg:color_aqua)[ $loaded/$allowed ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
-      };
-
-      nix_shell = {
-        symbol = " ";
-        style = "bg:color_aqua";
-        format = " [${lc}](fg:color_aqua)[ $symbol$state ](fg:color_fg0 bg:color_aqua)[${rc}](fg:color_aqua)";
-      };
-
-      # right side — infra pills (purple)
-      kubernetes = {
-        disabled = false;
-        symbol = "☸ ";
-        style = "bg:color_purple";
-        format = " [${lc}](fg:color_purple)[ $symbol$namespace ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
-        contexts = [
-          { context_pattern = "gke_etsy-.*_us-central1_(?P<name>.*)"; context_alias = "$name"; }
-          { context_pattern = "vespa-cloud-(?P<env>[^_]+)_(?P<name>.*)"; context_alias = "vespa:$env/$name"; }
-        ];
-      };
-
-      docker_context = {
-        symbol = "";
-        style = "bg:color_purple";
-        format = " [${lc}](fg:color_purple)[ $symbol ($context) ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
-      };
-
-      container = {
-        disabled = false;
-        symbol = "⬡ ";
-        style = "bg:color_purple";
-        format = " [${lc}](fg:color_purple)[ $symbol$name ](fg:color_fg0 bg:color_purple)[${rc}](fg:color_purple)";
-      };
-
-      # right side — perf pill (bg3)
-      cmd_duration = {
-        style = "bg:color_bg3";
-        format = " [${lc}](fg:color_bg3)[  $duration ](fg:color_fg0 bg:color_bg3)[${rc}](fg:color_bg3)";
-        min_time = 3000;
-      };
-
-      # right side — clock pill (bg1)
-      time = {
-        disabled = false;
-        time_format = "%R";
-        style = "bg:color_bg1";
-        format = " [${lc}](fg:color_bg1)[  $time ](fg:color_fg0 bg:color_bg1)[${rc}](fg:color_bg1)";
-      };
-
-      line_break.disabled = false;
-
-      character = {
-        disabled = false;
-        success_symbol = "[❯](bold fg:color_green)";
-        error_symbol = "[❯](bold fg:color_red)";
-        vimcmd_symbol = "[❮](bold fg:color_green)";
-        vimcmd_replace_one_symbol = "[❮](bold fg:color_purple)";
-        vimcmd_replace_symbol = "[❮](bold fg:color_purple)";
-        vimcmd_visual_symbol = "[❮](bold fg:color_yellow)";
-      };
+    settings = mkSettings {
+      lc = powerlineLc;
+      rc = powerlineRc;
+      osSymbols = nerdOsSymbols;
     };
   };
 }
