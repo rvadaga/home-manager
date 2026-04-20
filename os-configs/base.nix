@@ -14,6 +14,7 @@
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
   home = {
     file = {
+      ".codex/AGENTS.md".text = builtins.readFile ../dotfiles/codex/AGENTS-base.md;
       ".claude/CLAUDE.md".text = builtins.readFile ../dotfiles/claude/CLAUDE-base.md;
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;

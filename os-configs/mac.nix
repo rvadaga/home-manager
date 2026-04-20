@@ -3,6 +3,10 @@
   claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
   home = {
     file = {
+      ".codex/AGENTS.md".text = lib.mkAfter (
+        "\n\n" + builtins.readFile ../dotfiles/codex/AGENTS-mac.md
+      );
+
       ".claude/CLAUDE.md".text = lib.mkAfter (
         "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-mac.md
       );

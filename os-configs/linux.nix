@@ -2,6 +2,10 @@
   # claude configuration
   claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-linux.json)) ];
   home = {
+    file.".codex/AGENTS.md".text = lib.mkAfter (
+      "\n\n" + builtins.readFile ../dotfiles/codex/AGENTS-linux.md
+    );
+
     file.".claude/CLAUDE.md".text = lib.mkAfter (
       "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-linux.md
     );
