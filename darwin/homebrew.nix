@@ -15,6 +15,7 @@
       "chatgpt"
       "claude"
       "codex"
+      "codex-app"
       "docker-desktop"
       "ghostty"
       "google-chrome"
