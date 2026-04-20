@@ -1,0 +1,1 @@
+* **this repo is personal - never include work-specific content.** no employer names, internal hostnames, project names, team names, or any other work-identifying details in any file under `~/.config/home-manager/`. use generic placeholders in examples (e.g. `example.com`, `my-project`, `corp-cluster`). work config lives in `~/.config/work-home-manager/` exclusively.
