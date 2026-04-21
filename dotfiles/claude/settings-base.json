@@ -30,7 +30,8 @@
       "url": "https://mcp.slack.com/mcp"
     }
   },
-  "model": "claude-opus-4-6",
+  "model": "claude-opus-4-7",
+  "thinkingBudgetTokens": 128000,
   "outputStyle": "explanatory",
   "permissions": {
     "allow": [
