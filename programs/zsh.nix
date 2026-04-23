@@ -66,6 +66,18 @@
       # source some helper functions
       source ~/.config/home-manager/scripts/functions.sh;
 
+      # tab/window title: show running command name during execution, cwd at prompt.
+      # uses add-zsh-hook so ghostty's own preexec/precmd hooks (OSC 133 semantic zones)
+      # are preserved alongside these.
+      function _tab_title_preexec() {
+        printf '\033]0;▶ %s\a' "''${1%% *}"
+      }
+      function _tab_title_precmd() {
+        printf '\033]0;%s\a' "''${PWD/#$HOME/~}"
+      }
+      add-zsh-hook preexec _tab_title_preexec
+      add-zsh-hook precmd _tab_title_precmd
+
     '';
   };
 }
