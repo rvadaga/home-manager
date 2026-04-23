@@ -35,6 +35,7 @@ in {
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
+      ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/commands/notes.md".source = ../dotfiles/claude/commands/notes.md;
     };
 
@@ -66,6 +67,9 @@ in {
       pkgs.yq-go
       (pkgs.writeShellScriptBin "xless" ''
         yq -p xml -o json . $1 | jless
+      '')
+      (pkgs.writeShellScriptBin "claude-strip-images" ''
+        exec ${pkgs.python3}/bin/python3 ${../scripts/claude-strip-images.py} "$@"
       '')
 
       # build and task runners
