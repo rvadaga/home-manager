@@ -14,7 +14,7 @@ in
       font-size = 14;
       font-style = "Semibold";
       theme = "Starlight";
-      scrollback-limit = 100000;
+      scrollback-limit = 500000;
 
       # bell — disable audible bell, keep notification features
       bell-features = "no-audio";
