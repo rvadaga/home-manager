@@ -32,7 +32,7 @@
     };
   };
 
-  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, nix-index-database, ... }@inputs:
+  outputs = { darwin-stable, nixos-stable, darwin-unstable, nixos-unstable, staging, staging-next, home-manager, nix-darwin, cloudflare-speed-cli, ghostty, googleworkspace-cli, nix-index-database, ... }@inputs:
     let
       unfreeConfig = {
         allowUnfree = true;
@@ -65,6 +65,9 @@
           cloudflare-speed-cli.overlays.default
           (final: prev: {
             ghostty-tip = ghostty.packages.${system}.default;
+          })
+          (final: prev: {
+            gws = googleworkspace-cli.packages.${system}.gws;
           })
         ];
 
@@ -144,6 +147,9 @@
       overlays = {
         ghostty-tip = final: prev: {
           ghostty-tip = ghostty.packages.${prev.stdenv.hostPlatform.system}.default;
+        };
+        gws = final: prev: {
+          gws = googleworkspace-cli.packages.${prev.stdenv.hostPlatform.system}.gws;
         };
       };
 
