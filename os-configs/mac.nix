@@ -28,11 +28,15 @@
   programs.ssh = {
     enable = true;
     enableDefaultConfig = false;
+    extraConfig = ''
+      IgnoreUnknown UseKeychain
+    '';
     matchBlocks = {
       "*" = {
         extraOptions = {
           AddKeysToAgent = "yes";
           IdentitiesOnly = "yes";
+          UseKeychain = "yes";
         };
       };
       "github.com" = {
@@ -41,5 +45,8 @@
         identityFile = "~/.ssh/id_ed25519";
       };
     };
+    includes = [
+      "~/.step/ssh/includes"
+    ];
   };
 }
