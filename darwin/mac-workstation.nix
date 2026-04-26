@@ -1,4 +1,7 @@
-{ lib, ... }: {
+{ config, lib, ... }:
+let
+  user = config.users.users.${config.system.primaryUser};
+in {
   imports = [ ./common.nix ];
 
   system.primaryUser = "rahul";
@@ -13,7 +16,7 @@
   # tracing of Dock.app during space switches.
   environment.etc."sudoers.d/dtrace-nopasswd" = {
     text = ''
-      rahul ALL=(ALL) NOPASSWD: /usr/sbin/dtrace, /usr/bin/pkill, /bin/kill
+      ${user.name} ALL=(ALL) NOPASSWD: /usr/sbin/dtrace, /usr/bin/pkill, /bin/kill, /run/current-system/sw/bin/darwin-rebuild
     '';
   };
 
