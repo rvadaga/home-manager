@@ -13,7 +13,7 @@ in
       font-family = "FiraCode Nerd Font Mono";
       font-size = 14;
       font-style = "Semibold";
-      theme = "Starlight";
+      theme = "Gruvbox Dark Hard";
       scrollback-limit = 100000000;
 
       # bell — disable audible bell, keep notification features
