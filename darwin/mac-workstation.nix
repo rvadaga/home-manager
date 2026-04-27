@@ -11,12 +11,13 @@ in {
     home = "/Users/rahul";
   };
 
-  # mac-workstation has SIP disabled for paneherd menu bar investigation —
-  # allow dtrace + signal-sending without password to streamline runtime
-  # tracing of Dock.app during space switches.
+  # mac-workstation has SIP disabled for paneherd runtime investigation —
+  # allow dtrace, lldb, and signal-sending without password to streamline
+  # tracing + debugger attach against running processes (e.g. Dock.app
+  # during space switches, BetterTouchTool during cross-space window moves).
   environment.etc."sudoers.d/dtrace-nopasswd" = {
     text = ''
-      ${user.name} ALL=(ALL) NOPASSWD: /usr/sbin/dtrace, /usr/bin/pkill, /bin/kill, /run/current-system/sw/bin/darwin-rebuild
+      ${user.name} ALL=(ALL) NOPASSWD: /usr/sbin/dtrace, /usr/bin/lldb, /usr/bin/pkill, /bin/kill, /run/current-system/sw/bin/darwin-rebuild
     '';
   };
 
