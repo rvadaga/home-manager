@@ -13,6 +13,13 @@
     * always read the pr description from github before updating it (user may have made changes via github ui)
 * when creating a branch
     * prefix the name with rahul/
+* worktree branch naming (claude-auto-named branches)
+    * claude code's worktree toggle creates branches with auto-generated random names — two lowercase words optionally followed by a 6-char hex suffix (e.g., `kind-matsumoto-bdf245`, `beautiful-gates`, `condescending-faraday-309090`, `dreamy-jemison`). these names don't communicate the work being done.
+    * detect the pattern: branch matches regex `^[a-z]+-[a-z]+(-[a-f0-9]{6})?$` AND has no `/` separator AND is not prefixed `rahul/` → it's claude-auto-generated.
+    * **proactively** rename such branches by running `/wt-name` once the user's task is clear (jira ticket, topic, or scope visible from the conversation). do this without being asked — it is an expected default behavior.
+    * if the task is ambiguous and you cannot infer a confident name, **ask the user once** for the topic or jira ticket before continuing. do not guess.
+    * **never push** a branch matching the auto-name pattern. before any `git push` (including the first push to set upstream), check the current branch name; if it matches, run `/wt-name` first.
+    * rename only the branch (`git branch -m <old> <new>`), never move the worktree directory — directory moves break the current session's cwd resolution.
 * when making any nix config changes:
     * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then rebuild to apply
     * do not ask whether to rebuild after nix config changes unless the user explicitly asks not to rebuild or the rebuild target is genuinely ambiguous
