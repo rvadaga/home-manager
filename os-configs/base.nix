@@ -35,6 +35,7 @@ in {
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/commands/notes.md".source = ../dotfiles/claude/commands/notes.md;
+      ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
     };
 
     packages = [
