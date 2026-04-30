@@ -65,6 +65,8 @@ in {
     trackpad = {
       Clicking = lib.mkDefault true;
       TrackpadThreeFingerDrag = lib.mkDefault true;
+      # 3-finger tap → look up & data detectors (0 = off, 2 = on)
+      TrackpadThreeFingerTapGesture = lib.mkDefault 2;
     };
 
     screensaver.askForPasswordDelay = lib.mkDefault 5;
