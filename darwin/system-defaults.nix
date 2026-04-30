@@ -60,6 +60,8 @@ in {
       NSAutomaticQuoteSubstitutionEnabled = lib.mkDefault false;
       # full keyboard access — tab cycles focus through all controls in dialogs
       AppleKeyboardUIMode = lib.mkDefault 3;
+      # tap-to-click; the System Settings toggle reads this, not trackpad.Clicking
+      "com.apple.mouse.tapBehavior" = lib.mkDefault 1;
     };
 
     trackpad = {
@@ -127,4 +129,10 @@ in {
     };
   };
 
+  # the System Settings "Look up & data detectors" dropdown reads the ByHost
+  # key, not the per-app trackpad domain that nix-darwin's structured options
+  # write to. set it during user activation so a 3-finger tap actually fires.
+  system.activationScripts.postUserActivation.text = lib.mkAfter ''
+    /usr/bin/defaults -currentHost write -g com.apple.trackpad.threeFingerTapGesture -int 2
+  '';
 }
