@@ -66,6 +66,34 @@
       # source some helper functions
       source ~/.config/home-manager/scripts/functions.sh;
 
+      # override omz git plugin's gwtls (= git worktree list) to print only
+      # the worktree directory basename instead of the full absolute path
+      unalias gwtls 2>/dev/null
+      gwtls() {
+        git worktree list --porcelain "$@" | awk '
+          /^worktree / {
+            path = $0
+            sub(/^worktree /, "", path)
+            n = split(path, a, "/")
+            name = a[n]
+          }
+          /^HEAD / { sha = substr($2, 1, 10) }
+          /^branch / {
+            br = $2
+            sub(/^refs\/heads\//, "", br)
+            label = "[" br "]"
+          }
+          /^detached/ { label = "(detached HEAD)" }
+          /^$/ {
+            if (name) printf "%-40s %s %s\n", name, sha, label
+            name = ""; sha = ""; label = ""
+          }
+          END {
+            if (name) printf "%-40s %s %s\n", name, sha, label
+          }
+        '
+      }
+
     '';
   };
 }
