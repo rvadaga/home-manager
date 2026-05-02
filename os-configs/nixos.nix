@@ -39,4 +39,30 @@
     X-KDE-autostart-after=panel
     X-GNOME-Autostart-enabled=true
   '';
+
+  # ensure remote keyboard/mouse control is enabled in krfbrc.
+  # the file is otherwise imperative (kwallet-backed password, gui-managed),
+  # so we patch only the [Security] keys we care about and leave the rest alone.
+  # idempotent: re-running adds nothing if the key already has the right value.
+  home.activation.krfbDesktopControl = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    KRFBRC="$HOME/.config/krfbrc"
+    if [ -f "$KRFBRC" ]; then
+      if ! ${pkgs.gnugrep}/bin/grep -q '^allowDesktopControl=true$' "$KRFBRC"; then
+        # remove any existing allowDesktopControl line, then append a true one
+        # under [Security]. uses awk for an in-place section-aware insert.
+        ${pkgs.gawk}/bin/awk '
+          BEGIN { added = 0; in_security = 0 }
+          /^\[Security\]/ { in_security = 1; print; next }
+          /^\[/ && in_security {
+            if (!added) { print "allowDesktopControl=true"; added = 1 }
+            in_security = 0; print; next
+          }
+          /^allowDesktopControl=/ { next }
+          { print }
+          END { if (in_security && !added) print "allowDesktopControl=true" }
+        ' "$KRFBRC" > "$KRFBRC.tmp" && mv "$KRFBRC.tmp" "$KRFBRC"
+        echo "krfbrc: enabled allowDesktopControl"
+      fi
+    fi
+  '';
 }
