@@ -6,6 +6,13 @@ let
   # generate them from codepoints at build time instead.
   rc = builtins.fromJSON ''"\ue0b4"'';  # right cap  (closes a segment)
   lc = builtins.fromJSON ''"\ue0b6"'';  # left cap   (opens a segment)
+
+  # nerd font os glyphs that live in BMP private-use-area (U+E000\u2013U+F8FF).
+  # the Write tool strips raw BMP-PUA characters, so we materialize them
+  # from JSON \u escapes at evaluation time. supplementary-PUA glyphs
+  # (Macos, Linux, etc. at U+F0035+) survive verbatim and stay inline below.
+  nixosGlyph  = builtins.fromJSON ''"\uf313"'';  # nf-linux-nixos
+  alpineGlyph = builtins.fromJSON ''"\uf300"'';  # nf-linux-alpine
 in {
   programs.starship = {
     enable = true;
@@ -83,14 +90,14 @@ in {
         format = "[ $symbol ]($style)";
         symbols = {
           Macos = "󰀵";
-          NixOS = "";
+          NixOS = nixosGlyph;
           Linux = "󰌽";
           Windows = "󰍲";
           Ubuntu = "󰕈";
           Fedora = "󰣛";
           Arch = "󰣇";
           Debian = "󰣚";
-          Alpine = "";
+          Alpine = alpineGlyph;
         };
       };
 

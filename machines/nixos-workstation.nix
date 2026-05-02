@@ -14,4 +14,10 @@
       HM_CONFIG_NAME = "nixos-workstation";
     };
   };
+
+  claude.settingsPieces = lib.mkAfter [{
+    permissions = {
+      defaultMode = "bypassPermissions";
+    };
+  }];
 }
