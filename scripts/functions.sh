@@ -234,3 +234,44 @@ cdiff() {
 
   code --diff "$left_path" "$right_path"
 }
+
+function claude-recent() {
+  local n=${1:-10}
+  local sessions_dir="$HOME/Library/Application Support/Claude/claude-code-sessions"
+  local tmpnames="/tmp/cc-session-titles.tsv"
+  local tmpfiles="/tmp/cc-recent-files.tsv"
+
+  find "$sessions_dir" -name 'local_*.json' -exec \
+    jq -r 'select(.cliSessionId != null and .title != null)
+      | "\(.cliSessionId)\t\(.title)"' {} + > "$tmpnames" 2>/dev/null
+
+  find ~/.claude/projects -name '*.jsonl' -type f \
+    -exec gstat -c '%Y %n' {} + \
+    | sort -rn \
+    | head -"$n" > "$tmpfiles"
+
+  awk -v names="$tmpnames" '
+    BEGIN { while ((getline line < names) > 0) {
+      split(line, a, "\t"); nm[a[1]] = a[2]
+    }}
+    {
+      epoch = $1; path = $2
+      file = path; gsub(/.*\//, "", file); sub(/\.jsonl$/, "", file)
+      sid = file
+
+      cmd = "gdate -d @" epoch " +\"%Y-%m-%d %H:%M\""
+      cmd | getline ts; close(cmd)
+
+      if (sid in nm) {
+        display = nm[sid]
+      } else {
+        fcmd = "head -1 " path " | jq -r \".content // empty\" 2>/dev/null"
+        fcmd | getline display; close(fcmd)
+        gsub(/\n/, " ", display)
+      }
+      if (display == "") display = "(untitled)"
+      printf "%s  %.8s  %s\n  %s\n", ts, sid, substr(display, 1, 80), path
+    }' "$tmpfiles"
+
+  rm -f "$tmpnames" "$tmpfiles"
+}
