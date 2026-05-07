@@ -234,3 +234,44 @@ cdiff() {
 
   code --diff "$left_path" "$right_path"
 }
+
+function claude-recent() {
+  local n=${1:-10}
+  local history="$HOME/.claude/history.jsonl"
+  local tmpnames="/tmp/cc-session-names.tsv"
+  local tmpfiles="/tmp/cc-recent-files.tsv"
+
+  jq -r 'select(.display != null and .display != "")
+    | "\(.sessionId)\t\(.display | gsub("\n"; " "))"' "$history" \
+    | awk -F'\t' '!seen[$1]++ {print}' > "$tmpnames"
+
+  find ~/.claude/projects -name '*.jsonl' -type f \
+    -exec gstat -c '%Y %n' {} + \
+    | sort -rn \
+    | head -"$n" > "$tmpfiles"
+
+  awk -v names="$tmpnames" '
+    BEGIN { while ((getline line < names) > 0) {
+      split(line, a, "\t"); nm[a[1]] = a[2]
+    }}
+    {
+      epoch = $1; path = $2
+      gsub(/.*\//, "", path); sub(/\.jsonl$/, "", path)
+      sid = path
+
+      cmd = "gdate -d @" epoch " +\"%Y-%m-%d %H:%M\""
+      cmd | getline ts; close(cmd)
+
+      if (sid in nm) {
+        display = nm[sid]
+      } else {
+        fcmd = "head -1 " $2 " | jq -r \".content // empty\" 2>/dev/null"
+        fcmd | getline display; close(fcmd)
+        gsub(/\n/, " ", display)
+      }
+      if (display == "") display = "(no name)"
+      printf "%s  %.8s  %s\n", ts, sid, substr(display, 1, 80)
+    }' "$tmpfiles"
+
+  rm -f "$tmpnames" "$tmpfiles"
+}
