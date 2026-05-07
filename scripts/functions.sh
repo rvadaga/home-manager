@@ -270,7 +270,7 @@ function claude-recent() {
         gsub(/\n/, " ", display)
       }
       if (display == "") display = "(untitled)"
-      printf "%s  %.8s  %s\n", ts, sid, substr(display, 1, 80)
+      printf "%s  %.8s  %s\n  %s\n", ts, sid, substr(display, 1, 80), path
     }' "$tmpfiles"
 
   rm -f "$tmpnames" "$tmpfiles"
