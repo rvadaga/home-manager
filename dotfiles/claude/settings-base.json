@@ -1,5 +1,6 @@
 {
   "alwaysThinkingEnabled": true,
+  "autoUpdatesChannel": "latest",
   "hooks": {
     "SessionEnd": [
       {
@@ -31,10 +32,10 @@
     }
   },
   "model": "claude-opus-4-7[1m]",
-  "thinkingBudgetTokens": 1048576,
-  "outputStyle": "explanatory",
+  "outputStyle": "proactive",
   "permissions": {
     "allow": [
+      "Bash(awk:*)",
       "Bash(bq:*)",
       "Bash(chmod 600:*)",
       "Bash(claude plugin:*)",
@@ -141,31 +142,34 @@
       "mcp__plugin_slack_slack__slack_search_users"
     ],
     "ask": [
-      "Bash(grb:*)",
-      "Bash(grbm:*)",
-      "Bash(git rebase:*)",
-      "Bash(git -C * rebase:*)",
-      "Bash(gp --force:*)",
-      "Bash(gp --force-with-lease:*)",
-      "Bash(gp -f:*)",
-      "Bash(gpsup --force:*)",
-      "Bash(gpsup --force-with-lease:*)",
-      "Bash(gpsup -f:*)",
-      "Bash(git push --force:*)",
-      "Bash(git push --force-with-lease:*)",
-      "Bash(git push -f:*)",
-      "Bash(git -C * push --force:*)",
       "Bash(git -C * push --force-with-lease:*)",
-      "Bash(git -C * push -f:*)"
+      "Bash(git -C * push --force:*)",
+      "Bash(git -C * push -f:*)",
+      "Bash(git -C * rebase:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git rebase:*)",
+      "Bash(gp --force-with-lease:*)",
+      "Bash(gp --force:*)",
+      "Bash(gp -f:*)",
+      "Bash(gpsup --force-with-lease:*)",
+      "Bash(gpsup --force:*)",
+      "Bash(gpsup -f:*)",
+      "Bash(grb:*)",
+      "Bash(grbm:*)"
     ],
     "defaultMode": "auto",
     "deny": [
       "Bash(gf --all:*)",
       "Bash(gfo --all:*)",
-      "Bash(git fetch --all:*)",
-      "Bash(git -C * fetch --all:*)"
-    ]
+      "Bash(git -C * fetch --all:*)",
+      "Bash(git fetch --all:*)"
+    ],
+    "disableBypassPermissionsMode": "disable"
   },
   "skipAutoPermissionPrompt": true,
+  "skipDangerousModePermissionPrompt": true,
+  "thinkingBudgetTokens": 1048576,
   "verbose": false
 }
