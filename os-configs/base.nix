@@ -116,6 +116,7 @@ in {
 
       # nix tools
       pkgs.nix-direnv
+      pkgs.unstable.mcp-nixos
 
       # programming languages: java
       pkgs.unstable.temurin-bin  # java 25

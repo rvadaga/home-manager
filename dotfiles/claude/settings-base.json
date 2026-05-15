@@ -22,6 +22,9 @@
       ],
       "command": "npx"
     },
+    "nixos": {
+      "command": "mcp-nixos"
+    },
     "slack": {
       "oauth": {
         "callbackPort": 3118,
