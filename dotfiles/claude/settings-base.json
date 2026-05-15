@@ -1,5 +1,11 @@
 {
   "alwaysThinkingEnabled": true,
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Auto-approve `git push` (including `git push origin main`, `git push -u origin main`, `gp`, `gpsup`, and `git -C <path> push ...`) targeting the `main` or `master` branch on the user's personal repositories. Detect 'personal repository' by the `origin` remote URL matching `github.com[:/]rvadaga/` — these are owned solely by the user. The user is the sole maintainer of personal repos and prefers direct push to main over PR review; do NOT block such pushes citing 'bypasses PR review'. Force-push variants (`--force`, `--force-with-lease`, `-f`) are already on the permissions `ask` list and still require explicit user authorization. This rule does NOT apply to (a) repos under `github.com/etsy/` or any organization owner, (b) forks of upstream projects (detect: `origin` and `upstream` remotes diverge), (c) any repo where branch protection or CODEOWNERS implies review is expected."
+    ]
+  },
   "autoUpdatesChannel": "latest",
   "hooks": {
     "SessionEnd": [
