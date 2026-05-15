@@ -6,6 +6,7 @@ in {
     ./nix.nix
     ./homebrew.nix
     ./system-defaults.nix
+    ./provenance.nix
   ];
 
   # fonts must be installed at the system level on macos — home-manager's

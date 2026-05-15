@@ -98,6 +98,9 @@
       mkDarwinConfiguration = { darwinModule, homeManagerModule, system, user }:
         nix-darwin.lib.darwinSystem {
           inherit system;
+          # `inputs` (and thus `inputs.self`) must be in scope for
+          # darwin/provenance.nix to stamp the active system with the flake rev.
+          specialArgs = { inherit inputs; };
           modules = [
             darwinModule
             home-manager.darwinModules.home-manager
@@ -173,6 +176,9 @@
         base = ./darwin/nix.nix;
         desktop = ./darwin/system-defaults.nix;
         homebrew = ./darwin/homebrew.nix;
+        # downstream consumers must also set `specialArgs = { inherit inputs; }`
+        # on their darwinSystem so provenance.nix can read inputs.self.
+        provenance = ./darwin/provenance.nix;
       };
     };
 }

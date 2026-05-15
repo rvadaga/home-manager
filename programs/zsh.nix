@@ -66,6 +66,43 @@
       # source some helper functions
       source ~/.config/home-manager/scripts/functions.sh;
 
+      # print the active system's flake provenance and compare with the current
+      # worktree's git state. analog of paneherd's
+      # `defaults read /Applications/PaneHerd.app/Contents/Info.plist ProjectRoot`.
+      # use after `darwin-rebuild switch` to confirm the active system was built
+      # from the source state you intended (see CLAUDE.md parallel-worktree
+      # foot-gun).
+      nix-provenance() {
+        local pf=/etc/nix-config-provenance
+        if [ ! -r "$pf" ]; then
+          echo "no provenance at $pf — host hasn't activated since the provenance module landed, or it's not nix-darwin managed"
+          return 1
+        fi
+        echo "== active system =="
+        cat "$pf"
+        if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+          local cur_rev cur_dirty active_rev
+          cur_rev=$(git rev-parse HEAD 2>/dev/null)
+          cur_dirty=""
+          if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+            cur_dirty="-dirty"
+          fi
+          echo
+          echo "== current worktree =="
+          echo "path=$(pwd)"
+          echo "rev=$cur_rev$cur_dirty"
+          echo "branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)"
+          active_rev=$(awk -F= '/^rev=/{print $2; exit}' "$pf")
+          echo
+          if [ "$active_rev" = "$cur_rev$cur_dirty" ]; then
+            echo "match — active system is from this worktree state"
+          else
+            echo "mismatch — active=$active_rev worktree=$cur_rev$cur_dirty"
+            echo "  rebuild from here to make this worktree's changes live."
+          fi
+        fi
+      }
+
     '';
   };
 }

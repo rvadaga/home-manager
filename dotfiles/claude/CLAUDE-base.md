@@ -58,6 +58,17 @@ when a change is large enough to warrant multiple prs:
 * **macos (nix-darwin):** `darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
 * **linux (home-manager):** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
 
+## parallel-worktree foot-gun
+
+* **the active system carries no visible cue about which worktree it was built from.** parallel worktrees of this config all activate into the same `/run/current-system` (and home-manager profile); whichever one ran `darwin-rebuild switch` most recently wins. before trusting "i rebuilt and my change took effect" — and before reporting a fix as verified — confirm the active system was built from this worktree. `darwin/provenance.nix` writes the flake's rev + content hash to `/etc/nix-config-provenance` at activation, and the `nix-provenance` zsh function reads it and compares with the current worktree's git state:
+  ```bash
+  cat /etc/nix-config-provenance   # rev, narHash, lastModified, storePath
+  nix-provenance                   # same, plus comparison with `pwd`'s git state
+  ```
+  rev mismatch → rebuild from this worktree. rev matches but you've edited since → `narHash` (and the `-dirty` suffix on rev) catches that; rebuild anyway. analog of paneherd's `Info.plist` `ProjectRoot` / `BuildCommit` keys.
+* this only kicks in on nix-darwin (the module lives under `darwin/`). linux home-manager doesn't have an equivalent stamp yet.
+* downstream configs (work) must opt in by importing `inputs.personal-config.darwinModules.provenance` and ensuring their `darwinSystem` sets `specialArgs = { inherit inputs; }`.
+
 ## multi-repo structure
 
 the personal/base config (`~/.config/home-manager`) can be imported as a flake input by other configs (e.g., work-specific configs). on machines with layered configs:
