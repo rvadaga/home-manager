@@ -42,13 +42,13 @@ rename only the branch — leave the worktree directory alone. moving the direct
 
 the auto-generated pattern is:
 - two random lowercase words separated by `-`, optionally followed by a 6-character hex suffix
-- examples: `kind-matsumoto`, `beautiful-gates`, `condescending-faraday-309090`, `dreamy-jemison`
-- if the current branch matches `^[a-z]+-[a-z]+(-[a-f0-9]{6})?$` and has no `/` in it, treat as auto-generated
+- examples: `kind-matsumoto`, `beautiful-gates`, `condescending-faraday-309090`, `dreamy-jemison`, `rahul/busy-taussig-692fab`, `rahul/sweet-edison-b38582`
+- if the current branch matches `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, treat as auto-generated. this covers both bare auto-names AND `rahul/<auto-name>` patterns where the prefix was added but the body is still random words — those still don't communicate the work being done
 
 names that should NOT be renamed (already meaningful):
-- anything starting with `rahul/`
-- anything containing a slash (`worktree-foo/bar`, `feature/x`)
-- branches that don't match the random-word pattern
+- `rahul/<topic>` where `<topic>` is a real word or jira-style identifier (e.g. `rahul/fix-auth-bug`, `rahul/s2-306-prod-query-pipeline`) — distinguished from `rahul/<two-random-words>(-<6-hex>)?` by the regex above
+- anything containing a slash that isn't the `rahul/<auto-name>` shape (`worktree-foo/bar`, `feature/x`)
+- branches that don't match the random-word pattern at all
 
 ## notes
 

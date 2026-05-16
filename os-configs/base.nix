@@ -36,6 +36,72 @@ in {
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/commands/notes.md".source = ../dotfiles/claude/commands/notes.md;
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
+
+      # nix-provenance: print the active system's flake provenance (written to
+      # /etc/nix-config-provenance by darwin/provenance.nix at activation) and
+      # compare with the current worktree's git state. use after `darwin-rebuild
+      # switch` to confirm the active system was built from the source state
+      # you intended (see CLAUDE.md parallel-worktree foot-gun).
+      #
+      # bash script (not a zsh function) so it works in any shell, including
+      # the claude-code bash harness. mirrors the ecurl/esudo pattern.
+      ".local/bin/nix-provenance" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          # repo-awareness: only suggest "rebuild from here" when pwd is itself
+          # a nix-config flake repo (flake.nix at its top). otherwise the
+          # rev/narHash in the provenance file belongs to a different flake
+          # and pwd's git state isn't a rebuild-actionable signal.
+          set -uo pipefail
+
+          pf=/etc/nix-config-provenance
+          if [ ! -r "$pf" ]; then
+            echo "no provenance at $pf — host hasn't activated since the provenance module landed, or it's not nix-darwin managed"
+            exit 1
+          fi
+          echo "== active system =="
+          cat "$pf"
+
+          if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          cur_rev=$(git rev-parse HEAD 2>/dev/null)
+          cur_dirty=""
+          if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+            cur_dirty="-dirty"
+          fi
+          repo_top=$(git rev-parse --show-toplevel 2>/dev/null)
+          is_flake_repo=no
+          if [ -n "$repo_top" ] && [ -f "$repo_top/flake.nix" ]; then
+            is_flake_repo=yes
+          fi
+          cur_origin=$(git config --get remote.origin.url 2>/dev/null)
+          active_rev=$(awk -F= '/^rev=/{print $2; exit}' "$pf")
+
+          echo
+          echo "== current worktree =="
+          echo "path=$(pwd)"
+          echo "rev=$cur_rev$cur_dirty"
+          echo "branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo detached)"
+          echo "origin=''${cur_origin:-<none>}"
+          echo
+
+          if [ "$is_flake_repo" != yes ]; then
+            echo "(pwd is not a nix-config flake repo — comparison is informational only, not a rebuild signal)"
+            exit 0
+          fi
+
+          if [ "$active_rev" = "$cur_rev$cur_dirty" ]; then
+            echo "match — active system is from this flake repo at this rev"
+          else
+            echo "mismatch — active=$active_rev worktree=$cur_rev$cur_dirty"
+            echo "  if this repo built the active system: rebuild from here to make your changes live."
+            echo "  if this repo did NOT build the active system (different flake): no rebuild needed from here."
+          fi
+        '';
+      };
     };
 
     packages = [
