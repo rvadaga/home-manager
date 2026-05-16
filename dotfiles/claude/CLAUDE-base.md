@@ -74,7 +74,13 @@ when a change is large enough to warrant multiple prs:
 
 ## parallel-worktree foot-gun
 
-* **the active system carries no visible cue about which worktree it was built from.** parallel worktrees of this config all activate into the same `/run/current-system` (and home-manager profile); whichever one ran `darwin-rebuild switch` most recently wins. before trusting "i rebuilt and my change took effect" — and before reporting a fix as verified — confirm the active system was built from this worktree. `darwin/provenance.nix` writes the flake's rev + content hash to `/etc/nix-config-provenance` at activation, and the `nix-provenance` zsh function reads it and compares with the current worktree's git state:
+* **the active system carries no visible cue about which worktree it was built from.** parallel worktrees of this config all activate into the same `/run/current-system` (and home-manager profile); whichever one ran `darwin-rebuild switch` most recently wins. **run `nix-provenance` as your FIRST diagnostic in any of these situations**, before deeper troubleshooting:
+    * before trusting "i rebuilt and my change took effect" / before reporting a fix as verified
+    * when an expected change isn't visible in the active system ("i added module X but it's not loaded", "i edited setting Y but the system still shows the old value", "my new alias / script / command isn't on PATH")
+    * when behavior diverges from what the source files imply (e.g. you read a file and it has feature A, but the running system behaves like it's still on the old version)
+    * before blaming a bug on the code — first rule out "wrong build is active"
+
+  `darwin/provenance.nix` writes the flake's rev + content hash to `/etc/nix-config-provenance` at activation; `~/.local/bin/nix-provenance` (PATH bash script installed via `os-configs/base.nix`) reads it and compares with the current worktree's git state:
   ```bash
   cat /etc/nix-config-provenance   # rev, narHash, lastModified, storePath
   nix-provenance                   # same, plus comparison with `pwd`'s git state
