@@ -8,6 +8,17 @@
   },
   "autoUpdatesChannel": "latest",
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[^a-zA-Z0-9_-])(git[[:space:]]+push|gp|ggpush|gpsup|gpsupf|gpf|gpd|gpv|gpu|gpoat|gpod)([^a-zA-Z0-9_-]|$)'; then branch=$(git symbolic-ref --short HEAD 2>/dev/null); if [ -n \"$branch\" ] && printf '%s' \"$branch\" | grep -qE '^(rahul/)?[a-z]+-[a-z]+-[a-f0-9]{6}$'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing to push: current branch matches claude-auto-generated name pattern (two-word + 6-hex-suffix). rename it first via /wt-name (per CLAUDE.md branch naming rule).\"}}'; fi; fi"
+          }
+        ]
+      }
+    ],
     "SessionEnd": [
       {
         "hooks": [
