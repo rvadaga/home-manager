@@ -24,24 +24,14 @@
     * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then rebuild to apply
     * do not ask whether to rebuild after nix config changes unless the user explicitly asks not to rebuild or the rebuild target is genuinely ambiguous
     * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
-    * only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing
+    * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
 * commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
-* shipping a worktree to main ("squash merge", "land this worktree", "ship it") — follow this exact sequence; the cwd-deletion foot-gun makes improvising risky:
-    * commit any pending work in the worktree first
-    * fetch latest main: `git -C "$PROJ" fetch origin main` (where `$PROJ` is the main repo, e.g. `~/.config/home-manager`). if the worktree branch diverged, rebase it: `git rebase origin/main`
-    * squash-merge into main from inside the worktree using `git -C "$PROJ"` — never `cd` into the main repo, because the bash harness registers the worktree as cwd at session start and `cd` doesn't update that registration:
-      ```
-      PROJ=$HOME/.config/home-manager
-      git -C "$PROJ" merge --squash <branch>
-      git -C "$PROJ" commit -m "<message>"
-      git -C "$PROJ" push origin main
-      git push origin --delete <branch>     # remove the remote feature branch
-      ```
-    * **cleanup foot-gun (claude-code-specific)**: when the harness's registered cwd is the worktree and you `git worktree remove` it from this session, every subsequent Bash call fails to spawn — the harness still launches shells from the (now-deleted) path. so delegate the cleanup (`git worktree remove` + `git branch -D`) to an `Agent` spawned with `isolation: "worktree"` — the isolation flag gives the agent a separate cwd that survives the removal. a vanilla Agent without that flag inherits the same cwd registration and falls into the same trap. interactive terminals are unaffected; this is purely a claude-code harness quirk.
+* shipping a config change from a worktree ("ship it", "land this", "squash merge") → invoke the `/ship-config` skill. pr + squash merge is the default; the skill covers pr creation, pre-merge closure testing, merge, cascade, rebuild, verification, and worktree cleanup, and proceeds autonomously once the pre-merge test passes.
+* **worktree cleanup foot-gun (claude-code-specific)**: when the harness's registered cwd is the worktree and you `git worktree remove` it from this session, every subsequent Bash call fails to spawn — the harness still launches shells from the (now-deleted) path. so delegate the cleanup (`git worktree remove` + `git branch -D`) to an `Agent` spawned with `isolation: "worktree"` — the isolation flag gives the agent a separate cwd that survives the removal. a vanilla Agent without that flag inherits the same cwd registration and falls into the same trap. interactive terminals are unaffected; this is purely a claude-code harness quirk. always run this cleanup as the absolute last action once worktree work has landed on main.
 * when a nix config change touches BOTH this config (`~/.config/home-manager`) AND a downstream config that imports it (e.g. adding a new module here and opting the downstream config into it), invoke the `/nix-rebuild` skill instead of improvising the commit / push / `nix flake update` / commit / rebuild ordering. the skill encodes the cross-repo sequence correctly and stops the agent from forgetting the downstream lock bump.
 * for any task spanning ≥5 steps OR multiple repos / systems / live-and-source layers, use `TodoWrite` even if it feels like overkill. cross-repo state (which file in which repo, which lock pointing where, which rebuild from which flake) is easy to lose mid-execution; the harness reminds for a reason.
 
@@ -87,11 +77,11 @@ when a change is large enough to warrant multiple prs:
   ```
   rev mismatch → rebuild from this worktree. rev matches but you've edited since → `narHash` (and the `-dirty` suffix on rev) catches that; rebuild anyway.
 * this only kicks in on nix-darwin (the module lives under `darwin/`). linux home-manager doesn't have an equivalent stamp yet.
-* downstream configs (work) must opt in by importing `inputs.personal-config.darwinModules.provenance` and ensuring their `darwinSystem` sets `specialArgs = { inherit inputs; }`.
+* downstream configs must opt in by importing `inputs.personal-config.darwinModules.provenance` and ensuring their `darwinSystem` sets `specialArgs = { inherit inputs; }`.
 
 ## multi-repo structure
 
-the personal/base config (`~/.config/home-manager`) can be imported as a flake input by other configs (e.g., work-specific configs). on machines with layered configs:
+the personal/base config (`~/.config/home-manager`) can be imported as a flake input by downstream configs. on machines with layered configs:
 
 * the downstream config imports this repo as `inputs.personal-config`
 * CLAUDE.md files from both repos get combined
