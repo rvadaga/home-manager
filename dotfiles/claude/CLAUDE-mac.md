@@ -12,7 +12,7 @@ darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
 * for personal mac: `darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME`
-* for work mac: use the work flake path (see work-specific instructions)
+* for machines built from a downstream flake: use that flake's path (see machine-specific instructions)
 
 ## system.defaults gotchas
 
