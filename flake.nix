@@ -3,8 +3,8 @@
 
   inputs = {
     # stable channels (platform-specific)
-    darwin-stable.url = "github:nixos/nixpkgs/nixpkgs-25.11-darwin";
-    nixos-stable.url = "github:nixos/nixpkgs/nixos-25.11";
+    darwin-stable.url = "github:nixos/nixpkgs/nixpkgs-26.05-darwin";
+    nixos-stable.url = "github:nixos/nixpkgs/nixos-26.05";
 
     # unstable channels (platform-specific)
     # darwin-unstable (nixpkgs-unstable) has autopatchelf issues on linux
@@ -22,12 +22,12 @@
     nix-index-database.url = "github:nix-community/nix-index-database";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.11";
+      url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "darwin-stable";
     };
 
     nix-darwin = {
-      url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "darwin-stable";
     };
   };
