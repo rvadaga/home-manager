@@ -17,6 +17,21 @@
         default-cache-ttl 28800
         max-cache-ttl 28800
       '';
+
+      # git: /bin/sh shim in front of the nix git so the claude desktop app
+      # can detect git. macos (amfid/syspolicyd) denies a third-party gui app
+      # binary direct exec of adhoc-signed nix binaries (posix_spawn EACCES →
+      # "Git is required for local sessions" banner). a shebang script makes
+      # the app exec apple-signed /bin/sh instead; terminals still get the
+      # nix git through the same shim. ~/.local/bin precedes the profile
+      # dirs in PATH.
+      ".local/bin/git" = {
+        executable = true;
+        text = ''
+          #!/bin/sh
+          exec ${config.home.profileDirectory}/bin/git "$@"
+        '';
+      };
     };
 
     packages = [
