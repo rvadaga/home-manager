@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[[:space:]/])brew[[:space:]]+(install|reinstall|tap)([[:space:]]|$)'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prefer nix: homebrew is a last resort. add the package to the nix config and rebuild (nixpkgs home.packages/systemPackages for cli tools, or homebrew.brews/casks for brew-only). only confirm this brew command if nix genuinely cannot provide it.\"}}'; fi"
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[[:space:]/])brew[[:space:]]+(install|reinstall|tap|upgrade|uninstall|remove|rm)([[:space:]]|$)'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"prefer nix: homebrew is a last resort. manage packages declaratively in the nix config and rebuild (nixpkgs home.packages/systemPackages for cli tools, homebrew.brews/casks for brew-only) — add or remove them there, not imperatively. only confirm this brew command if the declarative path genuinely cannot do it.\"}}'; fi"
           }
         ]
       }
