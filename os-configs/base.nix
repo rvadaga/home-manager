@@ -154,7 +154,7 @@ in {
       pkgs.fortune
       pkgs.cowsay
       pkgs.lolcat
-      pkgs.neofetch
+      pkgs.fastfetch
 
       # version control
       pkgs.gh
