@@ -9,16 +9,3 @@ free rest api access to google docs + drive is set up on the personal google acc
 * re-auth after the ~7-day testing-mode token expiry: `gcloud auth application-default login --client-id-file=~/.config/secrets/gcloud-docs-oauth-client.json --scopes=https://www.googleapis.com/auth/documents,https://www.googleapis.com/auth/drive.file,https://www.googleapis.com/auth/cloud-platform`
 * auth gotchas: plain gcloud adc login is blocked for docs/drive scopes ("app is blocked") — must pass the own-client `--client-id-file`; and the oauth consent screen must list your email as a test user (owner ≠ test user).
 * creating / formatting / editing docs: use the `editing-google-docs` skill (html-import creation, cleaning up import artifacts, verify-by-rendering). this note is just the personal access/auth facts.
-
-# x api mcp (personal)
-
-the `xapi` mcp server (settings-base.json mcpServers) uses the `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp` bridge. oauth2 token cached in `~/.xurl` (auto-refreshes), authorized as @rahul_vadaga.
-
-* app credentials (client id/secret) live in 1password: personal account (vadaga.1password.com), Private vault, item "x.com mcp server" (api credential; username = client id, credential = client secret, app id 33153851, redirect uri http://localhost:8080/callback).
-* if the token is ever revoked, re-auth with:
-  ```bash
-  CLIENT_ID="$(op item get exwqhsu22gqyb7f5rzosu2fa4y --account vadaga.1password.com --fields username)" \
-  CLIENT_SECRET="$(op item get exwqhsu22gqyb7f5rzosu2fa4y --account vadaga.1password.com --fields credential --reveal)" \
-  npx -y @xdevplatform/xurl auth oauth2
-  ```
-* the `x-docs` server (https://docs.x.com/mcp) needs no auth.

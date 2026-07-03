@@ -125,3 +125,14 @@ all obsidian vaults live under `~/development/obsidian/`:
 ## vault schema
 
 each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-evolve over time to define structure, conventions, and domain-specific rules
+
+# x api mcp
+
+the `xapi` mcp server (settings-base.json mcpServers) uses the `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp` bridge. oauth2 token cached in `~/.xurl` (auto-refreshes), authorized as @rahul_vadaga.
+
+* app credentials (client id + secret) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed).
+* if the token is ever revoked, re-auth with:
+  ```bash
+  source ~/.config/secrets/x-mcp-oauth-client.env && npx -y @xdevplatform/xurl auth oauth2
+  ```
+* the `x-docs` server (https://docs.x.com/mcp) needs no auth.
