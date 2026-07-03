@@ -126,7 +126,7 @@ curl -s "https://www.googleapis.com/drive/v3/files/$DOC_ID/comments?fields=comme
 ## Snapshot before, verify after
 
 - Before editing a shared doc: save `documents.get` JSON + `revisionId` so you can diff or restore.
-- After editing: re-fetch and inspect structure + styling from the JSON — necessary, but **not sufficient**. Individual fields can each read correct while a *separate* element (a stray `horizontalRule`) or the *list definition* still renders wrong, so a field-check will report "fixed" when the page isn't. For anything visual, get the ground truth: export to PDF (`files/{id}/export?mimeType=application/pdf`), rasterize it (`nix shell nixpkgs#poppler -c pdftoppm in.pdf out`), and **look**.
+- After editing: re-fetch and inspect structure + styling from the JSON — necessary, but **not sufficient**. Individual fields can each read correct while a *separate* element (a stray `horizontalRule`) or the *list definition* still renders wrong, so a field-check will report "fixed" when the page isn't. For anything visual, get the ground truth: export to PDF (`files/{id}/export?mimeType=application/pdf`), rasterize it (`nix shell nixpkgs#poppler-utils -c pdftoppm in.pdf out`), and **look**.
 - If you embedded a runnable command, extract it and run it with the side-effecting parts stubbed to prove it actually runs.
 
 ## Common mistakes
