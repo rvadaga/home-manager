@@ -130,9 +130,15 @@ each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-ev
 
 the `xapi` mcp server (settings-base.json mcpServers) uses the `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp` bridge. oauth2 token cached in `~/.xurl` (auto-refreshes), authorized as @rahul_vadaga.
 
-* app credentials (client id + secret) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed).
-* if the token is ever revoked, re-auth with:
+* app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store (via `xurl auth app-only -`, reads from stdin).
+* if the user-context token is ever revoked, re-auth with:
   ```bash
   source ~/.config/secrets/x-mcp-oauth-client.env && npx -y @xdevplatform/xurl auth oauth2
   ```
+* full-archive post search is the exception: the hosted mcp's `search_posts_all` tool requires app-only auth and 403s with the bridge's user-context token; the other 23 tools work user-context. run it from bash instead (deliberately not a second mcp server — that would persist the token in settings.local.json):
+  ```bash
+  npx -y @xdevplatform/xurl --auth app "/2/tweets/search/all?query=<url-encoded>&max_results=10"
+  ```
+  keep `max_results` low — pay-per-use bills $0.005 per post returned. a spending limit should be set in the developer console under billing (~$10/month).
+* the app-only bearer token cannot be minted via oauth2 client_credentials (403) — it comes from the developer console's app-only authentication section. if lost, regenerate there, then re-register in xurl's store from the secrets cache.
 * the `x-docs` server (https://docs.x.com/mcp) needs no auth.
