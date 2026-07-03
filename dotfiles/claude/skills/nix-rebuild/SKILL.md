@@ -9,6 +9,31 @@ commit, push, and rebuild after nix config changes. handles this config and down
 
 shipping a worktree-based change? use /ship-config instead — it wraps these steps with pr creation, pre-merge testing, and worktree cleanup.
 
+## edit in a throwaway worktree (preferred)
+
+prefer making the config edits in a temp worktree, not the primary checkout. this is mandatory when /nix-rebuild is invoked from an external project session (never edit the primary checkout from an unrelated session) and the right call when other sessions or rebuilds may be using the primary checkout. editing the primary directly is acceptable only when the session is already working there and nothing else is using it.
+
+1. **create the worktree** off fresh origin/main:
+   ```bash
+   git -C ~/.config/home-manager fetch origin main
+   git -C ~/.config/home-manager worktree add \
+     ~/.config/home-manager/.claude/worktrees/nix-rebuild-<topic> \
+     -b rahul/nix-rebuild-<topic> origin/main
+   ```
+2. **edit + commit in the worktree**, then push straight to main (no pr — /nix-rebuild is for small direct-to-main changes; anything needing review goes through /ship-config):
+   ```bash
+   git -C <worktree> push origin HEAD:main
+   ```
+   push rejected (non-ff) → fetch origin main, rebase the worktree onto origin/main, retry once.
+3. **rebuild using `<worktree>` as the flake path** (workflow steps 3–5 below) — leaves the primary checkout untouched; provenance lands on the pushed main rev.
+4. **clean up only after a successful rebuild + verification** (rebuild failed → leave the worktree in place for debugging):
+   ```bash
+   git -C ~/.config/home-manager worktree remove ~/.config/home-manager/.claude/worktrees/nix-rebuild-<topic>
+   git -C ~/.config/home-manager branch -D rahul/nix-rebuild-<topic>
+   git -C ~/.config/home-manager fetch origin main && git -C ~/.config/home-manager merge --ff-only origin/main   # skip if the primary checkout is dirty or another session is using it
+   ```
+   plain bash is safe here only because the session's registered cwd is elsewhere (external project or primary checkout). if the session's cwd IS the worktree being removed, delegate per the cleanup foot-gun in global claude.md (agent with `isolation: "worktree"`). scope: remove only the worktree this invocation created — never other worktrees.
+
 ## workflow
 
 1. **determine scope** — which repo was modified:

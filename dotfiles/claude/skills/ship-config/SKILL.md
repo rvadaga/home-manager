@@ -56,7 +56,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - the changed artifact carries the new value (step-4 check against the real lock)
    - where the change flows into a live-merged file, confirm the merge ran (target file mtime)
 
-9. **cleanup (mandatory last step)** — once verified, delegate worktree removal per the cleanup foot-gun instructions in global claude.md: an `Agent` with `isolation: "worktree"` runs `git -C <main-repo> worktree remove --force <worktree>` then `git -C <main-repo> branch -D <branch>`. no shell commands in this session afterward — only the final summary.
+9. **cleanup (mandatory last step)** — once verified, delegate worktree removal per the cleanup foot-gun instructions in global claude.md: an `Agent` with `isolation: "worktree"` runs `git -C <main-repo> worktree remove --force <worktree>` then `git -C <main-repo> branch -D <branch>`. no shell commands in this session afterward — only the final summary. scope: remove only the worktree being shipped — never enumerate or touch other worktrees; they belong to other sessions.
 
 ## notes
 
