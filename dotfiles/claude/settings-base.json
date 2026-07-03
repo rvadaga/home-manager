@@ -54,6 +54,19 @@
       },
       "type": "http",
       "url": "https://mcp.slack.com/mcp"
+    },
+    "x-docs": {
+      "type": "http",
+      "url": "https://docs.x.com/mcp"
+    },
+    "xapi": {
+      "args": [
+        "-y",
+        "@xdevplatform/xurl",
+        "mcp",
+        "https://api.x.com/mcp"
+      ],
+      "command": "npx"
     }
   },
   "model": "claude-fable-5[1m]",
