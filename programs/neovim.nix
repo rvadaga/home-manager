@@ -5,6 +5,11 @@
     viAlias = true;
     vimAlias = true;
 
+    # 26.05 flipped these defaults from true to false; config is pure lua,
+    # so the python/ruby providers aren't needed
+    withPython3 = false;
+    withRuby = false;
+
     plugins = with pkgs.vimPlugins; [
       # color scheme
       {
@@ -278,7 +283,7 @@
       }
     ];
 
-    extraLuaConfig = ''
+    initLua = ''
       -- basic settings
       vim.opt.number = true
       vim.opt.relativenumber = false
