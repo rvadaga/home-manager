@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mkdir *), Bash(ls *)
-description: read or save notes in obsidian vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings from the conversation.
+description: read, save, or curate notes in obsidian vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings, "answer [<page>]" to answer inline "> q:" questions, "cleanup <page>" to refactor accumulated q&a into atomic pages.
 ---
 
 ## your task
@@ -9,6 +9,8 @@ manage notes in the user's obsidian vaults at `~/development/obsidian/`. two mod
 
 - **read \<topic\>**: find and display existing notes matching the topic
 - **save \<topic\>**: save durable findings from the current conversation as a wiki page
+- **answer [\<page\>]**: answer the user's inline `> q:` questions in place
+- **cleanup \<page\>**: refactor accumulated q&a into the body + atomic pages
 
 if no mode word is given, default to **save**.
 
@@ -60,6 +62,28 @@ each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`
 7. append an entry to `log.md` in the format: `## [YYYY-MM-DD] action | description` — use today's date from the session context
 8. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 
+## inline q&a workflow (answer + cleanup modes)
+
+the user drops questions into pages as they read, as `> q: ...` blockquotes — anywhere, including mid-list or nested inside earlier answers. this is an encouraged first-class pattern (the user is extremely curious): questions are vault content, never noise to strip.
+
+### answer mode
+
+1. if a page is named, scan it for `> q:` blockquotes with no `> a:` beneath; otherwise grep the vault for unanswered ones
+2. answer each **inline, directly beneath the question**, as `> a: ...` inside the same blockquote — keep the user's question text verbatim (typos included)
+3. if a question was appended onto an existing line (e.g. tacked onto a bullet), split it out cleanly without wrecking the surrounding structure
+4. answers should teach: plain language first, every jargon term unpacked, concrete numbers where they build intuition (~1ns cache hit vs ~100ns miss beats "slower")
+5. finish with a `log.md` entry summarizing the round, and a brief digest of the answers in the chat reply
+
+### cleanup mode
+
+when q&a accumulates and the page stops reading as an article, refactor — never just delete:
+
+- **absorb into the body only what is core to the page's own argument** — a clarification that sharpens a definition, a motivation the page was missing. resist absorbing everything; peripheral detail bloats the article
+- **spin peripheral-but-durable depth into new atomic pages** (one concept each) and link each from the concept's **first mention** in the body. this fixes placement incoherence structurally: where the user happened to ask no longer matters, because the pointer lives at the concept's introduction
+- the q&a dialogue format disappears from the page afterwards — the wiki stores knowledge, not transcripts
+- new pages cross-link each other and back to the source page; update `index.md` (new entries) and `log.md` (refactor entry)
+- verify nothing was lost: every answered question's content must survive somewhere (body or atomic page)
+
 ## github permalinks
 
 when citing source code, always use commit-sha permalinks (pinned to a specific commit, not a branch). branch URLs break when files move; sha permalinks are permanent.
@@ -110,3 +134,4 @@ when writing a new diagram, scan all node/edge label strings for `\n` before sav
 - lowercase everything (filenames and content) per global CLAUDE.md
 - obsidian vaults are currently not git repos — do not run git commands against them
 - prefer atomic pages — many small focused files over one big file
+- when editing a page for any reason, preserve unanswered `> q:` blocks the user has added — they are pending work, not clutter
