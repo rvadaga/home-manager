@@ -46,6 +46,9 @@ when a change is large enough to warrant multiple prs:
 * assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
 * number each pr sequentially — pr1, pr2, etc.
 * include the number in the branch name: e.g., `rahul/pr1-change-abc`, `rahul/pr2-fix-bug` (follows existing branch prefix conventions per repo)
+* in chained pr series, code comments may reference **subsequent/child prs only** — never the pr itself, never a parent. forward refs are breadcrumbs for later prs to pick up: pr1 leaves `TODO(pr2): <task>`, and pr2 removes that comment when it implements the task (rewording to name the real component if the context is still useful — `(pr2)` inside pr2 would be a self-reference)
+* invariant: whatever lands on main never carries a stale/meaningless pr reference — every forward ref is consumed by the child that fulfills it before that child merges
+* if a parent pr already contains a reference to itself or a parent, fix it in the CHILD branch — parents that are already open/merged stay untouched unless the user says otherwise
 * track the full pr sequence in project-level memory: pr number (pr1, pr2…), github pr #, branch name, and status
 * when the project is complete and the user asks, clean up the associated project memory
 * if a pr sequence seems stale or stuck, proactively ask the user about it
