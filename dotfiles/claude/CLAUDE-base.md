@@ -11,6 +11,10 @@
     * always use pull request templates available in the repository
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
     * always read the pr description from github before updating it (user may have made changes via github ui)
+* **pr/branch ledger — capture every durable artifact a session creates or materially depends on in project-level memory.** prs opened (in the current repo or companion prs in other repos), branches pushed but not yet pr'd, and cross-repo dependency pairs each get a ledger entry: pr number/link or branch name + tip sha, a one-line purpose, current status, and (for cross-repo pairs) which side depends on which
+    * capture at creation time, not at session end — sessions get interrupted, and an unrecorded pr is invisible to parallel and future sessions
+    * keep the ledger current: when refreshing or citing it, verify against the live source of truth (`gh pr list` / `gh pr view` on `<owner>/<repo>`, `git ls-remote`) rather than trusting recollection or the ledger itself; update statuses (merged/closed) as they change
+    * applies in every repo and to spawned/child sessions too — they share the parent project's memory, so the ledger is the shared registry across parallel sessions
 * when creating a branch
     * prefix the name with rahul/
 * worktree branch naming (claude-auto-named branches)
