@@ -46,6 +46,10 @@ when a change is large enough to warrant multiple prs:
 * assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
 * number each pr sequentially — pr1, pr2, etc.
 * include the number in the branch name: e.g., `rahul/pr1-change-abc`, `rahul/pr2-fix-bug` (follows existing branch prefix conventions per repo)
+* the next sequence number in a series is CLAIMED by pushing the branch to origin — the remote branch namespace is the allocation registry, so parallel sessions can't silently mint the same number
+* to allocate: check both live branches (`git ls-remote --heads origin '<series-branch-prefix>*'`) and burned numbers from merged/closed prs (`gh pr list --state all --search "<series> in:title"` — deleted branches vanish from ls-remote); take the NUMERIC max+1 (pr<N>.10 > pr<N>.9; lexical sort lies)
+* claim immediately: create the branch and push it before substantive work; re-check ls-remote after pushing — if two sessions raced the small window, the later pusher renumbers before real work exists
+* a session that spawns child sessions allocates numbers FOR them in their briefs (spawner allocates); ledger files (project memory) record numbers + status for reading, never for allocation
 * in chained pr series, code comments may reference **subsequent/child prs only** — never the pr itself, never a parent. forward refs are breadcrumbs for later prs to pick up: pr1 leaves `TODO(pr2): <task>`, and pr2 removes that comment when it implements the task (rewording to name the real component if the context is still useful — `(pr2)` inside pr2 would be a self-reference)
 * invariant: whatever lands on main never carries a stale/meaningless pr reference — every forward ref is consumed by the child that fulfills it before that child merges
 * if a parent pr already contains a reference to itself or a parent, fix it in the CHILD branch — parents that are already open/merged stay untouched unless the user says otherwise
