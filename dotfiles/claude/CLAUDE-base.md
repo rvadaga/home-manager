@@ -44,6 +44,8 @@
 when a change is large enough to warrant multiple prs:
 
 * assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
+* when a pr series must be chained (each branch based on the previous, because of a real code dependency between them), build the whole stack of branches locally up front, but open each child pr only AFTER its parent has merged to the default branch and the child has been rebased onto it. never open all the chained prs at once — keep exactly one open at a time and advance as each parent lands
+* this refines the chained-vs-standalone choice above: for chained series use the build-all/open-sequentially cadence; for independent chunks keep the off-main, one-at-a-time approach
 * number each pr sequentially — pr1, pr2, etc.
 * include the number in the branch name: e.g., `rahul/pr1-change-abc`, `rahul/pr2-fix-bug` (follows existing branch prefix conventions per repo)
 * the next sequence number in a series is CLAIMED by pushing the branch to origin — the remote branch namespace is the allocation registry, so parallel sessions can't silently mint the same number
