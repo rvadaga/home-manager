@@ -275,3 +275,11 @@ function claude-recent() {
 
   rm -f "$tmpnames" "$tmpfiles"
 }
+
+# greppable man output: the nix groff emits ansi color codes even when piped
+# (TERM=dumb, MANPAGER=cat, GROFF_NO_SGR are all ignored), which breaks
+# patterns like '^ *-n'. strip the escapes so man text greps like plain text.
+# usage: manp bash | grep -A4 '^ *-n'
+function manp() {
+  man "$@" | LC_ALL=C sed -E $'s/\x1b\\[[0-9;]*m//g'
+}
