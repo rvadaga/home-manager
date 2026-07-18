@@ -1,36 +1,41 @@
 ---
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mkdir *), Bash(ls *)
-description: read, save, or curate notes in obsidian vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings, "answer [<page>]" to answer inline "> q:" questions, "cleanup <page>" to refactor accumulated q&a into atomic pages.
+name: notes
+description: read, save, or curate notes in the obsidian llm-wiki vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings, "answer [<page>]" to answer inline "> q:" questions, "cleanup <page>" to refactor accumulated q&a into atomic pages, "lint [<vault>|all]" to run the health check.
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mkdir *), Bash(ls *), Bash(git *), Bash(python3 *), Bash(find *), Bash(gstat *)
 ---
 
 ## your task
 
-manage notes in the user's obsidian vaults at `~/development/obsidian/`. two modes based on the first argument word:
+manage notes in the user's obsidian llm-wiki vaults at `~/development/obsidian/`. mode is the first argument word:
 
 - **read \<topic\>**: find and display existing notes matching the topic
 - **save \<topic\>**: save durable findings from the current conversation as a wiki page
 - **answer [\<page\>]**: answer the user's inline `> q:` questions in place
 - **cleanup \<page\>**: refactor accumulated q&a into the body + atomic pages
+- **lint [\<vault\>|all]**: run the health check (default: all vaults on this machine)
 
 if no mode word is given, default to **save**.
 
-## vaults
+## vault registry
 
-- `personal-software` — general software engineering, architecture, programming
-- `oss-vespa` — vespa open-source search engine (source-code reading wiki)
+- `personal-software` — general software engineering, architecture, programming. schema: `CLAUDE.md` at vault root. topic dirs (`systems/`, `languages/`, `networking/`, `git/`, `bash/`, `terminal/`, `tools/`, `observability/`, `temporal/`, `meta/`) + project sub-wikis with their own indexes (e.g. `paneherd/`). `raw/` for web-clipper ingest.
+- `oss-vespa` — vespa open-source internals, a source-code-reading wiki. schema: `SCHEMA.md`. flat `pages/`; frontmatter carries `source:` listing the files read.
+- **work machines only**: if `references/etsy-vault.md` exists in this skill's directory, it registers the work vault (`etsy-software`) and its routing/confidentiality rules — read it before routing whenever work-internal content is in play.
 
-each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`) — **always read it first** before writing, since conventions (directory layout, frontmatter, tags) differ by vault.
+each vault's schema file is the source of truth for its conventions — **always read it before writing**.
 
-## vault selection
+## routing
 
-- vespa open-source internals (proton, distributor, bucket-distribution, etc.) → `oss-vespa`
-- general software/engineering topics → `personal-software`
-- if ambiguous, ask the user which vault to use
+- vespa open-source internals (proton, distributor, feed client, etc.) → `oss-vespa`
+- general software/engineering knowledge → `personal-software`
+- work-internal content → the work vault per `references/etsy-vault.md` (work machines); on personal machines, work content has no home here — flag it instead of saving
+- mixed general + work-internal topics → the split protocol in `references/etsy-vault.md`
+- if still ambiguous, ask the user which vault
 
 ## common setup
 
 1. pick the target vault per the rules above
-2. read the vault's schema file (`SCHEMA.md` or `CLAUDE.md`) for conventions — filename style, frontmatter template, directory layout
+2. read the vault's schema file for conventions — filename style, frontmatter template, directory layout, log direction
 3. skim the vault's `index.md` to see what's already catalogued
 
 ## read mode
@@ -52,15 +57,14 @@ each vault has its own schema file at the vault root (`SCHEMA.md` or `CLAUDE.md`
 5. write the page per the vault's schema:
    - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
    - filename: lowercase, hyphenated, descriptive (e.g., `vespa-metrics-pipeline.md`)
-   - frontmatter: follow the vault's template (always includes a `tags` array; some vaults also include `created` or `source`)
+   - frontmatter: the vault's template, always including `tags` and `created: YYYY-MM-DD`; add `source:` (files/urls the page was derived from) wherever it applies — typed metadata is what keeps staleness detectable
    - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
    - cross-link to related pages using obsidian `[[wikilinks]]`
-   - mark uncertain or inferred claims with `[inferred]` (per oss-vespa schema)
-   - cite source code paths when relevant (e.g., `path/to/file.ext:line`)
+   - mark uncertain or inferred claims with `[inferred]`
    - do NOT include session-specific details (timestamps in prose, conversation ids, task progress)
-6. update `index.md`: add a one-liner for the new page under the appropriate section — format matches existing entries (e.g., `- [[page-name]] — short description`). if no fitting section exists, add a new heading
-7. append an entry to `log.md` in the format: `## [YYYY-MM-DD] action | description` — use today's date from the session context
-8. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
+6. **update `index.md` and `log.md` in the same pass — never skip this.** drift (pages the index doesn't know about) is the wiki pattern's primary failure mode. index: one-liner under the fitting section (project sub-wikis catalogue their own pages in their own index). log: `## [YYYY-MM-DD] action | description` — check the schema for direction (append-at-bottom vs prepend-at-top varies by vault)
+7. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
+8. if the finding supersedes a claim on another page, update that page too (or mark it) — don't leave two pages disagreeing
 
 ## inline q&a workflow (answer + cleanup modes)
 
@@ -84,6 +88,33 @@ when q&a accumulates and the page stops reading as an article, refactor — neve
 - new pages cross-link each other and back to the source page; update `index.md` (new entries) and `log.md` (refactor entry)
 - verify nothing was lost: every answered question's content must survive somewhere (body or atomic page)
 
+## lint mode
+
+the periodic health check — per the llm-wiki pattern it is *not optional*: drift is how these wikis die. run monthly, after any bulk change, or on request. for each target vault:
+
+1. **index coverage**: every content page has an index entry with an accurate one-liner (project sub-wikis: their own index counts). the reverse too — no index entries pointing at missing pages.
+2. **orphans**: pages with zero inbound links from anywhere. either link them from where the concept is first mentioned, or index them; deletion only with user sign-off.
+3. **broken wikilinks**: extract `[[targets]]` (strip `|alias`, `#anchor`, table-escaped `\|`; skip code blocks) and resolve each against the vault namespace. on the work vault the namespace includes the personal vault through the `personal/` symlink.
+4. **raw linkage**: every `raw/` source is wikilinked from the compiled page that digested it; flag uncompiled raw files as ingest backlog.
+5. **staleness/contradictions**: when a recent page settles an investigation, sweep older pages still stating the earlier hypothesis. spot-check pages whose `source:` targets may have moved on.
+6. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — report and remove.
+7. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented.
+8. **close out**: log the lint pass in each vault's `log.md`, then `git commit` each vault touched.
+
+a scan skeleton (adapt per vault; run from `~/development/obsidian/`):
+
+```bash
+python3 - <<'EOF'
+import os, re
+link_re = re.compile(r'\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]')
+# walk the vault (skip dotdirs), build {basename, vault-relative} namespace,
+# collect link targets per file (strip trailing '\' from table-escaped pipes),
+# then report: pages absent from index files, targets resolving nowhere,
+# pages with zero inbound links. for etsy-software, extend the namespace with
+# 'personal/<rel>' + basenames from ../personal-software (the symlink).
+EOF
+```
+
 ## github permalinks
 
 when citing source code, always use commit-sha permalinks (pinned to a specific commit, not a branch). branch URLs break when files move; sha permalinks are permanent.
@@ -105,14 +136,6 @@ rules:
 
 **when to use mermaid vs ascii:** check the longest line in the diagram. if it exceeds ~60 characters, use mermaid — ascii diagrams wider than that wrap badly on mobile screens. below ~60 chars, a simple ascii diagram (e.g. `A → B → C`) is fine.
 
-```
-# too wide for ascii (~80 chars) → use mermaid
-prod-cluster.us-central1.internal.corp.example.com → managed-zone (dns-project)
-
-# fine as ascii (~30 chars)
-consumer → NAT subnet → producer
-```
-
 obsidian's mermaid renderer does **not** interpret `\n` as a line break in node labels or edge labels — it renders literally as `\n`. always use `<br/>` instead:
 
 ```
@@ -121,7 +144,7 @@ node["first line\nsecond line"]             ✗ renders literally
 ```
 
 specific rules by diagram element:
-- **node labels** (`["..."]`, `(["..."])`, `(["..."])`) — use `<br/>` for multi-line content
+- **node labels** (`["..."]`, `(["..."])`) — use `<br/>` for multi-line content
 - **edge labels** (`|"..."|`) — prefer a single-line label with ` · ` as separator rather than `<br/>`, since edge labels are narrow
 - **sequence diagram participant aliases** (`participant x as "..."`) — single-line only; `<br/>` does not work here; keep aliases short and descriptive
 - **subgraph titles** (`subgraph title["..."]`) — use `<br/>` if multi-line is needed
@@ -130,8 +153,9 @@ when writing a new diagram, scan all node/edge label strings for `\n` before sav
 
 ## important notes
 
-- defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, and layout conventions
+- defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, layout, and log direction
 - lowercase everything (filenames and content) per global CLAUDE.md
-- obsidian vaults are currently not git repos — do not run git commands against them
+- **the vaults are git repos** (since 2026-07-18; `.obsidian/workspace.json` ignored) — commit at the end of any session that wrote to a vault; a plain descriptive message, no push (local-only repos)
 - prefer atomic pages — many small focused files over one big file
 - when editing a page for any reason, preserve unanswered `> q:` blocks the user has added — they are pending work, not clutter
+- **obsidian gotchas**: a file deleted while open in an obsidian tab can be resurrected from the editor buffer — verify deletions stick (quit obsidian → delete → scrub the leaf from `.obsidian/workspace.json` → reopen if needed). edit `.obsidian/*.json` only while obsidian is closed. obsidian's watcher may miss edits arriving through a symlinked dir until a vault reload.

@@ -38,7 +38,10 @@ in {
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
-      ".claude/commands/notes.md".source = ../dotfiles/claude/commands/notes.md;
+      # notes skill: base covers the general llm-wiki vaults (personal-software,
+      # oss-vespa); work config composes into the same skill dir by adding
+      # references/etsy-vault.md (registry entry for the work vault).
+      ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
 
       # nix-provenance: print the active system's flake provenance (written to
