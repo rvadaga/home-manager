@@ -17,7 +17,6 @@
     "/System/Applications/Music.app"
     "/Applications/Claude.app"
     "/Applications/ChatGPT.app"
-    "/Applications/Codex.app"
     "/System/Applications/Mail.app"
     "/System/Applications/Calendar.app"
     "/System/Applications/Reminders.app"
