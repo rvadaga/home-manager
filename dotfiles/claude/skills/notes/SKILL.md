@@ -20,7 +20,7 @@ if no mode word is given, default to **save**.
 
 - `personal-software` — general software engineering, architecture, programming. schema: `CLAUDE.md` at vault root. topic dirs (`systems/`, `languages/`, `networking/`, `git/`, `bash/`, `terminal/`, `tools/`, `observability/`, `temporal/`, `meta/`) + project sub-wikis with their own indexes (e.g. `paneherd/`). `raw/` for web-clipper ingest.
 - `oss-vespa` — vespa open-source internals, a source-code-reading wiki. schema: `SCHEMA.md`. flat `pages/`; frontmatter carries `source:` listing the files read.
-- **work machines only**: if `references/etsy-vault.md` exists in this skill's directory, it registers the work vault (`etsy-software`) and its routing/confidentiality rules — read it before routing whenever work-internal content is in play.
+- **work machines only**: if `references/work-vault.md` exists in this skill's directory, it registers the work vault and its routing/confidentiality rules — read it before routing whenever work-internal content is in play.
 
 each vault's schema file is the source of truth for its conventions — **always read it before writing**.
 
@@ -28,8 +28,8 @@ each vault's schema file is the source of truth for its conventions — **always
 
 - vespa open-source internals (proton, distributor, feed client, etc.) → `oss-vespa`
 - general software/engineering knowledge → `personal-software`
-- work-internal content → the work vault per `references/etsy-vault.md` (work machines); on personal machines, work content has no home here — flag it instead of saving
-- mixed general + work-internal topics → the split protocol in `references/etsy-vault.md`
+- work-internal content → the work vault per `references/work-vault.md` (work machines); on personal machines, work content has no home here — flag it instead of saving
+- mixed general + work-internal topics → the split protocol in `references/work-vault.md`
 - if still ambiguous, ask the user which vault
 
 ## common setup
@@ -57,7 +57,7 @@ each vault's schema file is the source of truth for its conventions — **always
 5. write the page per the vault's schema:
    - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
    - filename: lowercase, hyphenated, descriptive (e.g., `vespa-metrics-pipeline.md`)
-   - frontmatter: the vault's template, always including `tags` and `created: YYYY-MM-DD`; add `source:` (files/urls the page was derived from) wherever it applies — typed metadata is what keeps staleness detectable
+   - frontmatter: the vault's template, always including `tags` and `created: YYYY-MM-DD`; add `source:` (files/urls the page was derived from) wherever it applies — typed metadata is what keeps staleness detectable. some vaults require a **kind** tag (mechanism/component/investigation/…) as the first tag — the vault schema defines it. no `title:` key — the filename is the title. extra provenance keys are allowed when they carry meaning
    - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
    - cross-link to related pages using obsidian `[[wikilinks]]`
    - mark uncertain or inferred claims with `[inferred]`
@@ -110,7 +110,7 @@ link_re = re.compile(r'\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]')
 # walk the vault (skip dotdirs), build {basename, vault-relative} namespace,
 # collect link targets per file (strip trailing '\' from table-escaped pipes),
 # then report: pages absent from index files, targets resolving nowhere,
-# pages with zero inbound links. for etsy-software, extend the namespace with
+# pages with zero inbound links. for the work vault, extend the namespace with
 # 'personal/<rel>' + basenames from ../personal-software (the symlink).
 EOF
 ```

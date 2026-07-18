@@ -39,8 +39,8 @@ in {
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
       # notes skill: base covers the general llm-wiki vaults (personal-software,
-      # oss-vespa); work config composes into the same skill dir by adding
-      # references/etsy-vault.md (registry entry for the work vault).
+      # oss-vespa); a downstream config can compose into the same skill dir by
+      # adding references/work-vault.md (registry entry for its work vault).
       ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
 
