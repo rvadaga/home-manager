@@ -56,7 +56,7 @@ each vault's schema file is the source of truth for its conventions — **always
    - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one
 5. write the page per the vault's schema:
    - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
-   - filename: lowercase, hyphenated, descriptive (e.g., `vespa-metrics-pipeline.md`)
+   - filename: lowercase, hyphenated, descriptive — and **name = scope**: the filename must match what the page actually covers, never claim broader scope than the content delivers (a page about one system's tracing setup is `<system>-otel-tracing`, not `opentelemetry-tracing`). vault schemas may add anchor rules on top
    - frontmatter: the vault's template, always including `tags` and `created: YYYY-MM-DD`; add `source:` (files/urls the page was derived from) wherever it applies — typed metadata is what keeps staleness detectable. some vaults require a **kind** tag (mechanism/component/investigation/…) as the first tag — the vault schema defines it. no `title:` key — the filename is the title. extra provenance keys are allowed when they carry meaning
    - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
    - cross-link to related pages using obsidian `[[wikilinks]]`
