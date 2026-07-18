@@ -90,16 +90,27 @@ when q&a accumulates and the page stops reading as an article, refactor — neve
 
 ## lint mode
 
-the periodic health check — per the llm-wiki pattern it is *not optional*: drift is how these wikis die. run monthly, after any bulk change, or on request. for each target vault:
+the periodic health check — per the llm-wiki pattern it is *not optional*: drift is how these wikis die. runs weekly on a schedule, after any bulk change, or on request.
 
-1. **index coverage**: every content page has an index entry with an accurate one-liner (project sub-wikis: their own index counts). the reverse too — no index entries pointing at missing pages.
-2. **orphans**: pages with zero inbound links from anywhere. either link them from where the concept is first mentioned, or index them; deletion only with user sign-off.
-3. **broken wikilinks**: extract `[[targets]]` (strip `|alias`, `#anchor`, table-escaped `\|`; skip code blocks) and resolve each against the vault namespace. on the work vault the namespace includes the personal vault through the `personal/` symlink.
-4. **raw linkage**: every `raw/` source is wikilinked from the compiled page that digested it; flag uncompiled raw files as ingest backlog.
-5. **staleness/contradictions**: when a recent page settles an investigation, sweep older pages still stating the earlier hypothesis. spot-check pages whose `source:` targets may have moved on.
-6. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — report and remove.
-7. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented.
-8. **close out**: log the lint pass in each vault's `log.md`, then `git commit` each vault touched.
+**authority model — fix, don't just report.** every check below whose fix is codified by a schema rule is *executed* in the run (own git commit per logical fix, descriptive message), not flagged for a human. flag in the run summary only what is genuinely ambiguous (scope you cannot infer, content-loss risk) or big blast radius (more than ~5 structural changes queued in one run — do the mechanical ones, defer the rest). the vaults are git repos: everything is revertible, which is what makes autonomy safe.
+
+per target vault:
+
+1. **pre-flight**: unexplained untracked/modified files at lint start → investigate before proceeding. a deleted page reappearing usually means obsidian resurrected it from an open tab's buffer (see gotchas) — re-delete properly, don't re-index it.
+2. **index coverage**: every content page has an index entry with an accurate one-liner (project sub-wikis: their own index counts). the reverse too — no index entries pointing at missing pages. fix both directions.
+3. **orphans**: pages with zero inbound links from anywhere. link them from where the concept is first mentioned, or index them; deletion only with user sign-off.
+4. **broken wikilinks**: extract `[[targets]]` (strip `|alias`, `#anchor`, table-escaped `\|`; skip code blocks) and resolve each against the vault namespace. on the work vault the namespace includes the personal vault through the `personal/` symlink. fix or retarget.
+5. **frontmatter/tag conformance** (auto-fix): every page has `tags` + `created` (backfill `created` from file mtime); vaults whose schema requires a kind tag have exactly one; no `title:` keys; vault-specific tag rules enforced (see each schema). synthesize frontmatter for pages missing it entirely (infer topical tags from the page's own content).
+6. **name = scope**: filenames claiming broader scope than the content delivers get renamed per the vault schema's naming rules (in the work vault: generic basenames are reserved for the personal vault; add the owning-system anchor). a rename rewrites ALL inbound links + the H1 and records the old→new mapping in the log entry. skip when the right anchor cannot be inferred from the content — flag instead.
+7. **split candidates**: work-vault pages whose body is largely general knowledge (generic concepts with the work system only as worked example) get the split protocol from `references/work-vault.md`: general body → personal vault (scrubbed, original basename when it is the canonical generic name), work residue → anchored companion, no content lost, both indexes + logs updated. defer a split only if disentangling general from internal is genuinely lossy — flag those.
+8. **one-way direction**: no personal-vault (or other general-vault) page may wikilink a page that exists only in the work vault. any such link is a violation — rewrite or remove it.
+9. **basename collisions**: through the symlink the work + personal vaults share one link namespace — no basename may exist in both. resolve per the split protocol (the general page keeps the generic name; the work page gets an anchored name).
+10. **confidentiality**: general vaults contain no work-internal information — run the marker grep from `references/work-vault.md` (work machines) over recently-touched general-vault files; eyeball hits (common words collide). violations are scrubbed immediately.
+11. **raw linkage**: every `raw/` source is wikilinked from the compiled page that digested it; flag uncompiled raw files as ingest backlog.
+12. **staleness/contradictions**: when a recent page settles an investigation, sweep older pages still stating the earlier hypothesis. spot-check pages whose `source:` targets may have moved on.
+13. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — remove (report-before-delete only for files with real content).
+14. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented. when a lint fix establishes a new convention, codify it in the schema in the same run.
+15. **close out**: log the lint pass in each vault's `log.md` (each vault's own direction), commit each vault touched, and end with a summary: what drifted since the last lint, what was fixed (renames/splits listed explicitly with old→new names), what was deferred and why.
 
 a scan skeleton (adapt per vault; run from `~/development/obsidian/`):
 
@@ -110,8 +121,10 @@ link_re = re.compile(r'\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]')
 # walk the vault (skip dotdirs), build {basename, vault-relative} namespace,
 # collect link targets per file (strip trailing '\' from table-escaped pipes),
 # then report: pages absent from index files, targets resolving nowhere,
-# pages with zero inbound links. for the work vault, extend the namespace with
-# 'personal/<rel>' + basenames from ../personal-software (the symlink).
+# pages with zero inbound links, basenames present in BOTH vaults, personal
+# pages whose link targets resolve only in the work namespace. for the work
+# vault, extend the namespace with 'personal/<rel>' + basenames from
+# ../personal-software (the symlink).
 EOF
 ```
 
