@@ -32,7 +32,7 @@ prefer making the config edits in a temp worktree, not the primary checkout. thi
    git -C ~/.config/home-manager branch -D rahul/nix-rebuild-<topic>
    git -C ~/.config/home-manager fetch origin main && git -C ~/.config/home-manager merge --ff-only origin/main   # skip if the primary checkout is dirty or another session is using it
    ```
-   plain bash is safe here only because the session's registered cwd is elsewhere (external project or primary checkout). if the session's cwd IS the worktree being removed, delegate per the cleanup foot-gun in global claude.md (agent with `isolation: "worktree"`). scope: remove only the worktree this invocation created — never other worktrees.
+   plain bash is safe here only because the session's registered cwd is elsewhere (external project or primary checkout). if the session's cwd IS the worktree being removed, delegate per the cleanup foot-gun in global claude.md — an `Agent` that runs the whole removal in one bash invocation via `git -C ~/.config/home-manager` (isolation flag optional, not the safety mechanism). scope: remove only the worktree this invocation created — never other worktrees.
 
 ## workflow
 
