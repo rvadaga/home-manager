@@ -25,8 +25,8 @@
     * **never push** a branch matching the auto-name pattern. before any `git push` (including the first push to set upstream), check the current branch name; if it matches, run `/wt-name` first. **enforced by PreToolUse Bash hook in settings-base.json — push attempts from auto-named branches are rejected at the harness layer.**
     * rename only the branch (`git branch -m <old> <new>`), never move the worktree directory — directory moves break the current session's cwd resolution.
 * when making any nix config changes:
-    * for most changes (CLAUDE.md, settings, dotfiles): edit, commit, push, then rebuild to apply
-    * do not ask whether to rebuild after nix config changes unless the user explicitly asks not to rebuild or the rebuild target is genuinely ambiguous
+    * **every change goes worktree → draft pr → rahul's "looks ok" → merge to main → rebuild, via the `/nix-rebuild` skill.** NEVER edit/commit/push on the primary checkout's `main`, and NEVER `git push origin HEAD:main` — no config change lands on main without a reviewable pr first, no matter how small. (an explicit "ship it / land this / squash merge" instead uses `/ship-config`, which merges autonomously once the pre-merge test passes — the explicit command is the approval.)
+    * do not ask whether to rebuild after a change MERGES — once it's on main, rebuild autonomously (the approval gate is at merge, not at rebuild) unless the rebuild target is genuinely ambiguous
     * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
