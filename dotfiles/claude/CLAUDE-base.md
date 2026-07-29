@@ -8,7 +8,7 @@
 * **write plainly for every human-facing thing you produce** (docs, PR descriptions, code comments, chat, standups) — default to the register of explaining it out loud to a colleague who just walked up. the fix is NOT "shorter": terse and readable are different axes; a short paragraph dense with coined terms still fails.
     * lead with the point in plain words; gloss or drop coined terms on first use (jargon i've "gotten used to" is invisible to me — don't assume it's shared); short sentences, active voice.
     * cut the LLM filler i keep flagging — belt-and-suspenders, load-bearing, binding gate, "X, not Y" contrasts, throat-clearing openers, fake-profound closers, emoji-in-headings, em-dash rhythm-crutches (one is sometimes apt; the problem is overuse). outsider-read prose a human reads cold; if the top needs a glossary, rewrite it.
-    * fuller pattern list: peter yang's `/no-ai-slop`; PR-desc application + motivating case: estate memory `feedback_pr_plain_english_lede`.
+    * fuller pattern list: peter yang's `/no-ai-slop`.
 * when working on pull requests:
     * unless specifically asked not to, create a DRAFT pr
     * don't add ai generated prompt
