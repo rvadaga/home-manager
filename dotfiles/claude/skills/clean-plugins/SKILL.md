@@ -1,3 +1,8 @@
+---
+name: clean-plugins
+description: Use when claude code has leftover or unwanted plugins installed — plugins present in a project but absent from desired-plugins.json, plugin cruft accumulated across project paths, or a request to audit what is installed where.
+---
+
 # /clean-plugins
 
 list all projects where claude code has plugins installed, and clean up plugins not in `desired-plugins.json`.
