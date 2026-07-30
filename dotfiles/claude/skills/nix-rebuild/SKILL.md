@@ -64,9 +64,14 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
 
 ## 6. on approval — merge, rebuild, verify, clean up
 
-1. **merge** (squash is the default):
+1. **mark ready, THEN merge** (squash is the default) — §3 opened this pr as a DRAFT and github refuses to merge a draft (`GraphQL: Pull Request is still a draft (mergePullRequest)`), so `gh pr ready` is required, not optional; /ship-config §5 does the same:
    ```bash
+   gh pr ready <n> --repo <owner>/<repo>
    gh pr merge <n> --repo <owner>/<repo> --squash
+   ```
+   then confirm it actually landed — a refused merge leaves the pr open and is easy to skim past:
+   ```bash
+   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt   # want state=MERGED + non-null mergedAt
    ```
 2. **rebuild** from the now-updated main, using the flake this machine actually rebuilds from (`$HM_CONFIG_NAME` selects the config):
    ```bash
