@@ -1,3 +1,8 @@
+---
+name: bootstrap-plugins
+description: Use when claude code plugins are missing, out of sync, or newly declared — a fresh machine with no plugins installed, a plugin added to desired-plugins.json, or plugin drift reported by /diff-claude-settings.
+---
+
 # /bootstrap-plugins
 
 install and enable plugins declared in `desired-plugins.json`. run this on a fresh machine or whenever you want to sync installed plugins to the desired state.

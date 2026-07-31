@@ -1,3 +1,8 @@
+---
+name: sync-claude-settings
+description: Use when settings changed live in ~/.claude/settings.json need writing back to the nix source files — session-approved permissions piling up in settings.local.json, mcp servers added live, or drift found by /diff-claude-settings.
+---
+
 # /sync-claude-settings
 
 export live `~/.claude/settings.json` back to nix source files in `dotfiles/claude/`.
