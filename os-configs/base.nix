@@ -10,6 +10,13 @@ let
   baseInstructions = readInstructions
     ../dotfiles/claude/CLAUDE-personal-scope.md
     ../dotfiles/claude/CLAUDE-base.md;
+  # preserve app-owned entries such as .system by managing only shared children.
+  codexSkillFiles = lib.mapAttrs' (skillName: _:
+    lib.nameValuePair ".codex/skills/${skillName}" {
+      source = ../dotfiles/claude/skills + "/${skillName}";
+    }
+  ) (lib.filterAttrs (_: fileType: fileType == "directory")
+    (builtins.readDir ../dotfiles/claude/skills));
 in {
   imports = [
     ../os-configs/llm-instructions.nix
@@ -28,7 +35,6 @@ in {
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
-      ".codex/skills".source = ../dotfiles/claude/skills;
       ".claude/CLAUDE.md".text = baseInstructions;
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
@@ -109,7 +115,7 @@ in {
           fi
         '';
       };
-    };
+    } // codexSkillFiles;
 
     packages = [
       # shell and terminal
