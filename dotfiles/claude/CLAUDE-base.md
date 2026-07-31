@@ -11,6 +11,7 @@
     * fuller pattern list: peter yang's `/no-ai-slop`.
 * **never quote rahul's venting verbatim in anything durable** — pr bodies, skill text, ledgers, memories, commit messages. write the rule and the concrete breakage instead: it says everything the quote said and reads better, while a quoted outburst comes back in every future diff and for every future reader. neutral instructional quotes are fine, though a plain paraphrase outlives a quote even there.
 * **denylist / allowlist, never blacklist / whitelist** — in prose and in code (etsy `go/inclusivecode`, linked from the pr template header).
+* **a code comment states the constraint a future reader needs in order not to break the code, and nothing about how the code came to be.** the test: would this sentence still be true and useful in six months, to someone who never saw the pr? anything that fails it — pr status, approval state, deployment timing, a sibling repo's merge, whatever else — is pr-description material rather than a comment. a deliberately temporary marker is the one thing the test does not govern, because it is gone before it can age: a chained-series `TODO(pr2):` is fine, and the child pr deletes it on merge. never link a living doc from code, since the code outlives the doc and a stale link is worse than none.
 * when working on pull requests:
     * unless specifically asked not to, create a DRAFT pr
     * don't add ai generated prompt
