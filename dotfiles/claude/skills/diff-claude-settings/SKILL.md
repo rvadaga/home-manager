@@ -1,3 +1,8 @@
+---
+name: diff-claude-settings
+description: Use when live ~/.claude/settings.json may have drifted from its nix sources — after approving permissions mid-session, before syncing settings back to nix, or when a setting behaves differently than the dotfiles suggest. Read-only.
+---
+
 # /diff-claude-settings
 
 read-only comparison of live `~/.claude/settings.json` against nix source files.
