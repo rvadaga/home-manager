@@ -30,6 +30,18 @@ in {
       ".codex/AGENTS.md".text = baseInstructions;
       ".codex/skills".source = ../dotfiles/claude/skills;
       ".claude/CLAUDE.md".text = baseInstructions;
+      ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
+      ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
+      ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
+      ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
+      ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
+      ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
+      ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
+      ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
+      # notes skill: base covers the general llm-wiki vaults (personal-software,
+      # oss-vespa); a downstream config can compose into the same skill dir by
+      # adding references/work-vault.md (registry entry for its work vault).
+      ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
 
       # nix-provenance: print the active system's flake provenance (written to
