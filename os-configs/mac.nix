@@ -10,6 +10,14 @@ in {
 
       ".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
 
+      # claude and codex capture path through marked login-shell probes, then
+      # direct-spawn git from their gui processes. macos 26 intermittently
+      # blocks the ad-hoc-signed nix git at that boundary with eacces. expose
+      # apple's platform-signed git only to those probes; regular shells keep
+      # using the nix-managed git.
+      ".local/libexec/gui-git/git".source =
+        config.lib.file.mkOutOfStoreSymlink "/usr/bin/git";
+
       # gpg-agent config (services.gpg-agent is systemd-only, not available on mac)
       ".gnupg/gpg-agent.conf".text = ''
         pinentry-program ${pkgs.pinentry_mac}/bin/pinentry-mac
@@ -23,6 +31,16 @@ in {
       pkgs.pinentry_mac
     ];
   };
+
+  programs.zsh.initContent = lib.mkAfter ''
+    if [[ "$CLAUDE_DESKTOP_RESOLVING_ENVIRONMENT" = 1 || "$CODEX_SHELL" = 1 ]]; then
+      gui_git_dir="$HOME/.local/libexec/gui-git"
+      if [[ ":$PATH:" != *":$gui_git_dir:"* ]]; then
+        export PATH="$gui_git_dir:$PATH"
+      fi
+      unset gui_git_dir
+    fi
+  '';
 
   programs.ssh = {
     enable = true;
