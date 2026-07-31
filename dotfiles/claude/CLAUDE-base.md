@@ -5,6 +5,11 @@
     * when creating new docs, use the default lower case style
     * when editing, preserve case for code, variable names, identifiers, abbreviations and actual code
     * product names are lower case too
+* **write for someone who wasn't in the session — define a term at first use, or don't use it at all.** applies to everything rahul reads: questions, status reports, pr titles and bodies, commit messages, chip titles.
+    * **lead with the plain thing; the label comes second, if at all.** say "before deleting a doc, check what else was only reachable through it" — not "run the stranding check". a slogan headline that only parses if you already lived the incident is the same defect.
+    * **a question is one sentence plus options a person can choose between without re-reading.** if it needs a paragraph of setup, it's the wrong shape — cut the setup, or drop the question and make a recommendation instead.
+    * **never name a thing that doesn't exist yet.** a label for an absent check gives him nothing to picture; describe what it would do.
+    * rahul has flagged this three times (2026-07-30 → 07-31: two pr framings, one question). terse and readable are different axes — short jargon is terse and unreadable. where a repo's own pr-description rules already demand a plain-english lede, that is this rule applied to pr bodies; this is the general form of it.
 * when working on pull requests:
     * unless specifically asked not to, create a DRAFT pr
     * don't add ai generated prompt
