@@ -24,6 +24,10 @@
           {
             "type": "command",
             "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create'; then head=$(printf '%s' \"$cmd\" | sed -nE 's/.*(-H|--head)[[:space:]=]+([^[:space:]]+).*/\\2/p'); branch=\"$head\"; [ -z \"$branch\" ] && branch=$(git branch --show-current 2>/dev/null); prn=$(printf '%s' \"$branch\" | grep -oE '(^|/|-)pr[0-9]+(\\.[0-9]+)?-' | head -1 | grep -oE 'pr[0-9]+(\\.[0-9]+)?'); if [ -n \"$prn\" ] && ! printf '%s' \"$cmd\" | grep -qF \"($prn)\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"branch '\"$branch\"' looks like a numbered pr-series member ('\"$prn\"'), but the --title lacks the matching suffix. append ('\"$prn\"') to the --title and retry (CLAUDE.md multi-pr workflow).\"}}'; fi; fi"
+          },
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); n=$(printf '%s' \"$cmd\" | grep -oE 'git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+worktree[[:space:]]+remove' | wc -l | tr -d ' '); prune=$(printf '%s' \"$cmd\" | grep -cE 'git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+worktree[[:space:]]+prune'); loop=$(printf '%s' \"$cmd\" | grep -cE '(for|while)[^;]*;[[:space:]]*do([^a-zA-Z0-9_-]|$)|\\|[[:space:]]*xargs([^a-zA-Z0-9_-]|$)'); if [ \"$n\" -ge 2 ] || { [ \"$n\" -ge 1 ] && [ \"$loop\" -ge 1 ]; } || [ \"$prune\" -ge 1 ]; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"stop: this removes more than one worktree at a time, drives removal from a loop or xargs, or runs worktree prune. remove ONE literal path per command instead, and for each one first confirm it is your own cwd AND that no other live session claims it (mcp__ccd_session_mgmt__list_sessions, exact-path match), checked immediately before removing. why: the app can move a running session into a worktree directory that already belongs to another running session, so a directory can be the working dir of another live session even when it looks like yours — and the recorded cwd/branch for other sessions can be out of date, so a batch cannot be verified safe. never run worktree prune. see the worktree-cleanup rules in CLAUDE.md.\"}}'; fi"
           }
         ]
       }
@@ -33,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "git worktree prune 2>/dev/null; git branch --list 'worktree-*' | while read b; do git branch -d \"$b\" 2>/dev/null; done"
+            "command": "git branch --list 'worktree-*' | while read b; do git branch -d \"$b\" 2>/dev/null; done"
           }
         ]
       }

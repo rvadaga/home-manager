@@ -47,6 +47,11 @@ no AI-attribution trailer/footer. read the template from the repo (or the fallba
 ## 4. validate before asking (pre-merge)
 
 - docs / skills / CLAUDE.md / settings-markdown change → the PR DIFF is the reviewable artifact; no rebuild needed to review it.
+- change under `dotfiles/claude/skills/**` → ALSO validate the skill locally before surfacing the pr — the diff shows wording, not frontmatter schema, and a `skills-ref` ci gate is landing that turns invalid frontmatter into a red ci:
+  ```bash
+  npx -y skills-ref@0.1.5 validate dotfiles/claude/skills/<skill-name>/
+  ```
+  prints `Valid skill: <path>` and exits 0 on success. keep the version pinned — that's what ci runs.
 - `*.nix` / behavior change → build (never activates, safe any time) and verify the changed artifact in `./result`'s closure (see §verify). for a downstream flake, point it at the worktree:
   ```bash
   darwin-rebuild build --flake <downstream-repo>#$HM_CONFIG_NAME \
@@ -59,9 +64,14 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
 
 ## 6. on approval — merge, rebuild, verify, clean up
 
-1. **merge** (squash is the default):
+1. **mark ready, THEN merge** (squash is the default) — §3 opened this pr as a DRAFT and github refuses to merge a draft (`GraphQL: Pull Request is still a draft (mergePullRequest)`), so `gh pr ready` is required, not optional; /ship-config §5 does the same:
    ```bash
+   gh pr ready <n> --repo <owner>/<repo>
    gh pr merge <n> --repo <owner>/<repo> --squash
+   ```
+   then confirm it actually landed — a refused merge leaves the pr open and is easy to skim past:
+   ```bash
+   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt   # want state=MERGED + non-null mergedAt
    ```
 2. **rebuild** from the now-updated main, using the flake this machine actually rebuilds from (`$HM_CONFIG_NAME` selects the config):
    ```bash
