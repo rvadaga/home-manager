@@ -7,6 +7,9 @@ let
       ]
       ++ [ (builtins.readFile bodyPath) ]
     );
+  baseInstructions = readInstructions
+    ../dotfiles/claude/CLAUDE-personal-scope.md
+    ../dotfiles/claude/CLAUDE-base.md;
 in {
   imports = [
     ../os-configs/llm-instructions.nix
@@ -24,12 +27,9 @@ in {
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
   home = {
     file = {
-      ".codex/AGENTS.md".text = readInstructions
-        ../dotfiles/codex/AGENTS-personal-scope.md
-        ../dotfiles/codex/AGENTS-base.md;
-      ".claude/CLAUDE.md".text = readInstructions
-        ../dotfiles/claude/CLAUDE-personal-scope.md
-        ../dotfiles/claude/CLAUDE-base.md;
+      ".codex/AGENTS.md".text = baseInstructions;
+      ".codex/skills".source = ../dotfiles/claude/skills;
+      ".claude/CLAUDE.md".text = baseInstructions;
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
