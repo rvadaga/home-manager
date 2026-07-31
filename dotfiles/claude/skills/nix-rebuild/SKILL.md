@@ -47,6 +47,11 @@ no AI-attribution trailer/footer. read the template from the repo (or the fallba
 ## 4. validate before asking (pre-merge)
 
 - docs / skills / CLAUDE.md / settings-markdown change → the PR DIFF is the reviewable artifact; no rebuild needed to review it.
+- change under `dotfiles/claude/skills/**` → ALSO validate the skill locally before surfacing the pr — the diff shows wording, not frontmatter schema, and a `skills-ref` ci gate is landing that turns invalid frontmatter into a red ci:
+  ```bash
+  npx -y skills-ref@0.1.5 validate dotfiles/claude/skills/<skill-name>/
+  ```
+  prints `Valid skill: <path>` and exits 0 on success. keep the version pinned — that's what ci runs.
 - `*.nix` / behavior change → build (never activates, safe any time) and verify the changed artifact in `./result`'s closure (see §verify). for a downstream flake, point it at the worktree:
   ```bash
   darwin-rebuild build --flake <downstream-repo>#$HM_CONFIG_NAME \
