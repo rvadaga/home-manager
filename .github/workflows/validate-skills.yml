@@ -1,15 +1,13 @@
 name: validate skills
 
+# do not filter this workflow by path. the `skills-ref validate` check is
+# required on main, and a skipped workflow reports no status, so the required
+# check waits forever. every pr must reach this job, including prs that do not
+# touch a skill.
 on:
   pull_request:
-    paths:
-      - "dotfiles/claude/skills/**"
-      - ".github/workflows/validate-skills.yml"
   push:
     branches: [main]
-    paths:
-      - "dotfiles/claude/skills/**"
-      - ".github/workflows/validate-skills.yml"
 
 jobs:
   skills-ref:
