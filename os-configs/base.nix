@@ -1,5 +1,6 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
+  ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -233,6 +234,10 @@ in {
       CLAUDE_CODE_NO_FLICKER = "1";
     };
   };
+
+  # github cli discovers extensions under its xdg data directory. keep the
+  # official stack binary in that layout so `gh stack` dispatches to it.
+  xdg.dataFile."gh/extensions/gh-stack".source = "${ghStack}/bin";
 
   # required to autoload fonts from packages installed via Home Manager
   fonts = {
