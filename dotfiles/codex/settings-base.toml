@@ -1,0 +1,14 @@
+model = "gpt-5.6-sol"
+sandbox_mode = "workspace-write"
+service_tier = "priority"
+web_search = "indexed"
+
+[features]
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[sandbox_workspace_write]
+network_access = true

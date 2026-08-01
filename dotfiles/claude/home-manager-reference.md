@@ -21,14 +21,24 @@ for the condensed version, see CLAUDE.md.
 * **for CLAUDE.md changes:** edit the source file(s) and run `home-manager switch`
 * **for settings changes:** edit files directly in `~/.claude/` (takes effect immediately), then run `/sync-claude-settings` to propagate back to nix source files
 
+## codex config.toml
+
+`codex.settingsPieces` accepts a list of nix attribute sets. the base config reads `dotfiles/codex/settings-base.toml` into the first piece, and downstream configs can append their own pieces with `lib.mkAfter`.
+
+home-manager folds the nix pieces in order, with later pieces winning scalar conflicts. on activation it recursively merges that result into `~/.codex/config.toml`: live scalars and array order win, while missing nix keys and array entries are added.
+
+keep codex-owned mutable state out of these pieces. this includes notifications, marketplaces, project trust, installed plugins, desktop preferences, generated mcp server entries, and hook trust hashes.
+
 ## file structure
 
-settings are organized into environment-specific pieces:
+claude settings are organized into environment-specific pieces:
 
 * `settings-base.json` - shared settings across all environments (model, plugins, permissions, mcp servers, etc.)
 * `settings-mac.json` - macos-specific settings (mac-only permissions)
 * `settings-linux.json` - linux-specific settings (linux-only permissions)
 * `settings-nixos.json` - nixos-specific settings (nixos-only permissions)
+
+codex files and downstream pieces are described in [codex config.toml](#codex-configtoml).
 
 CLAUDE.md uses the same pattern:
 
@@ -141,6 +151,6 @@ edit ~/.config/home-manager/dotfiles/claude/CLAUDE-base.md
 
 * other configuration repos may exist separately and are not accessible from this config
 * other repos may use this repo as a flake input, so changes here may affect those configurations
-* settings files use json format - ensure valid json when editing
-* settings are merged using recursive update - later values override earlier ones
-* merge order: base → os-specific (so os-specific settings override base)
+* claude settings pieces use json; the codex base settings file uses toml
+* nix-owned pieces are merged recursively - later nix values override earlier ones
+* pieces merge in declared order: base → os-specific or downstream additions, so later nix pieces override earlier ones

@@ -21,6 +21,7 @@ in {
   imports = [
     ../os-configs/llm-instructions.nix
     ../programs/claude.nix
+    ../programs/codex.nix
     ../programs/fzf.nix
     ../programs/ghostty.nix
     ../programs/kitty.nix
@@ -30,8 +31,9 @@ in {
     ../programs/zsh.nix
   ];
 
-  # claude configuration
+  # claude and codex configuration
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
+  codex.settingsPieces = [ (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml)) ];
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
