@@ -12,7 +12,9 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 ## workflow
 
 1. **preflight**
-   - `gfo main` (git fetch origin main — never fetch all branches), then `grbom` (git rebase origin/main)
+   - `gfo main` (git fetch origin main — never fetch all branches)
+   - **branch not pushed yet → `grbom` (git rebase origin/main). branch already pushed → do not rebase it.** a rebase rewrites published history: it needs a force-push, which is denied by default, and it leaves any other checkout of that branch pointing at commits the remote no longer has. use `gh pr update-branch <n>` instead — github merges main into the branch server-side, so nothing is rewritten, and the new head re-runs the required check against the combined tree. plain `update-branch` only; its `--rebase` flag rewrites the branch after all.
+   - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
 
 2. **commit** — repo commit style, lower case, no ai-attribution trailers
@@ -42,8 +44,14 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 5. **merge** (no confirmation gate after a passing test)
    - `gh pr ready <n>`, then `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
-   - `gpod <branch>` (git push origin --delete)
+   - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
+     ```bash
+     gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'
+     ```
+     want `MERGED`, a non-null `mergedAt`, and the sha you pushed. still-running check → wait for it and re-run the merge. auto-merge is not an option on this repo (`allow_auto_merge` is false, so `gh pr merge --auto` errors).
+   - **only once that read says `MERGED`:** `gpod <branch>` (git push origin --delete). gate the delete on that read and nothing else — not on the merge command's silence, not on its exit status, and never by chaining the delete onto the merge. a refused merge with the delete running anyway leaves the branch deleted and the pr closed, recoverable only by re-pushing the identical sha and reopening.
    - fast-forward local main without `cd`: `git -C <main-repo> fetch origin main && git -C <main-repo> merge --ff-only origin/main`
+   - keep that `gh pr view` output — deleting the branch retires the remote-ref form of the data-loss gate, so step 9 has to run on the merged-pr form.
 
 6. **cascade** — if machine-specific instructions define a downstream config consuming this flake as `personal-config`: bump its lock, commit, push (/nix-rebuild steps 4–5). fold any downstream-side edits identified in step 4 into the same commit.
 
@@ -56,7 +64,9 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - the changed artifact carries the new value (step-4 check against the real lock)
    - where the change flows into a live-merged file, confirm the merge ran (target file mtime)
 
-9. **cleanup (mandatory last step)** — once verified, remove the worktree per the cleanup foot-gun in global claude.md: run the whole removal in ONE bash invocation using `git -C <main-repo>` — `git -C <main-repo> worktree remove --force <worktree> && git -C <main-repo> branch -D <branch>` — as this session's absolute last bash action (no shell commands afterward, only the final summary), so no command depends on the doomed cwd. do NOT spawn this with `isolation: "worktree"` — an isolated agent is guard-refused from `git -C <main-repo>` and the removal will not run. scope: remove only the worktree being shipped — never enumerate or touch other worktrees; they belong to other sessions.
+9. **cleanup (mandatory last step)** — once verified, remove the worktree.
+   - **clear the data-loss gate first** (global claude.md): `git status --porcelain` empty, and every commit present somewhere other than this worktree. step 5 deleted the branch, so the remote-ref form of that gate is already retired — use the merged-pr form: `gh pr view <n> --json state,mergedAt,headRefOid` reading `MERGED` with `headRefOid` equal to this worktree's `git rev-parse HEAD`. the sha comparison is what catches a commit made after the merge.
+   - then remove it per the cleanup foot-gun in global claude.md: run the whole removal in ONE bash invocation using `git -C <main-repo>` — `git -C <main-repo> worktree remove --force <worktree> && git -C <main-repo> branch -D <branch>` — as this session's absolute last bash action (no shell commands afterward, only the final summary), so no command depends on the doomed cwd. do NOT spawn this with `isolation: "worktree"` — an isolated agent is guard-refused from `git -C <main-repo>` and the removal will not run. scope: remove only the worktree being shipped — never enumerate or touch other worktrees; they belong to other sessions.
 
 ## notes
 
