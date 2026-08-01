@@ -1,0 +1,147 @@
+allow_login_shell = true
+approval_policy = "on-request"
+approvals_reviewer = "auto_review"
+model = "gpt-5.6-sol"
+personality = "friendly"
+sandbox_mode = "workspace-write"
+service_tier = "priority"
+web_search = "indexed"
+
+[agents]
+enabled = true
+interrupt_message = true
+max_concurrent_threads_per_session = 3
+
+[apps._default]
+approvals_reviewer = "auto_review"
+default_tools_approval_mode = "auto"
+enabled = true
+
+[desktop]
+appearanceDarkCodeThemeId = "codex"
+appearanceDiffMarkerStyle = "color"
+appearanceLightCodeThemeId = "codex"
+conversationDetailMode = "STEPS_COMMANDS"
+default-service-tier = "fast"
+defaultTerminalLocation = "bottom"
+dock-icon-preference = "codex-system"
+followUpQueueMode = "steer"
+show-context-window-usage = false
+usePointerCursors = true
+
+[desktop.appearanceDarkChromeTheme]
+accent = "#0169cc"
+contrast = 60
+ink = "#fcfcfc"
+opaqueWindows = false
+surface = "#111111"
+
+[desktop.appearanceDarkChromeTheme.fonts]
+code = "FiraCode Nerd Font Mono"
+
+[desktop.appearanceDarkChromeTheme.semanticColors]
+diffAdded = "#00a240"
+diffRemoved = "#e02e2a"
+skill = "#b06dff"
+
+[desktop.appearanceLightChromeTheme]
+accent = "#0169cc"
+contrast = 45
+ink = "#0d0d0d"
+opaqueWindows = false
+surface = "#ffffff"
+
+[desktop.appearanceLightChromeTheme.fonts]
+code = "FiraCode Nerd Font Mono"
+
+[desktop.appearanceLightChromeTheme.semanticColors]
+diffAdded = "#00a240"
+diffRemoved = "#e02e2a"
+skill = "#751ed9"
+
+[features]
+apps = true
+enable_request_compression = true
+fast_mode = true
+goals = true
+hooks = true
+memories = true
+multi_agent = true
+personality = true
+prevent_idle_sleep = true
+remote_plugin = true
+shell_snapshot = true
+shell_tool = true
+skill_mcp_dependency_install = true
+unified_exec = true
+
+[history]
+persistence = "save-all"
+
+[memories]
+generate_memories = true
+use_memories = true
+
+[mcp_servers.nixos]
+command = "mcp-nixos"
+default_tools_approval_mode = "auto"
+enabled = true
+
+[mcp_servers.x-docs]
+default_tools_approval_mode = "auto"
+enabled = true
+url = "https://docs.x.com/mcp"
+
+[mcp_servers.xapi]
+args = ["-y", "@xdevplatform/xurl", "mcp", "https://api.x.com/mcp"]
+command = "npx"
+default_tools_approval_mode = "auto"
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."codex@openai-codex"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."gmail@openai-curated"]
+enabled = true
+
+[plugins."google-drive@openai-curated"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."sites@openai-bundled"]
+enabled = true
+
+[plugins."slack@openai-curated"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[sandbox_workspace_write]
+network_access = true
