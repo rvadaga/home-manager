@@ -27,7 +27,7 @@ for the condensed version, see CLAUDE.md.
 
 home-manager folds the nix pieces in order, with later pieces winning scalar conflicts. on activation it recursively merges that result into `~/.codex/config.toml`: live scalars and array order win, while missing nix keys and array entries are added.
 
-keep codex-owned mutable state out of these pieces. this includes notifications, marketplaces, project trust, installed plugins, desktop preferences, generated mcp server entries, and hook trust hashes.
+stable desired plugin enablement and desktop defaults can live in these pieces because the live file still wins conflicts. keep generated app state out: notification paths, marketplace metadata, project trust, generated mcp server entries and environment values, and hook trust hashes.
 
 ## file structure
 
