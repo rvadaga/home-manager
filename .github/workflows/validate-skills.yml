@@ -1,15 +1,14 @@
 name: validate skills
 
+# deliberately NOT filtered with `paths:`. the `skills-ref validate` check is
+# required on main, and a workflow skipped by a path filter reports nothing at
+# all — not success, not skipped — so a required check waits on it forever and
+# the pr can never merge. every pr has to reach this job, including ones that
+# touch no skill. the job takes seconds; a filter here costs a deadlock.
 on:
   pull_request:
-    paths:
-      - "dotfiles/claude/skills/**"
-      - ".github/workflows/validate-skills.yml"
   push:
     branches: [main]
-    paths:
-      - "dotfiles/claude/skills/**"
-      - ".github/workflows/validate-skills.yml"
 
 jobs:
   skills-ref:
