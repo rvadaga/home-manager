@@ -82,6 +82,8 @@
 
 ## multi-pr workflow
 
+for github-managed stacked pull requests, use the `github-stacked-prs` skill; its stack commands and no-fallback rule replace the ordinary chained-pr workflow below.
+
 when a change is large enough to warrant multiple prs:
 
 * assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
