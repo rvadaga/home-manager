@@ -46,7 +46,7 @@
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
-* never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
+* ad hoc force-push commands require explicit permission — never run `git push --force` or `git push --force-with-lease` directly or through an alias without it. for a github-managed draft stack, use `github-stacked-prs`; that skill owns the official cli publication authorization and safety checks.
 * commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
 * **always run bash commands backgrounded** (`run_in_background: true`) — small or large. foreground command output isn't reliably visible in the claude desktop app's transcript; backgrounded output is captured to the task output file and shows in the "background task" view. after starting one, poll/read its output and relay the result — never fire-and-forget: a command isn't "done" until its output has been surfaced to the user.
@@ -82,7 +82,7 @@
 
 ## multi-pr workflow
 
-for github-managed stacked pull requests, use the `github-stacked-prs` skill; its stack commands and no-fallback rule replace the ordinary chained-pr workflow below.
+for github-managed stacked pull requests, use the `github-stacked-prs` skill; its command, publication, and safety rules replace the ordinary chained-pr workflow below.
 
 when a change is large enough to warrant multiple prs:
 
