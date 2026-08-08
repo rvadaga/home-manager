@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: manage and publish github-managed stacked pull requests with the official gh stack cli. use for creating, viewing, restacking, recovering, validating, pushing, or submitting a github stack, including deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, review, publish, restack, recover, and merge visible draft stacks with the official gh stack cli. use for any real dependent pull request series, including deciding whether the cli's descendant-head updates are authorized.
 ---
 
 # github stacked pull requests
@@ -8,6 +8,17 @@ description: manage and publish github-managed stacked pull requests with the of
 use the official github-owned [`github/gh-stack`](https://github.com/github/gh-stack) cli extension. this config packages stable release [`v0.1.0`](https://github.com/github/gh-stack/releases/tag/v0.1.0) declaratively in `packages/gh-stack.nix` and exposes its `bin` directory through the xdg extension link in `os-configs/base.nix`. the extension release is stable; the github stacked pull requests service is in [private preview](https://github.github.com/gh-stack/) and must be enabled for the repository.
 
 do not install the extension imperatively or substitute another stack tool. confirm `gh stack --version` before acting. if the official command is unavailable, stop stack reconciliation.
+
+## form and extend a visible draft stack
+
+use a stack only when the layers have a real code dependency. keep independent changes as independent draft pull requests.
+
+1. start the first layer with `gh stack init <branch>`. run its focused tests and the pre-push checks below, then publish it as a draft with `gh stack submit --auto` without `--open`.
+2. when the next dependent layer is ready, check out the current top and use `gh stack add <child-branch>`. if the dependent branches already exist, adopt them in bottom-to-top order with `gh stack init <bottom-branch> ... <top-branch>`.
+3. run the new layer's focused tests and the complete pre-push verification, then use `gh stack submit --auto` without `--open` to publish it as another draft layer.
+4. repeat for each ready dependent layer. do not keep a ready layer hidden locally while waiting for its parent to merge.
+
+keep one branch, pull request, owning working tree, writer, and reviewer claim per layer. do not make two sessions write the same layer.
 
 ## inspect and restack
 
@@ -53,6 +64,18 @@ this authorization does not cover:
 - overwriting remote movement that the current local stack does not account for;
 - changing or publishing a ready pull request unless the active project rules allow that action now; or
 - bypassing a stronger project, branch, pull request, design, deployment, or safety rule.
+
+## merge bottom-up
+
+merge a layer only after the user explicitly approves changing that layer from draft. keep every higher layer draft.
+
+1. repeat the full-stack inspection and layer tests, then change only the bottom pull request to ready.
+2. run `gh stack merge <bottom-pr-number>`. the command merges everything through the selected pull request, so selecting the bottom pull request lands exactly one layer.
+3. rederive the merged pull request state and exact head before changing any remaining layer.
+4. restack the remaining drafts with `gh stack rebase`. if conflicts stop the command, use only `gh stack rebase --continue` after resolving and staging them.
+5. repeat the full-stack inspection and every remaining layer's tests, then publish the validated restack with `gh stack push` and verify that every remaining pull request is still draft at the expected remote head.
+
+repeat from the new bottom layer. never substitute per-branch git commands for landing or restacking a github-managed stack.
 
 ## recover after the wrong continuation
 

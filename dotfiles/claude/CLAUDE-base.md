@@ -83,13 +83,13 @@
 
 ## multi-pr workflow
 
-for github-managed stacked pull requests, use the `github-stacked-prs` skill; its command, publication, and safety rules replace the ordinary chained-pr workflow below.
+for a real dependent series, use `github-stacked-prs` as the canonical owner of the stack lifecycle and commands. open the first layer as a draft, publish each ready dependent layer into the same visible draft stack, and land one layer at a time from the bottom while the skill restacks and verifies the remaining drafts.
+
+independent changes remain independent draft pull requests. do not force them into an artificial stack.
 
 when a change is large enough to warrant multiple prs:
 
-* assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
-* when a pr series must be chained (each branch based on the previous, because of a real code dependency between them), build the whole stack of branches locally up front, but open each child pr only AFTER its parent has merged to the default branch and the child has been rebased onto it. never open all the chained prs at once — keep exactly one open at a time and advance as each parent lands
-* this refines the chained-vs-standalone choice above: for chained series use the build-all/open-sequentially cadence; for independent chunks keep the off-main, one-at-a-time approach
+* decide whether the parts have real code dependencies. dependent parts use the visible draft stack above; independent parts stay as separate draft pull requests off main
 * the decision to number is a judgment about series cohesion, not a repo-level toggle — reusing the same jira ticket across prs, or prs that all belong to one coherent project/effort (a shared epic, a migration, a feature spanning several prs), is a strong signal to number the series. record that judgment by numbering the branch (below); a lone pr on its own ticket stays unnumbered.
 * number each pr sequentially — pr1, pr2, etc.
 * include the number in the branch name: e.g., `rahul/pr1-change-abc`, `rahul/pr2-fix-bug` (follows existing branch prefix conventions per repo)
