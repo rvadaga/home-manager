@@ -33,7 +33,7 @@ git -C <worktree> add -A && git -C <worktree> commit -m "<describe change>"
 git -C <worktree> push -u origin rahul/nix-rebuild-<topic>
 ```
 
-an existing published draft follows the canonical local-first published-branch rule in `CLAUDE.md`. a rejected push or unexpected remote movement is a stop signal; do not rebase, force-push, or move the remote with `gh pr update-branch`.
+an existing published ordinary draft follows the canonical local-first rule in `CLAUDE.md`. a github-managed stack follows `github-stacked-prs` for full-stack synchronization and publication; never apply the ordinary merge-main procedure or `gh pr update-branch` to one stack layer. a rejected push or unexpected remote movement is a stop signal.
 
 ## 3. open a DRAFT pr
 
