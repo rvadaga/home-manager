@@ -149,10 +149,13 @@ pass "pull-request title search keeps its default output"
 
 reset_mock
 help_output=$(gh-pr-search --help)
-assert_contains 'usage: gh-pr-search [--field <name>]... [--] <title text>' "$help_output" "search help shows the selector form"
+assert_contains 'usage: gh-pr-search [selector]... [--] <title text>' "$help_output" "search help shows the selector form"
+assert_contains 'selector: -f <name>[,<name>...] | --field <name>[,<name>...]' "$help_output" "search help shows both selector flags"
 assert_contains 'number, state, headRefName, headRefOid, title, url' "$help_output" "search help lists the allowed fields"
-assert_contains 'gh-pr-search --field headRefOid' "$help_output" "search help shows a single-field example"
-assert_contains 'gh-pr-search --field number --field url' "$help_output" "search help shows a multi-field example"
+assert_contains 'gh-pr-search --field headRefOid --field number' "$help_output" "search help shows repeated long selectors"
+assert_contains 'gh-pr-search -f headRefOid -f number' "$help_output" "search help shows repeated short selectors"
+assert_contains 'gh-pr-search -f headRefOid,number' "$help_output" "search help shows a comma-separated selector"
+assert_contains 'gh-pr-search --field headRefOid,url -f number,state' "$help_output" "search help shows mixed comma-separated selectors"
 assert_contains 'at most 1,000 results' "$help_output" "search help states the github result limit"
 if [ -s "$mock_log" ]; then
   fail "search help calls github"
@@ -182,19 +185,39 @@ done
 pass "search supports minimal single-field output"
 
 reset_mock
-mock_search_output=$'17\thttps://github.com/example/tools/pull/17'
-search_output=$(gh-pr-search exact --field number phrase --field url)
-assert_equals "$mock_search_output" "$search_output" "search prints selected fields in selector order"
+mock_search_output=$'1111111111111111111111111111111111111111\t17'
+search_output=$(gh-pr-search --field headRefOid --field number exact phrase)
+assert_equals "$mock_search_output" "$search_output" "search supports repeated long selectors"
 search_log=$(<"$mock_log")
-assert_contains 'searchQuery=is:pr author:@me in:title "exact phrase"' "$search_log" "selectors can appear between title words"
-assert_contains '[.number, .url]' "$search_log" "multi-field search keeps selector order"
-assert_not_contains '          state' "$search_log" "multi-field search requests an unselected state"
-assert_not_contains '          headRefOid' "$search_log" "multi-field search requests an unselected head oid"
-pass "search supports ordered multi-field output"
+assert_contains '[.headRefOid, .number]' "$search_log" "repeated long selectors keep caller order"
+
+reset_mock
+mock_search_output=$'1111111111111111111111111111111111111111\t17'
+search_output=$(gh-pr-search -f headRefOid -f number exact phrase)
+assert_equals "$mock_search_output" "$search_output" "search supports repeated short selectors"
+search_log=$(<"$mock_log")
+assert_contains '[.headRefOid, .number]' "$search_log" "repeated short selectors keep caller order"
+
+reset_mock
+mock_search_output=$'1111111111111111111111111111111111111111\t17'
+search_output=$(gh-pr-search -f headRefOid,number exact phrase)
+assert_equals "$mock_search_output" "$search_output" "search supports a comma-separated short selector"
+search_log=$(<"$mock_log")
+assert_contains '[.headRefOid, .number]' "$search_log" "comma-separated fields keep caller order"
+
+reset_mock
+mock_search_output=$'1111111111111111111111111111111111111111\thttps://github.com/example/tools/pull/17\t17\tOPEN'
+search_output=$(gh-pr-search --field headRefOid,url exact -f number,state phrase)
+assert_equals "$mock_search_output" "$search_output" "search flattens mixed selector groups"
+search_log=$(<"$mock_log")
+assert_contains 'searchQuery=is:pr author:@me in:title "exact phrase"' "$search_log" "mixed selectors can appear between title words"
+assert_contains '[.headRefOid, .url, .number, .state]' "$search_log" "mixed selector groups keep caller order"
+assert_equals "1" "$(awk '$0 == "gh-call" { count++ } END { print count + 0 }' "$mock_log")" "mixed selectors use one paginated github flow"
+pass "search supports repeated, comma-separated, and mixed selectors"
 
 reset_mock
 mock_search_output="17"
-search_output=$(gh-pr-search --field number -- --draft title)
+search_output=$(gh-pr-search -f number -- --draft title)
 assert_equals "17" "$search_output" "search accepts a title beginning with a dash"
 search_log=$(<"$mock_log")
 assert_contains 'searchQuery=is:pr author:@me in:title "--draft title"' "$search_log" "search preserves a dash-leading title"
@@ -202,12 +225,12 @@ pass "search separates options from dash-leading titles"
 
 reset_mock
 mock_search_output=$'17\n23'
-search_output=$(gh-pr-search --field number repeated title)
+search_output=$(gh-pr-search -f number repeated title)
 assert_equals "$mock_search_output" "$search_output" "search prints one selected value for each match"
 
 reset_mock
 mock_search_output=""
-if ! search_output=$(gh-pr-search --field url absent title); then
+if ! search_output=$(gh-pr-search -f url absent title); then
   fail "search rejects zero matches"
 fi
 assert_equals "" "$search_output" "search prints nothing for zero matches"
@@ -223,14 +246,38 @@ fi
 if gh-pr-search --field >/dev/null 2>&1; then
   fail "search accepts a missing selector value"
 fi
+if gh-pr-search -f >/dev/null 2>&1; then
+  fail "search accepts a missing short-selector value"
+fi
 if gh-pr-search --field -- fix >/dev/null 2>&1; then
   fail "search accepts the option separator as a selector value"
+fi
+if gh-pr-search -f -- fix >/dev/null 2>&1; then
+  fail "search accepts the option separator as a short-selector value"
 fi
 if gh-pr-search --field repository fix >/dev/null 2>&1; then
   fail "search accepts an unknown field"
 fi
+if gh-pr-search -f headRefOid,repository fix >/dev/null 2>&1; then
+  fail "search accepts an unknown field in a comma group"
+fi
+if gh-pr-search -f ,headRefOid fix >/dev/null 2>&1; then
+  fail "search accepts a leading empty field"
+fi
+if gh-pr-search --field headRefOid, fix >/dev/null 2>&1; then
+  fail "search accepts a trailing empty field"
+fi
+if gh-pr-search -f headRefOid,,number fix >/dev/null 2>&1; then
+  fail "search accepts an empty field between commas"
+fi
+if gh-pr-search -f '' fix >/dev/null 2>&1; then
+  fail "search accepts an empty field group"
+fi
 if gh-pr-search --field url >/dev/null 2>&1; then
   fail "search accepts a selector without title text"
+fi
+if gh-pr-search -f url '   ' >/dev/null 2>&1; then
+  fail "search accepts a short selector with a blank title"
 fi
 if gh-pr-search --unknown fix >/dev/null 2>&1; then
   fail "search accepts an unknown option"

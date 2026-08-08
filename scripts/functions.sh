@@ -158,13 +158,16 @@ function gct() {
 }
 
 _gh_pr_search_usage() {
-  echo "usage: gh-pr-search [--field <name>]... [--] <title text>"
+  echo "usage: gh-pr-search [selector]... [--] <title text>"
+  echo "selector: -f <name>[,<name>...] | --field <name>[,<name>...]"
   echo "fields: number, state, headRefName, headRefOid, title, url"
   echo ""
   echo "examples:"
   echo "  gh-pr-search 'fix exact phrase'"
-  echo "  gh-pr-search --field headRefOid 'fix exact phrase'"
-  echo "  gh-pr-search --field number --field url 'fix exact phrase'"
+  echo "  gh-pr-search --field headRefOid --field number 'fix exact phrase'"
+  echo "  gh-pr-search -f headRefOid -f number 'fix exact phrase'"
+  echo "  gh-pr-search -f headRefOid,number 'fix exact phrase'"
+  echo "  gh-pr-search --field headRefOid,url -f number,state 'fix exact phrase'"
   echo "  gh-pr-search -- '--title beginning with a dash'"
   echo ""
   echo "github search returns at most 1,000 results for one query."
@@ -176,6 +179,9 @@ function gh-pr-search() {
   local output_fields=()
   local parse_options=true
   local field
+  local field_group
+  local remaining_fields
+  local selector_flag
   local title_query
   local quoted_title_query
   local graphql_fields=""
@@ -191,29 +197,50 @@ function gh-pr-search() {
     fi
 
     case "$1" in
-      --field)
+      -f|--field)
+        selector_flag="$1"
         if [ "$#" -lt 2 ]; then
-          echo "error: --field requires a value"
+          echo "error: ${selector_flag} requires a value"
           _gh_pr_search_usage
           return 1
         fi
         case "$2" in
           -*)
-            echo "error: --field requires a value"
+            echo "error: ${selector_flag} requires a value"
             _gh_pr_search_usage
             return 1
             ;;
         esac
-        field="$2"
-        case "$field" in
-          number|state|headRefName|headRefOid|title|url) ;;
-          *)
-            echo "error: unknown field: $field"
+        field_group="$2"
+        case "$field_group" in
+          ""|,*|*,|*,,*)
+            echo "error: invalid field list: $field_group"
             _gh_pr_search_usage
             return 1
             ;;
         esac
-        selected_fields+=("$field")
+        remaining_fields="$field_group"
+        while [ -n "$remaining_fields" ]; do
+          case "$remaining_fields" in
+            *,*)
+              field=${remaining_fields%%,*}
+              remaining_fields=${remaining_fields#*,}
+              ;;
+            *)
+              field="$remaining_fields"
+              remaining_fields=""
+              ;;
+          esac
+          case "$field" in
+            number|state|headRefName|headRefOid|title|url) ;;
+            *)
+              echo "error: unknown field: $field"
+              _gh_pr_search_usage
+              return 1
+              ;;
+          esac
+          selected_fields+=("$field")
+        done
         shift 2
         ;;
       -h|--help)
@@ -224,7 +251,7 @@ function gh-pr-search() {
         parse_options=false
         shift
         ;;
-      --*)
+      -*)
         echo "error: unknown option: $1"
         _gh_pr_search_usage
         return 1
