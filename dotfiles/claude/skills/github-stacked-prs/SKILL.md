@@ -5,9 +5,7 @@ description: create, extend, review, publish, restack, recover, and merge visibl
 
 # github stacked pull requests
 
-use the official github-owned [`github/gh-stack`](https://github.com/github/gh-stack) cli extension. this config packages stable release [`v0.1.0`](https://github.com/github/gh-stack/releases/tag/v0.1.0) declaratively in `packages/gh-stack.nix` and exposes its `bin` directory through the xdg extension link in `os-configs/base.nix`. the extension release is stable; github stacked pull requests are in [public preview](https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/) and covered by the current [github documentation](https://docs.github.com/en/pull-requests/how-tos/stacked-pull-requests).
-
-do not install the extension imperatively or substitute another stack tool. confirm `gh stack --version` before acting. if the official command is unavailable, stop stack reconciliation.
+use the nix-managed official `gh stack` extension. if it is unavailable, stop rather than installing it imperatively or substituting another stack tool.
 
 ## form and extend a visible draft stack
 
