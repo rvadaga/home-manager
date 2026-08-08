@@ -54,7 +54,7 @@ expected: `Preparing worktree (new branch 'rahul/ship-config-skill')`. branch na
 
 ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → rebuild → verify → cleanup. fully autonomous once the pre-merge test passes — test pass is merge authorization.
 
-use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. for quick edits made directly on main, use /nix-rebuild instead.
+use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. without explicit shipping approval, use `/nix-rebuild`; it opens a reviewable draft pull request and waits for approval before merging.
 
 ## workflow
 
@@ -248,18 +248,7 @@ new:
 
 old (the full bullet from `* shipping a worktree to main` down to and including the `git push origin --delete <branch>` code block line and its closing fence, plus the `    * **cleanup foot-gun` sub-bullet prefix):
 ```
-* shipping a worktree to main ("squash merge", "land this worktree", "ship it") — follow this exact sequence; the cwd-deletion foot-gun makes improvising risky:
-    * commit any pending work in the worktree first
-    * fetch latest main: `git -C "$PROJ" fetch origin main` (where `$PROJ` is the main repo, e.g. `~/.config/home-manager`). if the worktree branch diverged, rebase it: `git rebase origin/main`
-    * squash-merge into main from inside the worktree using `git -C "$PROJ"` — never `cd` into the main repo, because the bash harness registers the worktree as cwd at session start and `cd` doesn't update that registration:
-      ```
-      PROJ=$HOME/.config/home-manager
-      git -C "$PROJ" merge --squash <branch>
-      git -C "$PROJ" commit -m "<message>"
-      git -C "$PROJ" push origin main
-      git push origin --delete <branch>     # remove the remote feature branch
-      ```
-    * **cleanup foot-gun (claude-code-specific)**:
+* superseded direct-default-branch workflow. follow the assembled `CLAUDE.md`: publish a branch, open a draft pull request, and merge through that pull request.
 ```
 new:
 ```
@@ -430,38 +419,17 @@ expected: built == active; provenance rev == downstream HEAD; `SKILL.md` listed;
 
 ### task 13: memory updates (Write tool — no repo, no rebuild)
 
-- [ ] **step 1: rewrite `~/.claude/projects/-Users-rvadaga--config-home-manager/memory/feedback_personal_repo_push.md` with exactly:**
-
-```markdown
----
-name: personal-repo direct push to main is the norm
-description: on personal repos (github.com:rvadaga/*) — direct push to main for quick edits; worktree-based work ships via /ship-config (pr + squash, self-merged, no review wait)
-type: feedback
-originSessionId: e019a04f-2978-41ae-8b53-38f4536fd5c2
----
-on personal repositories owned by the user (origin remote matches `github.com[:/]rvadaga/`):
-
-* quick edits made directly on main: commit and push directly — no pr.
-* worktree-based work: ship via the `/ship-config` skill — draft pr → pre-merge closure test → squash merge, proceeding autonomously once the test passes (user-confirmed 2026-06-12). the pr is created and immediately self-merged; there is no review wait.
-
-**why:** the user is the sole maintainer — review adds no value, but the pr trail and pre-merge closure testing do. /ship-config encodes the pipeline end to end (cascade, rebuild, verify, mandatory worktree cleanup).
-
-**how to apply:** don't ask "should i open a pr?" — for worktree ships invoke /ship-config and proceed; for tiny main-branch edits just push. destructive operations (force-push, history rewrites) still require explicit authorization.
-
-scope:
-- applies: any repo where `git remote get-url origin` matches `github.com[:/]rvadaga/`
-- does not apply: forks, repos under other orgs, anywhere CODEOWNERS or branch protection exists
-```
+- [ ] **step 1: do not create a separate repository-publication memory. the assembled `CLAUDE.md` is the canonical rule and requires a pull request for every default-branch change.**
 
 - [ ] **step 2: update the MEMORY.md index line**
 
 old:
 ```
-- [Personal-repo push policy](feedback_personal_repo_push.md) — direct push to main on `github.com:rvadaga/*` is the norm; don't suggest opening a PR
+- [Repository publication policy] — see assembled `CLAUDE.md`
 ```
 new:
 ```
-- [Personal-repo push policy](feedback_personal_repo_push.md) — quick main edits: direct push; worktree ships: /ship-config (pr + squash, self-merged)
+- [Repository publication policy] — see assembled `CLAUDE.md`
 ```
 
 ### task 14: delegated worktree cleanup (absolute last action)

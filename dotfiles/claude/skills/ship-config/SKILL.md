@@ -7,7 +7,7 @@ description: Use when shipping, landing, or squash-merging a config change from 
 
 ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → rebuild → verify → cleanup. fully autonomous once the pre-merge test passes — test pass is merge authorization.
 
-use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. for quick edits made directly on main, use /nix-rebuild instead.
+use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. without explicit shipping approval, use `/nix-rebuild`; it opens a reviewable draft pull request and waits for approval before merging.
 
 ## workflow
 

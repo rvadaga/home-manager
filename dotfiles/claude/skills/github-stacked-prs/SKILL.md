@@ -57,6 +57,8 @@ when every existing pull request in the github-managed stack is draft and every 
 
 `gh stack push` may update descendant remote heads with force-with-lease after a restack. those official, lease-checked updates are part of the standing authorization and do not need separate force-push permission.
 
+the shared default-branch rule in `CLAUDE.md` still applies: this authorization advances draft stack branches only and never permits a push to `main` or `master`.
+
 this authorization does not cover:
 
 - direct `git push --force`, `git push --force-with-lease`, their aliases, or another stack tool;

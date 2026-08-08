@@ -9,7 +9,7 @@ encode the end-to-end "ship a config change" workflow (worktree → pr → test 
 
 ## decisions (user-confirmed)
 
-* default ship path for worktree-based changes: **pr + squash merge**. direct push to main remains the norm for quick edits made directly on main.
+* every change reaches the default branch through a pull request. the assembled `CLAUDE.md` owns the full publication rule; `/ship-config` implements it for config changes.
 * **fully autonomous** once the pre-merge test passes: test pass = merge authorization; merge, cascade, rebuild, verify, and cleanup proceed without further confirmation.
 * `Bash(brew update)` is pre-allowed (mac-only) to self-heal the known homebrew stale-cache failure during `darwin-rebuild switch`. no broader brew allowances.
 * worktree cleanup per global claude.md (delegated isolated agent, absolute last action) is a **mandatory final step** of the workflow, not optional.
@@ -60,7 +60,7 @@ add the concrete precedence note to the downstream repo's overlay instructions: 
 
 ### 6. project memory consistency
 
-update the existing project memory note about push norms: pr + squash via `/ship-config` is the default for worktree-based ships; direct push to main remains the norm for quick edits made directly on main.
+do not create a separate memory rule for repository publication. point readers to the assembled `CLAUDE.md` so the pull-request requirement has one canonical owner.
 
 ## out of scope
 
