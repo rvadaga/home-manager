@@ -157,6 +157,165 @@ function gct() {
     git switch -C "$branch" --track "origin/$branch"
 }
 
+function gh-pr-search() {
+  if [ "$#" -eq 0 ]; then
+    echo "usage: gh-pr-search <title text>"
+    return 1
+  fi
+
+  local title_query="$*"
+  local quoted_title_query
+  local graphql_query
+
+  if [ -z "$(printf '%s' "$title_query" | tr -d '[:space:]')" ]; then
+    echo "usage: gh-pr-search <title text>"
+    return 1
+  fi
+
+  if ! quoted_title_query=$(jq -rn --arg query "$title_query" '$query | @json'); then
+    echo "error: could not prepare the title query"
+    return 1
+  fi
+
+  graphql_query='query($searchQuery: String!, $endCursor: String) {
+    search(query: $searchQuery, type: ISSUE, first: 100, after: $endCursor) {
+      nodes {
+        ... on PullRequest {
+          number
+          state
+          headRefName
+          headRefOid
+          title
+          url
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }'
+
+  gh api graphql --paginate \
+    -f query="$graphql_query" \
+    -F searchQuery="is:pr author:@me in:title ${quoted_title_query}" \
+    --jq '.data.search.nodes[] | [.number, .state, .headRefName, .headRefOid, .title, .url] | @tsv'
+}
+
+function gh-detach-head() {
+  local branch=""
+  local pr_number=""
+  local repo_info
+  local repo
+  local repo_url
+  local encoded_branch
+  local endpoint
+  local fetch_ref
+  local oid
+  local fetched_oid
+  local worktree_status
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --branch)
+        if [ -n "$branch" ] || [ "$#" -lt 2 ] || [ -z "$2" ]; then
+          echo "usage: gh-detach-head (--branch <name> | --pr <number>)"
+          return 1
+        fi
+        branch="$2"
+        shift 2
+        ;;
+      --pr)
+        if [ -n "$pr_number" ] || [ "$#" -lt 2 ] || [ -z "$2" ]; then
+          echo "usage: gh-detach-head (--branch <name> | --pr <number>)"
+          return 1
+        fi
+        pr_number="$2"
+        shift 2
+        ;;
+      *)
+        echo "usage: gh-detach-head (--branch <name> | --pr <number>)"
+        return 1
+        ;;
+    esac
+  done
+
+  if { [ -n "$branch" ] && [ -n "$pr_number" ]; } ||
+    { [ -z "$branch" ] && [ -z "$pr_number" ]; }; then
+    echo "usage: gh-detach-head (--branch <name> | --pr <number>)"
+    return 1
+  fi
+
+  if [ -n "$pr_number" ]; then
+    case "$pr_number" in
+      0|*[!0-9]*)
+        echo "error: pull-request number must be a positive integer"
+        return 1
+        ;;
+    esac
+  fi
+
+  if ! worktree_status=$(git status --porcelain); then
+    echo "error: could not read the current git worktree"
+    return 1
+  fi
+  if [ -n "$worktree_status" ]; then
+    echo "error: the worktree has changes; leave it clean before detaching"
+    return 1
+  fi
+
+  if ! repo_info=$(gh repo view --json nameWithOwner,sshUrl --jq '[.nameWithOwner, .sshUrl] | @tsv'); then
+    echo "error: could not infer the github repository from this checkout"
+    return 1
+  fi
+  repo=${repo_info%%$'\t'*}
+  repo_url=${repo_info#*$'\t'}
+  if [ -z "$repo" ] || [ -z "$repo_url" ] || [ "$repo" = "$repo_url" ]; then
+    echo "error: github returned incomplete repository details"
+    return 1
+  fi
+
+  if [ -n "$branch" ]; then
+    if ! encoded_branch=$(jq -rn --arg branch "$branch" '$branch | split("/") | map(@uri) | join("/")'); then
+      echo "error: could not prepare the branch name"
+      return 1
+    fi
+    endpoint="repos/${repo}/git/ref/heads/${encoded_branch}"
+    fetch_ref="refs/heads/${branch}"
+    if ! oid=$(gh api "$endpoint" --jq '.object.sha'); then
+      echo "error: could not resolve the github branch head"
+      return 1
+    fi
+  else
+    endpoint="repos/${repo}/pulls/${pr_number}"
+    fetch_ref="refs/pull/${pr_number}/head"
+    if ! oid=$(gh api "$endpoint" --jq '.head.sha'); then
+      echo "error: could not resolve the github pull-request head"
+      return 1
+    fi
+  fi
+
+  if [ -z "$oid" ]; then
+    echo "error: github returned an empty head oid"
+    return 1
+  fi
+
+  if ! git fetch --quiet --no-tags "$repo_url" "$fetch_ref"; then
+    echo "error: could not fetch the github head"
+    return 1
+  fi
+  if ! fetched_oid=$(git rev-parse FETCH_HEAD); then
+    echo "error: could not read the fetched head"
+    return 1
+  fi
+  if [ "$fetched_oid" != "$oid" ]; then
+    echo "error: the github head changed while it was being resolved; retry"
+    return 1
+  fi
+
+  git checkout --detach "$oid"
+}
+
 function code() {
   local workspace_dir="$HOME/Desktop/workspaces"
   local code_bin=""
