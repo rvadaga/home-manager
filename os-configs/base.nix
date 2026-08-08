@@ -1,5 +1,6 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
+  ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -21,6 +22,7 @@ in {
   imports = [
     ../os-configs/llm-instructions.nix
     ../programs/claude.nix
+    ../programs/codex.nix
     ../programs/fzf.nix
     ../programs/ghostty.nix
     ../programs/kitty.nix
@@ -30,8 +32,9 @@ in {
     ../programs/zsh.nix
   ];
 
-  # claude configuration
+  # claude and codex configuration
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
+  codex.settingsPieces = [ (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml)) ];
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
@@ -231,6 +234,10 @@ in {
       CLAUDE_CODE_NO_FLICKER = "1";
     };
   };
+
+  # github cli discovers extensions under its xdg data directory. keep the
+  # official stack binary in that layout so `gh stack` dispatches to it.
+  xdg.dataFile."gh/extensions/gh-stack".source = "${ghStack}/bin";
 
   # required to autoload fonts from packages installed via Home Manager
   fonts = {

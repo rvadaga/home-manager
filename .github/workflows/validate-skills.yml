@@ -1,10 +1,9 @@
 name: validate skills
 
-# deliberately NOT filtered with `paths:`. the `skills-ref validate` check is
-# required on main, and a workflow skipped by a path filter reports nothing at
-# all — not success, not skipped — so a required check waits on it forever and
-# the pr can never merge. every pr has to reach this job, including ones that
-# touch no skill. the job takes seconds; a filter here costs a deadlock.
+# do not filter this workflow by path. the `skills-ref validate` check is
+# required on main, and a skipped workflow reports no status, so the required
+# check waits forever. every pr must reach this job, including prs that do not
+# touch a skill.
 on:
   pull_request:
   push:
