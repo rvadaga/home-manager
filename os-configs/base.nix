@@ -45,6 +45,7 @@ in {
       ".claude/skills/bootstrap-plugins/SKILL.md".source = ../dotfiles/claude/skills/bootstrap-plugins/SKILL.md;
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
+      ".claude/skills/github-stacked-prs/SKILL.md".source = ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
