@@ -46,6 +46,13 @@
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
+* **reconcile every published ordinary branch local-first.** the owning local worktree is the source of the remote update:
+    1. confirm one-writer ownership, then rederive the exact local, upstream, and live pr heads. stop on unexpected remote movement.
+    2. fetch the exact current base and merge it into the local branch without rebasing.
+    3. resolve conflicts and complete every required validation locally.
+    4. push that exact validated head normally.
+    5. verify the local, upstream, and live pr heads match and the pr still has its intended draft state.
+    `gh pr update-branch` is not the normal path because it moves the remote before the owner has the merged and validated tree locally.
 * never force-push without explicit permission — `git push --force` and `git push --force-with-lease` are destructive and should be a last resort
 * commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
 * use oh-my-zsh git plugin aliases for all git commands. always put the equivalent full git command in the bash tool's `description` field (not as an inline `#` comment in the command itself, since that breaks permission matching). example: run `gcmsg "fix bug"` with description "git commit --message". the full alias reference is at `~/.config/home-manager/dotfiles/claude/omz-git-aliases.md`
@@ -89,7 +96,7 @@
 when a change is large enough to warrant multiple prs:
 
 * assess whether the change should be split into multiple prs. if so, ask the user whether to chain them (each branch based on the previous) or keep them as standalone branches off main
-* when a pr series must be chained (each branch based on the previous, because of a real code dependency between them), build the whole stack of branches locally up front, but open each child pr only AFTER its parent has merged to the default branch and the child has been rebased onto it. never open all the chained prs at once — keep exactly one open at a time and advance as each parent lands
+* when a pr series must be chained (each branch based on the previous, because of a real code dependency between them), build the whole stack of branches locally up front, but open each child pr only AFTER its parent has merged to the default branch and that base has been merged into the child locally under the published-branch rule above. never open all the chained prs at once — keep exactly one open at a time and advance as each parent lands
 * this refines the chained-vs-standalone choice above: for chained series use the build-all/open-sequentially cadence; for independent chunks keep the off-main, one-at-a-time approach
 * the decision to number is a judgment about series cohesion, not a repo-level toggle — reusing the same jira ticket across prs, or prs that all belong to one coherent project/effort (a shared epic, a migration, a feature spanning several prs), is a strong signal to number the series. record that judgment by numbering the branch (below); a lone pr on its own ticket stays unnumbered.
 * number each pr sequentially — pr1, pr2, etc.

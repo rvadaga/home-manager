@@ -13,7 +13,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 1. **preflight**
    - `gfo main` (git fetch origin main — never fetch all branches)
-   - **branch not pushed yet → `grbom` (git rebase origin/main). branch already pushed → do not rebase it.** a rebase rewrites published history: it needs a force-push, which is denied by default, and it leaves any other checkout of that branch pointing at commits the remote no longer has. use `gh pr update-branch <n>` instead — github merges main into the branch server-side, so nothing is rewritten, and the new head re-runs the required check against the combined tree. plain `update-branch` only; its `--rebase` flag rewrites the branch after all.
+   - **branch not pushed yet → `grbom` (git rebase origin/main). branch already pushed → follow the canonical local-first published-branch rule in `CLAUDE-base.md`.** merge base into the owning local worktree, validate there, and push normally; do not rebase the published branch or use `gh pr update-branch`.
    - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
 
