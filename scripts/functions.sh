@@ -157,61 +157,141 @@ function gct() {
     git switch -C "$branch" --track "origin/$branch"
 }
 
+_gh_pr_search_usage() {
+  echo "usage: gh-pr-search [--field <name>]... [--] <title text>"
+  echo "fields: number, state, headRefName, headRefOid, title, url"
+  echo ""
+  echo "examples:"
+  echo "  gh-pr-search 'fix exact phrase'"
+  echo "  gh-pr-search --field headRefOid 'fix exact phrase'"
+  echo "  gh-pr-search --field number --field url 'fix exact phrase'"
+  echo "  gh-pr-search -- '--title beginning with a dash'"
+  echo ""
+  echo "github search returns at most 1,000 results for one query."
+}
+
 function gh-pr-search() {
-  if [ "$#" -eq 0 ]; then
-    echo "usage: gh-pr-search <title text>"
-    return 1
-  fi
-
-  local title_query="$*"
+  local selected_fields=()
+  local title_parts=()
+  local output_fields=()
+  local parse_options=true
+  local field
+  local title_query
   local quoted_title_query
+  local graphql_fields=""
   local graphql_query
+  local jq_fields=""
+  local jq_filter
 
-  if [ -z "$(printf '%s' "$title_query" | tr -d '[:space:]')" ]; then
-    echo "usage: gh-pr-search <title text>"
+  while [ "$#" -gt 0 ]; do
+    if [ "$parse_options" = false ]; then
+      title_parts+=("$1")
+      shift
+      continue
+    fi
+
+    case "$1" in
+      --field)
+        if [ "$#" -lt 2 ]; then
+          echo "error: --field requires a value"
+          _gh_pr_search_usage
+          return 1
+        fi
+        case "$2" in
+          -*)
+            echo "error: --field requires a value"
+            _gh_pr_search_usage
+            return 1
+            ;;
+        esac
+        field="$2"
+        case "$field" in
+          number|state|headRefName|headRefOid|title|url) ;;
+          *)
+            echo "error: unknown field: $field"
+            _gh_pr_search_usage
+            return 1
+            ;;
+        esac
+        selected_fields+=("$field")
+        shift 2
+        ;;
+      -h|--help)
+        _gh_pr_search_usage
+        return 0
+        ;;
+      --)
+        parse_options=false
+        shift
+        ;;
+      --*)
+        echo "error: unknown option: $1"
+        _gh_pr_search_usage
+        return 1
+        ;;
+      *)
+        title_parts+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [ "${#title_parts[@]}" -eq 0 ]; then
+    _gh_pr_search_usage
     return 1
   fi
+
+  title_query="${title_parts[*]}"
+  if [ -z "$(printf '%s' "$title_query" | tr -d '[:space:]')" ]; then
+    _gh_pr_search_usage
+    return 1
+  fi
+
+  if [ "${#selected_fields[@]}" -eq 0 ]; then
+    output_fields=(number state headRefName headRefOid title url)
+  else
+    output_fields=("${selected_fields[@]}")
+  fi
+
+  for field in "${output_fields[@]}"; do
+    graphql_fields="${graphql_fields}          ${field}
+"
+    if [ -n "$jq_fields" ]; then
+      jq_fields="${jq_fields}, "
+    fi
+    jq_fields="${jq_fields}.${field}"
+  done
 
   if ! quoted_title_query=$(jq -rn --arg query "$title_query" '$query | @json'); then
     echo "error: could not prepare the title query"
     return 1
   fi
 
-  graphql_query='query($searchQuery: String!, $endCursor: String) {
-    search(query: $searchQuery, type: ISSUE, first: 100, after: $endCursor) {
+  graphql_query="query(\$searchQuery: String!, \$endCursor: String) {
+    search(query: \$searchQuery, type: ISSUE, first: 100, after: \$endCursor) {
       nodes {
         ... on PullRequest {
-          number
-          state
-          headRefName
-          headRefOid
-          title
-          url
-        }
+${graphql_fields}        }
       }
       pageInfo {
         hasNextPage
         endCursor
       }
     }
-  }'
+  }"
+  jq_filter=".data.search.nodes[] | [${jq_fields}] | @tsv"
 
   gh api graphql --paginate \
     -f query="$graphql_query" \
     -F searchQuery="is:pr author:@me in:title ${quoted_title_query}" \
-    --jq '.data.search.nodes[] | [.number, .state, .headRefName, .headRefOid, .title, .url] | @tsv'
+    --jq "$jq_filter"
 }
 
 function gh-detach-head() {
   local branch=""
   local pr_number=""
-  local repo_info
-  local repo
-  local repo_url
-  local encoded_branch
-  local endpoint
+  local origin_url
   local fetch_ref
-  local oid
   local fetched_oid
   local worktree_status
 
@@ -248,7 +328,7 @@ function gh-detach-head() {
 
   if [ -n "$pr_number" ]; then
     case "$pr_number" in
-      0|*[!0-9]*)
+      0|0[0-9]*|*[!0-9]*)
         echo "error: pull-request number must be a positive integer"
         return 1
         ;;
@@ -264,56 +344,38 @@ function gh-detach-head() {
     return 1
   fi
 
-  if ! repo_info=$(gh repo view --json nameWithOwner,sshUrl --jq '[.nameWithOwner, .sshUrl] | @tsv'); then
-    echo "error: could not infer the github repository from this checkout"
+  if ! origin_url=$(git config --get remote.origin.url); then
+    echo "error: could not read the origin remote from this checkout"
     return 1
   fi
-  repo=${repo_info%%$'\t'*}
-  repo_url=${repo_info#*$'\t'}
-  if [ -z "$repo" ] || [ -z "$repo_url" ] || [ "$repo" = "$repo_url" ]; then
-    echo "error: github returned incomplete repository details"
+  if [ -z "$origin_url" ]; then
+    echo "error: the origin remote has no url"
     return 1
   fi
 
   if [ -n "$branch" ]; then
-    if ! encoded_branch=$(jq -rn --arg branch "$branch" '$branch | split("/") | map(@uri) | join("/")'); then
-      echo "error: could not prepare the branch name"
-      return 1
-    fi
-    endpoint="repos/${repo}/git/ref/heads/${encoded_branch}"
     fetch_ref="refs/heads/${branch}"
-    if ! oid=$(gh api "$endpoint" --jq '.object.sha'); then
-      echo "error: could not resolve the github branch head"
-      return 1
-    fi
   else
-    endpoint="repos/${repo}/pulls/${pr_number}"
+    case "$origin_url" in
+      https://github.com/*/*|http://github.com/*/*|git@github.com:*/*|ssh://git@github.com/*/*) ;;
+      *)
+        echo "error: origin is not a github repository"
+        return 1
+        ;;
+    esac
     fetch_ref="refs/pull/${pr_number}/head"
-    if ! oid=$(gh api "$endpoint" --jq '.head.sha'); then
-      echo "error: could not resolve the github pull-request head"
-      return 1
-    fi
   fi
 
-  if [ -z "$oid" ]; then
-    echo "error: github returned an empty head oid"
+  if ! git fetch --quiet --no-tags origin "$fetch_ref"; then
+    echo "error: could not fetch ${fetch_ref} from origin"
     return 1
   fi
-
-  if ! git fetch --quiet --no-tags "$repo_url" "$fetch_ref"; then
-    echo "error: could not fetch the github head"
-    return 1
-  fi
-  if ! fetched_oid=$(git rev-parse FETCH_HEAD); then
+  if ! fetched_oid=$(git rev-parse --verify 'FETCH_HEAD^{commit}'); then
     echo "error: could not read the fetched head"
     return 1
   fi
-  if [ "$fetched_oid" != "$oid" ]; then
-    echo "error: the github head changed while it was being resolved; retry"
-    return 1
-  fi
 
-  git checkout --detach "$oid"
+  git checkout --detach "$fetched_oid"
 }
 
 function code() {
