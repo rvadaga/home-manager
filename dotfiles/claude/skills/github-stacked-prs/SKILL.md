@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, review, publish, restack, recover, and merge visible draft stacks with the official gh stack cli. use for any real dependent pull request series, including deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, sync, review, publish, restack, recover, and merge visible draft stacks with the official gh stack cli. use for any real dependent pull request series, including syncing with the default branch and deciding whether the cli's descendant-head updates are authorized.
 ---
 
 # github stacked pull requests
@@ -21,9 +21,9 @@ keep one branch, pull request, owning working tree, writer, and reviewer claim p
 ## inspect and restack
 
 - use `gh stack view` for the current stack and pull request status. use `gh stack view --short` for compact output or `gh stack view --json` for machine-readable output.
-- restack only with `gh stack rebase`.
+- treat every request to sync `main` or the default branch as a full-stack operation, even when the request names one layer. run only `gh stack rebase` so the official cli restacks the complete stack.
 - if it stops for conflicts, resolve the files, stage them, and resume only with `gh stack rebase --continue`.
-- never use per-branch `git merge`, `git rebase`, or `git rebase --continue` inside a github-managed stack.
+- never merge the default branch into one layer, run per-layer `git rebase` or `git rebase --continue`, or use `gh pr update-branch` on a stack layer.
 
 ## keep new pull requests draft
 
@@ -37,11 +37,13 @@ keep every new stacked pull request draft unless the user explicitly asks to cha
 
 after every restack and before any push:
 
-1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. for each published layer, run `git ls-remote --heads <remote> <branch>` and compare the exact live head with the expected remote head. an absent remote is valid only for a new unpublished layer. stop if any existing head moved unexpectedly.
-2. run `git diff --check`.
-3. for every layer, run `git diff --check <parent>..<layer>` and `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --`. review every marker match.
-4. review `git diff <parent>..<layer> --` in full.
-5. run the tests required by each layer.
+1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm every layer's owning worktree has clean `git status --porcelain` output.
+2. for each published layer, run `git ls-remote --heads <remote> <branch>` and compare the exact live head with the expected remote head. rederive each pull request's live base and draft state, and confirm the bases form the expected chain and every layer remains draft. an absent remote is valid only for a new unpublished layer. stop if any existing head or base moved unexpectedly.
+3. run `git diff --check`, then run `git diff --check <parent>..<layer>` for every layer.
+4. scan every tracked file in every layer with `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --` and review every marker match.
+5. review `git diff <parent>..<layer> --` in full for every layer.
+6. run each layer's focused tests and the required end-to-end validation against the cumulative top tree.
+7. compare the cumulative top tree with the accepted combined source tree and require exact tree equality.
 
 a clean current layer does not establish that the layers above it are clean.
 

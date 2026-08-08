@@ -13,7 +13,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 1. **preflight**
    - `gfo main` (git fetch origin main — never fetch all branches)
-   - **branch not pushed yet → `grbom` (git rebase origin/main). branch already pushed → follow the canonical local-first published-branch rule in `CLAUDE.md`.** merge base into the owning local worktree, validate there, and push normally; do not rebase the published branch or use `gh pr update-branch`.
+   - **branch not pushed yet → `grbom` (git rebase origin/main). published ordinary branch → follow the canonical local-first rule in `CLAUDE.md`. github-managed stack → use `github-stacked-prs` for full-stack synchronization and publication.** never apply the ordinary merge-main procedure or `gh pr update-branch` to a stack layer.
    - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
 
