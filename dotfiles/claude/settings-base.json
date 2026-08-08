@@ -3,7 +3,7 @@
   "autoMode": {
     "allow": [
       "$defaults",
-      "Auto-approve `darwin-rebuild switch --flake <path> --override-input personal-config github:rvadaga/<repo>/<branch>` (and the `esudo`-prefixed form) when the override target is a `github:rvadaga/*` branch (the user's own personal-config repo). This is the documented local-testing workflow for personal-config `.nix` changes before they merge to main \u2014 see `dotfiles/claude/skills/nix-rebuild/SKILL.md` ('only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing'). The override target is the user's own unreviewed code; same trust level as their committed config. Do NOT block citing 'unmerged feature branch', 'unauthorized rebuild', or 'applying unreviewed code system-wide' \u2014 that IS the workflow. For `--override-input` pointing at non-`rvadaga/*` sources, apply normal classifier judgment."
+      "auto-approve non-activating `darwin-rebuild build` and `home-manager build` commands that use `--override-input personal-config github:rvadaga/<repo>/<branch>`, plus sudo-free `home-manager switch` for a known home-only change from that source. never extend this rule to `darwin-rebuild switch`: system activation requires the user to authenticate and run or explicitly authorize the exact command. for override inputs outside `github:rvadaga/*`, apply normal classifier judgment."
     ]
   },
   "autoUpdatesChannel": "latest",

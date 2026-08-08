@@ -1,11 +1,11 @@
 ---
 name: ship-config
-description: Use when shipping, landing, or squash-merging a config change from a worktree to main. Covers draft pr, pre-merge closure testing, squash merge, downstream cascade, rebuild, verification, and worktree cleanup — autonomous once tests pass.
+description: use when shipping, landing, or squash-merging a config change from a worktree to main. covers the draft pr, closure testing, merge, downstream cascade, activation authorization, verification, and cleanup.
 ---
 
 # /ship-config
 
-ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → rebuild → verify → cleanup. fully autonomous once the pre-merge test passes — test pass is merge authorization.
+ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → activate → verify → cleanup. a passing test authorizes the merge. it does not authorize an agent to satisfy or bypass sudo authentication for a macos system activation.
 
 use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. without explicit shipping approval, use `/nix-rebuild`; it opens a reviewable draft pull request and waits for approval before merging.
 
@@ -23,9 +23,11 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - `gpsup` (git push --set-upstream origin <branch>)
    - `gh pr create --draft` using the repo's pr template (fallback: `~/development/.github/pull_request_template.md`); no ai-generated footer
 
-4. **pre-merge test** — build the full closure through the flake this machine rebuilds from (check `$HM_CONFIG_NAME` and machine-specific instructions):
+4. **pre-merge test** — classify the evaluated outputs, then build through the flake this machine uses. a known home-only change builds home-manager. a known system-only change builds nix-darwin. a shared input or unclear change builds both; do not encode a manual filename list.
    - machine rebuilds from a downstream flake:
      ```bash
+     home-manager build --flake <downstream-repo>#$HM_CONFIG_NAME \
+       --override-input personal-config path:<worktree>
      darwin-rebuild build --flake <downstream-repo>#$HM_CONFIG_NAME \
        --override-input personal-config path:<worktree>
      ```
@@ -55,11 +57,10 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 6. **cascade** — if machine-specific instructions define a downstream config consuming this flake as `personal-config`: bump its lock, commit, push (/nix-rebuild steps 4–5). fold any downstream-side edits identified in step 4 into the same commit.
 
-7. **rebuild** — switch from the flake this machine rebuilds from. macos activation requires root: use the machine-mandated sudo wrapper if one exists, plain sudo otherwise.
-   - known failure: the homebrew activation step aborts with a stale-api-cache message ("have not updated today") → run `brew update`, retry the switch once. still failing → stop and report.
+7. **activate** — a known home-only change uses sudo-free `home-manager switch` from the merged flake. for a macos system or shared change, run a final non-activating nix-darwin build, then stop and give rahul the exact `sudo darwin-rebuild switch` command. continue only after rahul runs it or explicitly authorizes that authenticated step.
 
 8. **verify** (evidence before claims)
-   - `cat /etc/nix-config-provenance` — rev equals the rebuilt repo's HEAD, tree clean (macos)
+   - `nix-provenance` — the active home generation matches after a home-manager switch; the active system and embedded home generation match after a user-authenticated nix-darwin switch
    - `readlink /run/current-system` equals the freshly built path
    - the changed artifact carries the new value (step-4 check against the real lock)
    - where the change flows into a live-merged file, confirm the merge ran (target file mtime)

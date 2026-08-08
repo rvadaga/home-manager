@@ -1,6 +1,6 @@
 # nix configuration reference
 
-detailed workflows and examples for managing claude code settings via nix (nix-darwin on macos, home-manager on linux).
+detailed workflows and examples for managing claude code settings with standalone home-manager and nix-darwin.
 for the condensed version, see CLAUDE.md.
 
 ## updating CLAUDE.md or settings.json in ~/.claude folder
@@ -9,7 +9,7 @@ for the condensed version, see CLAUDE.md.
 
 * CLAUDE.md is managed by nix as a read-only symlink — edit the source files and rebuild
 * settings.json uses an **additive merge** model:
-    * on every rebuild (`darwin-rebuild switch` on macos / `home-manager switch` on linux), the nix baseline is deep-merged into the live file
+    * on every home activation, the nix baseline is deep-merged into the live file
     * objects merge recursively — live values win on scalar conflicts
     * arrays are union-merged (concat + deduplicate) — new nix permissions appear without losing locally-approved ones
     * on first run (or if the file is missing/still a symlink), the file is seeded from the nix baseline
@@ -76,8 +76,8 @@ use `/diff-claude-settings` for a read-only comparison without making changes.
 ### for CLAUDE.md (managed as a symlink)
 
 1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
-2. commit and push
-3. rebuild (macos: `darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`, linux: `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`)
+2. publish a draft pull request and merge it only after approval
+3. run `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
 4. verify changes in `~/.claude/CLAUDE.md`
 
 ### for settings (additive merge on rebuild)
@@ -100,23 +100,27 @@ only needed when making significant changes to `*.nix` files that warrant testin
 
 when editing this personal config on a machine with a downstream config:
 1. make the edit here in `~/.config/home-manager`
-2. test locally with `--override-input` (use the appropriate rebuild command for your os):
+2. classify the evaluated outputs. for a known home-only change, build home-manager. for a known system-only change, build nix-darwin. for a shared input or unclear change, run both commands:
    ```bash
-   # macos:
-   darwin-rebuild switch --flake <downstream-flake-path>#$HM_CONFIG_NAME \
+   home-manager build --flake <downstream-flake-path>#$HM_CONFIG_NAME \
      --override-input personal-config path:$HOME/.config/home-manager
-   # linux:
-   home-manager switch --flake <downstream-flake-path>#$HM_CONFIG_NAME \
+   darwin-rebuild build --flake <downstream-flake-path>#$HM_CONFIG_NAME \
      --override-input personal-config path:$HOME/.config/home-manager
    ```
-3. once confirmed working, commit and push the personal config changes
+3. once confirmed working, publish the personal config draft and wait for approval
 4. update the flake lock in the downstream config:
    ```bash
    # run these as separate commands (not chained with &&)
    # cd to the downstream flake path, then:
    nix flake update personal-config
    ```
-5. rebuild without the override to confirm the lock is correct
+5. build without the override to confirm the lock is correct. after merge, a known home-only change uses sudo-free `home-manager switch`. a macos system activation stops for rahul to run or explicitly authorize the authenticated `sudo darwin-rebuild switch` command
+
+## command choice and rollback
+
+choose from evaluated ownership, not a filename allowlist or denylist. obvious home modules and managed dotfiles can be treated as home-only. flake files, lock files, overlays, and shared imports can affect both graphs, so build both when the effect is unclear.
+
+standalone home-manager and nix-darwin keep separate rollback histories. `home-manager generations` and `home-manager rollback` manage standalone home generations. nix-darwin manages system generations. the live home links follow the most recently activated standalone or embedded home generation. `nix-provenance` reports both active layers and whether the home stamp agrees with `current-home`.
 
 **note:** if you rebuild a downstream flake without `--override-input` after making unpushed local changes, it will use the old locked revision.
 
@@ -126,9 +130,8 @@ when editing this personal config on a machine with a downstream config:
 ```
 # edit shared settings
 edit ~/.config/home-manager/dotfiles/claude/settings-base.json
-# commit and push, then rebuild — merges into live file without losing existing permissions
-# macos: darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
-# linux: home-manager switch --flake <flake-path>#$HM_CONFIG_NAME
+# publish and merge the draft, then activate the home-only change
+home-manager switch --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
 **syncing locally-approved permissions back to nix:**
@@ -142,9 +145,8 @@ edit ~/.config/home-manager/dotfiles/claude/settings-base.json
 ```
 # edit shared instructions
 edit ~/.config/home-manager/dotfiles/claude/CLAUDE-base.md
-# commit and push, then rebuild
-# macos: darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
-# linux: home-manager switch --flake <flake-path>#$HM_CONFIG_NAME
+# publish and merge the draft, then activate the home-only change
+home-manager switch --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
 ## notes

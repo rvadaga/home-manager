@@ -52,8 +52,11 @@ no AI-attribution trailer/footer. read the template from the repo (or the fallba
   npx -y skills-ref@0.1.5 validate dotfiles/claude/skills/<skill-name>/
   ```
   prints `Valid skill: <path>` and exits 0 on success. keep the version pinned — that's what ci runs.
-- `*.nix` / behavior change → build (never activates, safe any time) and verify the changed artifact in `./result`'s closure (see §verify). for a downstream flake, point it at the worktree:
+- classify the evaluated outputs before choosing a build. a known home-only change builds the home-manager graph. a known system-only change builds the nix-darwin graph. a shared input or unclear change builds both. paths can establish obvious ownership, but do not maintain a manual filename list.
+- `*.nix` / behavior change → build without activation and verify the changed artifact in the result closure (see §verify). for a downstream flake, point both builds at the worktree when both graphs are required:
   ```bash
+  home-manager build --flake <downstream-repo>#$HM_CONFIG_NAME \
+    --override-input personal-config path:<worktree>
   darwin-rebuild build --flake <downstream-repo>#$HM_CONFIG_NAME \
     --override-input personal-config path:<worktree>
   ```
@@ -62,7 +65,7 @@ no AI-attribution trailer/footer. read the template from the repo (or the fallba
 
 give him the pr link + a one-line what-changed + the validation result. do NOT merge until he says it looks ok. this human gate is the whole point of the skill — never auto-merge here (that's /ship-config's job, on an explicit ship command).
 
-## 6. on approval — merge, rebuild, verify, clean up
+## 6. on approval — merge, activate, verify, clean up
 
 1. **mark ready, THEN merge** (squash is the default) — §3 opened this pr as a DRAFT and github refuses to merge a draft (`GraphQL: Pull Request is still a draft (mergePullRequest)`), so `gh pr ready` is required, not optional; /ship-config §5 does the same:
    ```bash
@@ -73,12 +76,18 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
    ```bash
    gh pr view <n> --repo <owner>/<repo> --json state,mergedAt   # want state=MERGED + non-null mergedAt
    ```
-2. **rebuild** from the now-updated main, using the flake this machine actually rebuilds from (`$HM_CONFIG_NAME` selects the config):
+2. **activate** from the now-updated main, using the flake this machine actually uses (`$HM_CONFIG_NAME` selects the config):
    ```bash
-   sudo darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME   # macos — root; use the machine's sudo wrapper (esudo on work)
-   home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME          # linux
+   home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
    ```
-   downstream machine → after the base pr merges, bump the downstream lock (`nix flake update personal-config`) and rebuild with the downstream flake. that lock bump is itself a config change → its own worktree → draft pr → ok → merge (or fold both into one review when the change spans both repos). homebrew "have not updated today" abort → `brew update`, retry the switch once; still failing → stop and report.
+   this sudo-free command is the activation path for a known home-only change on macos or linux.
+
+   for a macos system or shared change, build the merged nix-darwin graph first. then stop and give rahul the exact authenticated command. rahul must run it or explicitly authorize it; merge approval does not authorize an agent to satisfy or bypass sudo authentication.
+   ```bash
+   darwin-rebuild build --flake ~/.config/home-manager#$HM_CONFIG_NAME
+   sudo darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
+   ```
+   downstream machine → after the base pr merges, bump the downstream lock (`nix flake update personal-config`) and use the downstream flake for every build and activation. that lock bump is itself a config change → its own worktree → draft pr → ok → merge, or part of the already-reviewed downstream pull request.
 3. **verify — artifact-level** (§verify).
 4. **clean up** — only after a green rebuild + verify (rebuild failed → leave the worktree for debugging). remove ONLY the worktree this invocation created:
    ```bash
@@ -89,7 +98,7 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
 
 ## verify — artifact-level, not vibes
 
-- macos: `nix-provenance` (or `cat /etc/nix-config-provenance`) — rev must equal the rebuilt main's HEAD with a clean tree.
+- `nix-provenance` — the active home generation and source must match after a home-manager switch. after a user-authenticated nix-darwin switch, the active system and embedded home generation must both match the merged source.
 - claude settings change: assert the changed key in the merged closure artifact
   ```bash
   M=$(nix-store -qR /run/current-system | grep claude-settings-nix-merged)
@@ -107,4 +116,4 @@ settings pieces merge in order: `settings-base.json` → os piece (`settings-mac
 - check `$HM_CONFIG_NAME` to determine which flake this machine rebuilds from.
 - use omz git aliases with the full command in the bash tool's `description` field.
 - skip `exec $SHELL` — claude code's shell snapshot won't update mid-conversation; changes land in the next conversation.
-- once merged, rebuild without asking (the approval gate is at merge, not rebuild) unless the rebuild target is genuinely ambiguous.
+- once merged, a known home-only activation proceeds without sudo. a macos system activation always stops for rahul's authentication or explicit authorization.
