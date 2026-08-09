@@ -18,6 +18,11 @@ in {
       ".local/libexec/gui-git/git".source =
         config.lib.file.mkOutOfStoreSymlink "/usr/bin/git";
 
+      ".local/libexec/stay-awake" = {
+        source = ../scripts/stay-awake.zsh;
+        executable = true;
+      };
+
       # gpg-agent config (services.gpg-agent is systemd-only, not available on mac)
       ".gnupg/gpg-agent.conf".text = ''
         pinentry-program ${pkgs.pinentry_mac}/bin/pinentry-mac
@@ -33,6 +38,10 @@ in {
   };
 
   programs.zsh.initContent = lib.mkAfter ''
+    function stay-awake() {
+      sudo /bin/zsh "$HOME/.local/libexec/stay-awake" "$@"
+    }
+
     if [[ "$CLAUDE_DESKTOP_RESOLVING_ENVIRONMENT" = 1 || "$CODEX_SHELL" = 1 ]]; then
       gui_git_dir="$HOME/.local/libexec/gui-git"
       if [[ ":$PATH:" != *":$gui_git_dir:"* ]]; then
