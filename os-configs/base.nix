@@ -200,7 +200,15 @@ in {
 
       # nix tools
       pkgs.nix-direnv
-      pkgs.unstable.mcp-nixos
+      # test_read_text_file reads an arbitrary text file out of the real
+      # /nix/store and asserts "Error" is absent from the tool output — but it
+      # matches against the file's own contents. macos builds run unsandboxed
+      # (nix sandbox defaults to false on darwin), so the test sees the host
+      # store and trips over any file containing the word, e.g. a minified
+      # highlight.js bundle. impure upstream test; the other 281 still run.
+      (pkgs.unstable.mcp-nixos.overrideAttrs (old: {
+        disabledTests = (old.disabledTests or [ ]) ++ [ "test_read_text_file" ];
+      }))
 
       # programming languages: java
       pkgs.unstable.temurin-bin  # java 25
