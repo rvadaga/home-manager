@@ -3,37 +3,40 @@
   "autoMode": {
     "allow": [
       "$defaults",
-      "Auto-approve `git push` (including `git push origin main`, `git push -u origin main`, `gp`, `gpsup`, and `git -C <path> push ...`) targeting the `main` or `master` branch on the user's personal repositories. Detect 'personal repository' by the `origin` remote URL matching `github.com[:/]rvadaga/` — these are owned solely by the user. The user is the sole maintainer of personal repos and prefers direct push to main over PR review; do NOT block such pushes citing 'bypasses PR review'. Force-push variants (`--force`, `--force-with-lease`, `-f`) are judged per-invocation by the classifier: auto-approve only on branches the user personally owns in their personal repos (e.g. after an explicitly requested rebase), and never on shared or protected branches (`main`/`master` or anything other contributors may have pulled). This rule does NOT apply to (a) repos under `github.com/etsy/` or any organization owner, (b) forks of upstream projects (detect: `origin` and `upstream` remotes diverge), (c) any repo where branch protection or CODEOWNERS implies review is expected.",
-      "Auto-approve `darwin-rebuild switch --flake <path> --override-input personal-config github:rvadaga/<repo>/<branch>` (and the `esudo`-prefixed form) when the override target is a `github:rvadaga/*` branch (the user's own personal-config repo). This is the documented local-testing workflow for personal-config `.nix` changes before they merge to main — see `dotfiles/claude/skills/nix-rebuild/SKILL.md` ('only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing'). The override target is the user's own unreviewed code; same trust level as their committed config. Do NOT block citing 'unmerged feature branch', 'unauthorized rebuild', or 'applying unreviewed code system-wide' — that IS the workflow. For `--override-input` pointing at non-`rvadaga/*` sources, apply normal classifier judgment."
+      "Auto-approve `darwin-rebuild switch --flake <path> --override-input personal-config github:rvadaga/<repo>/<branch>` (and the `esudo`-prefixed form) when the override target is a `github:rvadaga/*` branch (the user's own personal-config repo). This is the documented local-testing workflow for personal-config `.nix` changes before they merge to main \u2014 see `dotfiles/claude/skills/nix-rebuild/SKILL.md` ('only use `--override-input` for significant `*.nix` file changes that warrant local testing before pushing'). The override target is the user's own unreviewed code; same trust level as their committed config. Do NOT block citing 'unmerged feature branch', 'unauthorized rebuild', or 'applying unreviewed code system-wide' \u2014 that IS the workflow. For `--override-input` pointing at non-`rvadaga/*` sources, apply normal classifier judgment."
     ]
   },
   "autoUpdatesChannel": "latest",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[^a-zA-Z0-9_-])(git[[:space:]]+push|gp|ggpush|gpsup|gpsupf|gpf|gpd|gpv|gpu|gpoat|gpod)([^a-zA-Z0-9_-]|$)'; then branch=$(git symbolic-ref --short HEAD 2>/dev/null); if [ -n \"$branch\" ] && printf '%s' \"$branch\" | grep -qE '^(rahul/)?[a-z]+-[a-z]+-[a-f0-9]{6}$'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing to push: current branch matches claude-auto-generated name pattern (two-word + 6-hex-suffix). rename it first via /wt-name (per CLAUDE.md branch naming rule).\"}}'; fi; fi"
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[^a-zA-Z0-9_-])(git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+push|gp|ggpush|gpsup|gpsupf|gpf|gpd|gpv|gpu|gpoat|gpod)([^a-zA-Z0-9_-]|$)'; then repo=$(printf '%s' \"$cmd\" | sed -nE 's/.*git[[:space:]]+-C[[:space:]]+([^[:space:]]+)[[:space:]]+push.*/\\1/p'); [ -z \"$repo\" ] && repo=.; branch=$(git -C \"$repo\" symbolic-ref --short HEAD 2>/dev/null); if printf '%s' \"$cmd\" | grep -qE '(^|[[:space:]:/+])(refs/heads/)?(main|master)([[:space:]]|$)' || printf '%s' \"$branch\" | grep -qE '^(main|master)$'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing direct push to main or master: every change needs a pull request and its review description. push a branch and open a draft pull request instead; github-stacked-prs applies only to draft stack branches.\"}}'; fi; fi",
+            "type": "command"
           },
           {
-            "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(--no-gpg-sign|commit[.]gpgsign=(false|no|off|0))'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing: commit signing is on by default (commit.gpgsign=true, signing key registered on github) so commits are auto-verified. do not disable it with --no-gpg-sign or commit.gpgsign=false; remove the flag and commit normally.\"}}'; fi"
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(^|[^a-zA-Z0-9_-])(git[[:space:]]+push|gp|ggpush|gpsup|gpsupf|gpf|gpd|gpv|gpu|gpoat|gpod)([^a-zA-Z0-9_-]|$)'; then branch=$(git symbolic-ref --short HEAD 2>/dev/null); if [ -n \"$branch\" ] && printf '%s' \"$branch\" | grep -qE '^(rahul/)?[a-z]+-[a-z]+-[a-f0-9]{6}$'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing to push: current branch matches claude-auto-generated name pattern (two-word + 6-hex-suffix). rename it first via /wt-name (per CLAUDE.md branch naming rule).\"}}'; fi; fi",
+            "type": "command"
           },
           {
-            "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create'; then head=$(printf '%s' \"$cmd\" | sed -nE 's/.*(-H|--head)[[:space:]=]+([^[:space:]]+).*/\\2/p'); branch=\"$head\"; [ -z \"$branch\" ] && branch=$(git branch --show-current 2>/dev/null); prn=$(printf '%s' \"$branch\" | grep -oE '(^|/|-)pr[0-9]+(\\.[0-9]+)?-' | head -1 | grep -oE 'pr[0-9]+(\\.[0-9]+)?'); if [ -n \"$prn\" ] && ! printf '%s' \"$cmd\" | grep -qF \"($prn)\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"branch '\"$branch\"' looks like a numbered pr-series member ('\"$prn\"'), but the --title lacks the matching suffix. append ('\"$prn\"') to the --title and retry (CLAUDE.md multi-pr workflow).\"}}'; fi; fi"
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE '(--no-gpg-sign|commit[.]gpgsign=(false|no|off|0))'; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"refusing: commit signing is on by default (commit.gpgsign=true, signing key registered on github) so commits are auto-verified. do not disable it with --no-gpg-sign or commit.gpgsign=false; remove the flag and commit normally.\"}}'; fi",
+            "type": "command"
+          },
+          {
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -qE 'gh[[:space:]]+pr[[:space:]]+create'; then head=$(printf '%s' \"$cmd\" | sed -nE 's/.*(-H|--head)[[:space:]=]+([^[:space:]]+).*/\\2/p'); branch=\"$head\"; [ -z \"$branch\" ] && branch=$(git branch --show-current 2>/dev/null); prn=$(printf '%s' \"$branch\" | grep -oE '(^|/|-)pr[0-9]+(\\.[0-9]+)?-' | head -1 | grep -oE 'pr[0-9]+(\\.[0-9]+)?'); if [ -n \"$prn\" ] && ! printf '%s' \"$cmd\" | grep -qF \"($prn)\"; then printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"branch '\"$branch\"' looks like a numbered pr-series member ('\"$prn\"'), but the --title lacks the matching suffix. append ('\"$prn\"') to the --title and retry (CLAUDE.md multi-pr workflow).\"}}'; fi; fi",
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Bash"
       }
     ],
     "SessionEnd": [
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "git worktree prune 2>/dev/null; git branch --list 'worktree-*' | while read b; do git branch -d \"$b\" 2>/dev/null; done"
+            "command": "git branch --list 'worktree-*' | while read b; do git branch -d \"$b\" 2>/dev/null; done",
+            "type": "command"
           }
         ]
       }

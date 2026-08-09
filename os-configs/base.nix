@@ -1,5 +1,6 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
+  ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -7,10 +8,21 @@ let
       ]
       ++ [ (builtins.readFile bodyPath) ]
     );
+  baseInstructions = readInstructions
+    ../dotfiles/claude/CLAUDE-personal-scope.md
+    ../dotfiles/claude/CLAUDE-base.md;
+  # preserve app-owned entries such as .system by managing only shared children.
+  codexSkillFiles = lib.mapAttrs' (skillName: _:
+    lib.nameValuePair ".codex/skills/${skillName}" {
+      source = ../dotfiles/claude/skills + "/${skillName}";
+    }
+  ) (lib.filterAttrs (_: fileType: fileType == "directory")
+    (builtins.readDir ../dotfiles/claude/skills));
 in {
   imports = [
     ../os-configs/llm-instructions.nix
     ../programs/claude.nix
+    ../programs/codex.nix
     ../programs/fzf.nix
     ../programs/ghostty.nix
     ../programs/kitty.nix
@@ -20,21 +32,20 @@ in {
     ../programs/zsh.nix
   ];
 
-  # claude configuration
+  # claude and codex configuration
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
+  codex.settingsPieces = [ (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml)) ];
   home = {
     file = {
-      ".codex/AGENTS.md".text = readInstructions
-        ../dotfiles/codex/AGENTS-personal-scope.md
-        ../dotfiles/codex/AGENTS-base.md;
-      ".claude/CLAUDE.md".text = readInstructions
-        ../dotfiles/claude/CLAUDE-personal-scope.md
-        ../dotfiles/claude/CLAUDE-base.md;
+      ".codex/AGENTS.md".text = baseInstructions;
+      ".claude/CLAUDE.md".text = baseInstructions;
       ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
       ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
+      ".claude/skills/bootstrap-plugins/SKILL.md".source = ../dotfiles/claude/skills/bootstrap-plugins/SKILL.md;
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
+      ".claude/skills/github-stacked-prs/SKILL.md".source = ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
@@ -109,7 +120,7 @@ in {
           fi
         '';
       };
-    };
+    } // codexSkillFiles;
 
     packages = [
       # shell and terminal
@@ -189,7 +200,15 @@ in {
 
       # nix tools
       pkgs.nix-direnv
-      pkgs.unstable.mcp-nixos
+      # test_read_text_file reads an arbitrary text file out of the real
+      # /nix/store and asserts "Error" is absent from the tool output — but it
+      # matches against the file's own contents. macos builds run unsandboxed
+      # (nix sandbox defaults to false on darwin), so the test sees the host
+      # store and trips over any file containing the word, e.g. a minified
+      # highlight.js bundle. impure upstream test; the other 281 still run.
+      (pkgs.unstable.mcp-nixos.overrideAttrs (old: {
+        disabledTests = (old.disabledTests or [ ]) ++ [ "test_read_text_file" ];
+      }))
 
       # programming languages: java
       pkgs.unstable.temurin-bin  # java 25
@@ -225,6 +244,10 @@ in {
       CLAUDE_CODE_NO_FLICKER = "1";
     };
   };
+
+  # github cli discovers extensions under its xdg data directory. keep the
+  # official stack binary in that layout so `gh stack` dispatches to it.
+  xdg.dataFile."gh/extensions/gh-stack".source = "${ghStack}/bin";
 
   # required to autoload fonts from packages installed via Home Manager
   fonts = {

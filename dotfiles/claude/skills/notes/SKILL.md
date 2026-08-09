@@ -53,7 +53,7 @@ each vault's schema file is the source of truth for its conventions — **always
 4. check for an existing page on this topic:
    - search `index.md` for related entries
    - read the first 15 lines of likely candidates
-   - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one
+   - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one. the narrow exception is a **generated snapshot page** (below), which is overwritten in place with no prompt
 5. write the page per the vault's schema:
    - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
    - filename: lowercase, hyphenated, descriptive — and **name = scope**: the filename must match what the page actually covers, never claim broader scope than the content delivers (a page about one system's tracing setup is `<system>-otel-tracing`, not `opentelemetry-tracing`). vault schemas may add anchor rules on top
@@ -61,10 +61,25 @@ each vault's schema file is the source of truth for its conventions — **always
    - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
    - cross-link to related pages using obsidian `[[wikilinks]]`
    - mark uncertain or inferred claims with `[inferred]`
-   - do NOT include session-specific details (timestamps in prose, conversation ids, task progress)
+   - do NOT include session-specific details (timestamps in prose, conversation ids, task progress). the narrow exception is a **generated snapshot page** (below), which is session-specific by design
 6. **update `index.md` and `log.md` in the same pass — never skip this.** drift (pages the index doesn't know about) is the wiki pattern's primary failure mode. index: one-liner under the fitting section (project sub-wikis catalogue their own pages in their own index). log: `## [YYYY-MM-DD] action | description` — check the schema for direction (append-at-bottom vs prepend-at-top varies by vault)
 7. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 8. if the finding supersedes a claim on another page, update that page too (or mark it) — don't leave two pages disagreeing
+
+### generated snapshot pages — a narrow exception to steps 4 and 5
+
+a few pages are a *copy* of state that lives authoritatively somewhere else — a status render some command produces, or a point-in-time snapshot of a plan whose live version lives in a ledger. these are exempt from step 4's update-or-create prompt and from step 5's ban on session-specific detail — **and from nothing else**.
+
+a page is one only if all four hold:
+
+- **one fixed filename per generator** — no dated copies, no `-v2`, no second page on the same state. several renders of one current state sitting side by side with nothing saying which is live is the failure this exemption is shaped around
+- **overwritten in place on every run** — the page keeps no history; the previous render is simply gone
+- **re-derivable by someone other than whoever wrote it** — a named command anyone can run, or a named source they can re-read. this is what keeps the exemption narrow, and it is what a session's own progress notes fail: there is nothing to re-derive them from, they *are* the record, so they stay ordinary pages and step 5 still bans them whatever they are titled
+- **opens with a perishability header** — when it was captured, what produced it, and how to get the current truth: either the command to re-run or the source to re-verify against. without that line a six-hour-old render reads as the live picture
+
+everything else in save mode binds unchanged — the vault's schema, frontmatter and kind tag, `name = scope`, the `index.md` one-liner, a `log.md` entry per write, and a commit. link **out** to the durable pages carrying the reasoning instead of restating it; the durable pages don't link back, so the snapshot can be rewritten without dragging the rest of the vault with it.
+
+the generator writes these directly rather than through save mode — step 4's prompt would fire on every run. they are described here so lint, and anyone editing one by hand, can tell a legitimate one from a session dump.
 
 ## inline q&a workflow (answer + cleanup modes)
 
@@ -98,7 +113,7 @@ per target vault:
 
 1. **pre-flight**: unexplained untracked/modified files at lint start → investigate before proceeding. a deleted page reappearing usually means obsidian resurrected it from an open tab's buffer (see gotchas) — re-delete properly, don't re-index it.
 2. **index coverage**: every content page has an index entry with an accurate one-liner (project sub-wikis: their own index counts). the reverse too — no index entries pointing at missing pages. fix both directions.
-3. **orphans**: pages with zero inbound links from anywhere. link them from where the concept is first mentioned, or index them; deletion only with user sign-off.
+3. **orphans**: pages with zero inbound links from anywhere. link them from where the concept is first mentioned, or index them; deletion only with user sign-off. a generated snapshot page is not an orphan — its index entry is enough.
 4. **broken wikilinks**: extract `[[targets]]` (strip `|alias`, `#anchor`, table-escaped `\|`; skip code blocks) and resolve each against the vault namespace. on the work vault the namespace includes the personal vault through the `personal/` symlink. fix or retarget.
 5. **frontmatter/tag conformance** (auto-fix): every page has `tags` + `created` (backfill `created` from file mtime); vaults whose schema requires a kind tag have exactly one; no `title:` keys; vault-specific tag rules enforced (see each schema). synthesize frontmatter for pages missing it entirely (infer topical tags from the page's own content).
 6. **name = scope**: filenames claiming broader scope than the content delivers get renamed per the vault schema's naming rules (in the work vault: generic basenames are reserved for the personal vault; add the owning-system anchor). a rename rewrites ALL inbound links + the H1 and records the old→new mapping in the log entry. skip when the right anchor cannot be inferred from the content — flag instead.
@@ -107,10 +122,11 @@ per target vault:
 9. **basename collisions**: through the symlink the work + personal vaults share one link namespace — no basename may exist in both. resolve per the split protocol (the general page keeps the generic name; the work page gets an anchored name).
 10. **confidentiality**: general vaults contain no work-internal information — run the marker grep from `references/work-vault.md` (work machines) over recently-touched general-vault files; eyeball hits (common words collide). violations are scrubbed immediately.
 11. **raw linkage**: every `raw/` source is wikilinked from the compiled page that digested it; flag uncompiled raw files as ingest backlog.
-12. **staleness/contradictions**: when a recent page settles an investigation, sweep older pages still stating the earlier hypothesis. spot-check pages whose `source:` targets may have moved on.
-13. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — remove (report-before-delete only for files with real content).
-14. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented. when a lint fix establishes a new convention, codify it in the schema in the same run.
-15. **close out**: log the lint pass in each vault's `log.md` (each vault's own direction), commit each vault touched, and end with a summary: what drifted since the last lint, what was fixed (renames/splits listed explicitly with old→new names), what was deferred and why.
+12. **staleness/contradictions**: when a recent page settles an investigation, sweep older pages still stating the earlier hypothesis. spot-check pages whose `source:` targets may have moved on. a generated snapshot page is never edited to match what newer pages say — it is refreshed by re-running its generator (next check).
+13. **generated snapshot pages**: check the class's own invariants, not its content — perishability header present and naming how to refresh, exactly one page (delete dated siblings), index entry still there. do not strip its timestamps or task detail; that content is why the class exists. refresh a stale one by re-running its generator, and if you cannot run it in this pass leave the page as it stands and say so in the summary.
+14. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — remove (report-before-delete only for files with real content).
+15. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented. when a lint fix establishes a new convention, codify it in the schema in the same run.
+16. **close out**: log the lint pass in each vault's `log.md` (each vault's own direction), commit each vault touched, and end with a summary: what drifted since the last lint, what was fixed (renames/splits listed explicitly with old→new names), what was deferred and why.
 
 a scan skeleton (adapt per vault; run from `~/development/obsidian/`):
 

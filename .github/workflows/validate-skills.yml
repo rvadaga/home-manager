@@ -1,0 +1,36 @@
+name: validate skills
+
+# do not filter this workflow by path. the `skills-ref validate` check is
+# required on main, and a skipped workflow reports no status, so the required
+# check waits forever. every pr must reach this job, including prs that do not
+# touch a skill.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  skills-ref:
+    name: skills-ref validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      # pinned: an unpinned spec bump would break CI on an unrelated pr
+      - run: npm install -g skills-ref@0.1.5
+
+      # skills-ref takes one skill path per run, so loop and collect failures
+      # instead of stopping at the first bad skill.
+      # `failed`, not `status` — the latter is read-only in zsh, so this same
+      # loop can be pasted into a local shell to reproduce CI.
+      - name: validate every skill against the agent skills spec
+        run: |
+          failed=0
+          for dir in dotfiles/claude/skills/*/; do
+            [ -f "$dir/SKILL.md" ] || continue
+            skills-ref validate "$dir" || failed=1
+          done
+          exit $failed
