@@ -110,4 +110,17 @@ in
 
     enableZshIntegration = true;
   };
+
+  # home manager generates this file in the read-only nix store. materialize
+  # the link after activation so external tools can update the live config.
+  xdg.configFile."ghostty/config".force = true;
+  home.activation.makeGhosttyConfigWritable = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    ghostty_config="${config.xdg.configHome}/ghostty/config"
+    if [ -L "$ghostty_config" ]; then
+      ghostty_config_tmp="$(${pkgs.coreutils}/bin/mktemp "$ghostty_config.tmp.XXXXXX")"
+      ${pkgs.coreutils}/bin/cp --dereference "$ghostty_config" "$ghostty_config_tmp"
+      ${pkgs.coreutils}/bin/chmod 0644 "$ghostty_config_tmp"
+      ${pkgs.coreutils}/bin/mv --force "$ghostty_config_tmp" "$ghostty_config"
+    fi
+  '';
 }
