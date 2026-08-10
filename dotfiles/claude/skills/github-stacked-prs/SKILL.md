@@ -33,6 +33,28 @@ create every new stacked pull request as a draft. after publication, the shared 
 - in the interactive editor, change every new pull request from the default ready state to draft before submitting.
 - never let the interactive default ready state escape. pass `--open` only when the user explicitly asks to make the pull requests ready.
 
+## publish from a complete-object checkout
+
+before verification or publication, confirm that the checkout has complete git objects for the stack. use `git config --get remote.<remote>.url` to verify the selected remote. then inspect both `git config --get --bool remote.<remote>.promisor` and `git config --get remote.<remote>.partialclonefilter`. stop if `promisor` is true or a partial-clone filter is present. git lfs pre-push scans can otherwise turn promised pointer blobs into one filtered fetch per object before any ref moves.
+
+prefer the existing complete-object owning worktree. when a separate clean checkout is required, make it the sole owning worktree and writer for every layer before it changes any stack branch. the checkout below names the selected remote `origin`. clone only the current stack top without a partial-clone filter, configure fetch refspecs for the default branch and every exact stack branch, fetch those refs together, and keep the standard git lfs hook. identify the existing stack with a verified stack number, pull request number or url, or branch name, then reconstruct it with `gh stack checkout`:
+
+```sh
+GIT_LFS_SKIP_SMUDGE=1 git clone --no-checkout --single-branch --branch <top-branch> <remote-url> <publication-checkout>
+cd <publication-checkout>
+git config --unset-all remote.origin.fetch
+git config --add remote.origin.fetch '+refs/heads/<default-branch>:refs/remotes/origin/<default-branch>'
+git config --add remote.origin.fetch '+refs/heads/<stack-branch>:refs/remotes/origin/<stack-branch>'
+# add one exact refspec for every remaining stack branch
+git fetch --no-tags origin <the-exact-default-and-stack-refspecs>
+git lfs install --local
+GIT_LFS_SKIP_SMUDGE=1 gh stack checkout <existing-stack-or-pull-request>
+```
+
+this remote-only reconstruction is valid only when the accepted stack can be recovered from its published refs. stop if an accepted commit or required git lfs object exists only in another checkout; transfer that state through a separately verified handoff before making the new checkout the owner.
+
+repeat the complete verification below in that checkout before `gh stack push`. never use `GIT_LFS_SKIP_PUSH`, disable hooks, hydrate a partial clone in place, or substitute a direct push to make publication faster.
+
 ## verify the full stack before publication
 
 after every restack and before any push:
