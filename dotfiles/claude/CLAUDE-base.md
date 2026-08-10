@@ -46,7 +46,7 @@
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
-* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. open every new pull request as draft and keep it draft unless rahul explicitly changes it. the standing `github-stacked-prs` publication authorization advances only draft stack branches; it never authorizes a push to `main` or `master`.
+* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. open every new pull request as draft. for a github-managed stack, `github-stacked-prs` owns later per-layer state and publication. its authorization never permits a push to `main` or `master`.
 * **reconcile every published ordinary branch local-first.** the owning local worktree is the source of the remote update:
     1. confirm one-writer ownership, then rederive the exact local, upstream, and live pr heads. stop on unexpected remote movement.
     2. fetch the exact current base and merge it into the local branch without rebasing.
@@ -95,7 +95,7 @@
 
 ## multi-pr workflow
 
-for a real dependent series, use `github-stacked-prs` as the canonical owner of the stack lifecycle and commands. open the first layer as a draft, publish each ready dependent layer into the same visible draft stack, and land one layer at a time from the bottom while the skill restacks and verifies the remaining drafts.
+for a real dependent series, use `github-stacked-prs` as the canonical owner of the stack lifecycle and commands. open the first layer as a draft, publish each completed dependent layer into the same visible stack, and land one layer at a time from the bottom while the skill restacks and verifies the remaining layers.
 
 independent changes remain independent draft pull requests. do not force them into an artificial stack.
 

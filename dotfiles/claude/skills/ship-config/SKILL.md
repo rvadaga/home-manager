@@ -43,7 +43,8 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - test fails → fix and re-test. never merge a failing branch.
 
 5. **merge** (no confirmation gate after a passing test)
-   - `gh pr ready <n>`, then `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
+   - github-managed stack → invoke `github-stacked-prs`; preserve every live layer state and select only a live ready bottom layer. do not run the ordinary commands below.
+   - ordinary pull request → `gh pr ready <n>`, then `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
    - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
      ```bash
      gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'
