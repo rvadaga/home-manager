@@ -21,7 +21,20 @@
 * **denylist / allowlist, never blacklist / whitelist** — in prose and in code (etsy `go/inclusivecode`, linked from the pr template header).
 * **a code comment states the constraint a future reader must not break, and nothing about the process that produced the code.** the test: would this sentence still be true in six months, to someone who never saw the pr? if it turns on process state — which pr, whose approval, what deploys when — it belongs in the pr description. history that encodes a constraint is not process: "handles empty input, which the previous version crashed on" earns its place. a deliberately temporary marker sits outside the test, because it is deleted before it can age: a chained-series `TODO(pr2):` is fine, and the child pr removes it on merge. don't link a doc that changes on its own schedule (a wiki page, a ledger, a running design doc). it gets rewritten without anyone touching the code, so the link rots silently. this governs code comments; repo-resident narrative files (a top-level `MISTAKES.md`, an `IMPROVEMENTS.md`, a run log) are a related but separate concern with a different remedy.
 * when working on pull requests:
-    * unless specifically asked not to, create a DRAFT pr
+    * create every new pull request as a draft. a pull request that rahul has not made ready stays draft
+    * before a source push, title or body edit, other metadata change, polish pass, reviewer-bot loop, default-branch sync, pull request recreation or update, or github stack operation, rederive and record the pull request's live draft or ready state
+    * a github `ready_for_review` event authored by `rvadaga` is rahul's explicit ready instruction for that pull request. do not ask for the same confirmation in chat
+    * preserve the recorded live state through the operation. do not run `gh pr ready --undo`, recreate or update a live ready pull request as draft, or otherwise undo readiness unless rahul gives a later explicit instruction for that pull request
+    * when state provenance is unclear, inspect the github timeline event and actor. movement authored by `rvadaga` is authoritative for that pull request. stop for unexplained movement or movement by another actor outside the current authorization
+    * state preservation does not authorize a merge, make another pull request ready, bypass one-writer ownership or another project rule, or permit a push to `main` or `master`
+    * state controls:
+        * accept an ordinary or stacked pull request as ready when its live state and `rvadaga`-authored `ready_for_review` event agree; preserve it across source pushes, metadata and body edits, polish, bot loops, default-branch sync, and stack rebase or push
+        * keep every pull request that rahul has not made ready in its live draft state
+        * accept a later redraft only after a later explicit instruction from rahul for that same pull request, then verify the resulting live state
+        * reject a duplicate chat-confirmation requirement after the authoritative github event
+        * reject `gh pr ready --undo`, replacement, recreation, or update that would turn a live ready pull request into a draft without that later instruction
+        * stop when a state change has no clear provenance or has an unexpected non-rahul actor
+        * require every post-operation state to equal the state recorded before the operation unless the operation itself carried rahul's explicit state-change instruction
     * don't add ai generated prompt
     * always use pull request templates available in the repository
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
@@ -46,13 +59,13 @@
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
-* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. open every new pull request as draft. for a github-managed stack, `github-stacked-prs` owns later per-layer state and publication. its authorization never permits a push to `main` or `master`.
+* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. follow the shared pull request state rule above before any branch publication. for a github-managed stack, `github-stacked-prs` owns the command and publication mechanics. its authorization never permits a push to `main` or `master`.
 * **reconcile every published ordinary branch local-first.** the owning local worktree is the source of the remote update:
     1. confirm one-writer ownership, then rederive the exact local, upstream, and live pr heads. stop on unexpected remote movement.
     2. fetch the exact current base and merge it into the local branch without rebasing.
     3. resolve conflicts and complete every required validation locally.
     4. push that exact validated head normally.
-    5. verify the local, upstream, and live pr heads match and the pr still has its intended draft state.
+    5. verify the local, upstream, and live pr heads match and the pr still has the live draft or ready state recorded before reconciliation.
     `gh pr update-branch` is not the normal path because it moves the remote before the owner has the merged and validated tree locally.
 * ad hoc force-push commands require explicit permission — never run `git push --force` or `git push --force-with-lease` directly or through an alias without it. for a github-managed draft stack, use `github-stacked-prs`; that skill owns the official cli publication authorization and safety checks.
 * commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
