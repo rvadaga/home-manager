@@ -53,6 +53,14 @@ in {
       # oss-vespa); a downstream config can compose into the same skill dir by
       # adding references/work-vault.md (registry entry for its work vault).
       ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
+      ".claude/skills/notes/scripts/validate-mermaid.py" = {
+        source = ../dotfiles/claude/skills/notes/scripts/validate-mermaid.py;
+        executable = true;
+      };
+      ".claude/skills/notes/scripts/test-validate-mermaid.py" = {
+        source = ../dotfiles/claude/skills/notes/scripts/test-validate-mermaid.py;
+        executable = true;
+      };
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
 
       # nix-provenance: print the active system's flake provenance (written to
