@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
 ---
 
 # github stacked pull requests
@@ -16,7 +16,33 @@ use a stack only when the layers have a real code dependency. keep independent c
 3. run the new layer's focused tests and the complete pre-push verification, then use `gh stack submit --auto` without `--open` to publish it as another draft layer.
 4. repeat for each ready dependent layer. do not keep a ready layer hidden locally while waiting for its parent to merge.
 
-keep one branch, pull request, owning working tree, writer, and reviewer claim per layer. do not make two sessions write the same layer.
+keep one branch, pull request, and reviewer claim per layer. the integration and publication ownership below is exclusive; source work may run in parallel only under its handoff rules.
+
+## parallel source work and linear integration
+
+serialize stack metadata and history mutation, handoff adoption, integration, conflict resolution, lease verification, restacking, and publication. one stack integrator owns that checkout and is the only public publisher.
+
+when source changes are independent, implementation and validation run in parallel by default. each assignment has one bounded source worker in a separate isolated checkout and names the owning layer, allowed paths, intended behavior, and required tests. an owner, polish worker, or bounded subagent may fill that role. no source worker edits the integrator's checkout or another worker's checkout.
+
+one isolated bounded worker returns exactly one immutable commit. the handoff records the exact commit sha and parent or base, changed paths, tests and test-quality evidence, clean porcelain, and known dependencies. the worker does not rewrite stack history, merge its branch into an owning layer or stack branch, or publish a stack ref.
+
+the integrator rederives readiness and remote leases; verifies each handoff's base, path scope, content, tests, and dependencies; and adopts each approved handoff onto its owning layer in dependency order with `git cherry-pick <sha>`. never merge the worker branch. only the integrator resolves a cherry-pick conflict, serially, and then reruns affected tests. the integrator proves one linear commit sequence for every layer and the cumulative stack. only then does the integrator restack, validate, and publish once with the official flow.
+
+| case | execution |
+|---|---|
+| separate isolated checkouts, complete assignments, exactly one commit per worker, disjoint allowed paths, and no semantic dependency | run source implementation and validation in parallel; the integrator uses `git cherry-pick <sha>` in approved dependency order |
+| any allowed path overlaps | serialize the source work |
+| a cross-layer semantic dependency exists | serialize the dependent work |
+| a cherry-pick conflicts | only the integrator resolves it, serially, then reruns affected tests |
+| independence cannot be proved | serialize the source work |
+| a checkout is shared or an assignment is incomplete | reject parallel work |
+| a worker returns zero or more than one commit | reject the handoff |
+| a handoff's commit, parent or base, paths, tests, or dependencies do not match its assignment | reject the handoff and resolve the mismatch before integration |
+| a source worker changes stack metadata or history, merges a worker branch, or publishes | reject the handoff |
+| adoption would merge the worker branch, skip `git cherry-pick <sha>`, or create a merge commit or octopus merge | reject that adoption and preserve linear history |
+| more than one task would publish | reject publication |
+
+ordinary published pull requests that are not github-managed stack layers keep the separate local-first merge-main rule. this section does not authorize rebasing or force-updating them.
 
 ## inspect and restack
 
@@ -34,16 +60,39 @@ create every new stacked pull request as a draft. after publication, the shared 
 - in the interactive editor, change every new pull request from the default ready state to draft before submitting.
 - never let the interactive default ready state escape. pass `--open` only when the user explicitly asks to make the pull requests ready.
 
+## publish from a complete-object checkout
+
+before verification or publication, confirm that the checkout has complete git objects for the stack. use `git config --get remote.<remote>.url` to verify the selected remote. then inspect both `git config --get --bool remote.<remote>.promisor` and `git config --get remote.<remote>.partialclonefilter`. stop if `promisor` is true or a partial-clone filter is present. git lfs pre-push scans can otherwise turn promised pointer blobs into one filtered fetch per object before any ref moves.
+
+prefer the existing complete-object integrator checkout. when a separate clean checkout is required, make it the sole integration and publication checkout before it changes stack metadata, layer history, or refs. source workers remain in their isolated checkouts and stop at immutable one-commit handoffs. the checkout below names the selected remote `origin`. clone only the current stack top without a partial-clone filter, configure fetch refspecs for the default branch and every exact stack branch, fetch those refs together, and keep the standard git lfs hook. identify the existing stack with a verified stack number, pull request number or url, or branch name, then reconstruct it with `gh stack checkout`:
+
+```sh
+GIT_LFS_SKIP_SMUDGE=1 git clone --no-checkout --single-branch --branch <top-branch> <remote-url> <publication-checkout>
+cd <publication-checkout>
+git config --unset-all remote.origin.fetch
+git config --add remote.origin.fetch '+refs/heads/<default-branch>:refs/remotes/origin/<default-branch>'
+git config --add remote.origin.fetch '+refs/heads/<stack-branch>:refs/remotes/origin/<stack-branch>'
+# add one exact refspec for every remaining stack branch
+git fetch --no-tags origin <the-exact-default-and-stack-refspecs>
+git lfs install --local
+GIT_LFS_SKIP_SMUDGE=1 gh stack checkout <existing-stack-or-pull-request>
+```
+
+this remote-only reconstruction is valid only when the accepted stack can be recovered from its published refs. stop if an accepted commit or required git lfs object exists only in another checkout; transfer that state through a separately verified immutable handoff before making the new checkout the integrator.
+
+repeat the complete verification below in that checkout before `gh stack push`. never use `GIT_LFS_SKIP_PUSH`, disable hooks, hydrate a partial clone in place, or substitute a direct push to make publication faster.
+
 ## verify the full stack before publication
 
 after every restack and before any push, run all of these checks even when prior test results may carry:
 
-1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm every layer's owning worktree has clean `git status --porcelain` output.
+1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm the integrator checkout has clean `git status --porcelain` output, and confirm that every accepted handoff reported clean porcelain at its exact commit.
 2. record every post-restack local parent and layer oid. for each published layer, run `git ls-remote --heads <remote> <branch>` and require the exact live head to equal its recorded old lease. rederive each pull request's live base and draft or ready state, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. when state provenance is unclear, inspect the github timeline event and actor. use the current live state as the publication state only when the shared rule authorizes its movement; stop on any other unexpected head, base, or state movement. an absent remote is valid only for a new unpublished layer.
 3. compare every old parent-to-layer patch range with its post-restack range. use `git range-diff <old-parent>..<old-layer> <new-parent>..<new-layer>` and require the same ordered patch set with no added, dropped, or changed patch, or use an equally strong per-layer patch-identity proof. review both per-layer diffs when the proof is ambiguous. treat an unproved layer as changed.
 4. run `git diff --check`, then run `git diff --check <parent>..<layer>` for every layer.
 5. scan every tracked file in every layer with `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --` and review every marker match.
 6. review `git diff <parent>..<layer> --` in full for every layer.
+7. inspect `git rev-list --parents <parent>..<layer>` for every layer. reject merge commits, require each layer to start from its recorded parent, and require the cumulative stack to remain one linear sequence.
 
 a clean current layer does not establish that the layers above it are clean.
 
@@ -90,7 +139,7 @@ the shared default-branch rule in `CLAUDE.md` still applies: this authorization 
 this authorization does not cover:
 
 - direct `git push --force`, `git push --force-with-lease`, their aliases, or another stack tool;
-- a push when another writer owns any layer;
+- parallel publication, publication by a source worker, or a push when another task owns integration or publication for any layer;
 - overwriting remote movement that the current local stack does not account for;
 - making an untouched draft layer ready, restoring a recorded ready layer to draft, or otherwise changing a layer's state;
 - bypassing a stronger project, branch, pull request, design, deployment, or safety rule.
