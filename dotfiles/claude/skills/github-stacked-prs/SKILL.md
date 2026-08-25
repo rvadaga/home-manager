@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, scoping that integrator's exclusive locks, syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
 ---
 
 # github stacked pull requests
@@ -20,9 +20,11 @@ keep one branch, pull request, and reviewer claim per layer. the integration and
 
 ## parallel source work and linear integration
 
-serialize stack metadata and history mutation, handoff adoption, integration, conflict resolution, lease verification, restacking, and publication. one stack integrator owns that checkout and is the only public publisher.
+use a short-lived exclusive lock only while the stack integrator adopts a handoff, resolves a cherry-pick conflict, restacks, verifies remote leases, or publishes. each lock names the exact branch, history, or path resource it protects and an observable condition that releases it. release the lock as soon as that operation finishes or aborts. one stack integrator owns each locked operation and is the only public publisher.
 
-when source changes are independent, implementation and validation run in parallel by default. each assignment has one bounded source worker in a separate isolated checkout and names the owning layer, allowed paths, intended behavior, and required tests. an owner, polish worker, or bounded subagent may fill that role. no source worker edits the integrator's checkout or another worker's checkout.
+when source changes are independent, implementation and validation run in parallel by default. each assignment has one bounded source worker in a separate isolated checkout and names the owning layer, allowed paths, intended behavior, and required tests. an owner, polish worker, or bounded subagent may fill that role. no source worker edits the integrator's checkout or another worker's checkout. validators and polish may also run concurrently on disjoint immutable trees and paths in separate isolated checkouts. an integration lock never freezes unrelated source implementation, validation, validators, or polish.
+
+when overlap, a semantic dependency, or uncertain independence requires serial source work, finish and accept one worker's immutable handoff before assigning the next worker. give the next assignment the resulting dependency tip as its explicit immutable base. do not hold an integration lock while either worker implements or validates its source change.
 
 one isolated bounded worker returns exactly one immutable commit. the handoff records the exact commit sha and parent or base, changed paths, tests and test-quality evidence, clean porcelain, and known dependencies. the worker does not rewrite stack history, merge its branch into an owning layer or stack branch, or publish a stack ref.
 
@@ -31,11 +33,16 @@ the integrator rederives readiness and remote leases; verifies each handoff's ba
 | case | execution |
 |---|---|
 | separate isolated checkouts, complete assignments, exactly one commit per worker, disjoint allowed paths, and no semantic dependency | run source implementation and validation in parallel; the integrator uses `git cherry-pick <sha>` in approved dependency order |
-| any allowed path overlaps | serialize the source work |
-| a cross-layer semantic dependency exists | serialize the dependent work |
+| validators or polish inspect disjoint immutable trees and paths in separate isolated checkouts | run them concurrently |
+| a handoff adoption, cherry-pick conflict resolution, restack, lease verification, or publication lock names its exact branch, history, or path resource and an observable release condition | hold the lock only for that operation and release it when the condition is met |
+| any allowed path overlaps | finish and accept one immutable handoff, then assign the next worker from the resulting dependency tip |
+| a cross-layer semantic dependency exists | finish and accept the dependency handoff, then assign the dependent worker from the resulting dependency tip |
 | a cherry-pick conflicts | only the integrator resolves it, serially, then reruns affected tests |
-| independence cannot be proved | serialize the source work |
+| independence cannot be proved | finish and accept one immutable handoff, then assign the next worker from the resulting dependency tip |
 | a checkout is shared or an assignment is incomplete | reject parallel work |
+| one lock spans source implementation, validation, integration, and publication | reject the blanket lock |
+| a lock omits the exact resource or an observable release condition | reject the lock |
+| a lock freezes unrelated source implementation, validation, validators, or polish | narrow the lock before proceeding |
 | a worker returns zero or more than one commit | reject the handoff |
 | a handoff's commit, parent or base, paths, tests, or dependencies do not match its assignment | reject the handoff and resolve the mismatch before integration |
 | a source worker changes stack metadata or history, merges a worker branch, or publishes | reject the handoff |
