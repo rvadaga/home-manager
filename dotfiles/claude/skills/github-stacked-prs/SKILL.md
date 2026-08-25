@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, sync, review, publish, restack, recover, and merge visible draft stacks with the official gh stack cli. use for any real dependent pull request series, including syncing with the default branch, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
 ---
 
 # github stacked pull requests
@@ -26,9 +26,9 @@ keep one branch, pull request, owning working tree, writer, and reviewer claim p
 - if it stops for conflicts, resolve the files, stage them, and resume only with `gh stack rebase --continue`.
 - never merge the default branch into one layer, run per-layer `git rebase` or `git rebase --continue`, or use `gh pr update-branch` on a stack layer.
 
-## keep new pull requests draft
+## create stack layers as drafts
 
-keep every new stacked pull request draft unless the user explicitly asks to change it.
+create every new stacked pull request as a draft. after publication, the shared pull request state rule in `CLAUDE.md` owns readiness provenance and exact state preservation for every layer.
 
 - for a non-interactive submission, run `gh stack submit --auto` without `--open`.
 - in the interactive editor, change every new pull request from the default ready state to draft before submitting.
@@ -39,7 +39,7 @@ keep every new stacked pull request draft unless the user explicitly asks to cha
 after every restack and before any push, run all of these checks even when prior test results may carry:
 
 1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm every layer's owning worktree has clean `git status --porcelain` output.
-2. record every post-restack local parent and layer oid. for each published layer, run `git ls-remote --heads <remote> <branch>` and require the exact live head to equal its recorded old lease. rederive each pull request's live base and draft or ready state, confirm the bases form the expected chain, and confirm every state is allowed by the publication rules below. an absent remote is valid only for a new unpublished layer. stop if any existing head, base, or state moved unexpectedly.
+2. record every post-restack local parent and layer oid. for each published layer, run `git ls-remote --heads <remote> <branch>` and require the exact live head to equal its recorded old lease. rederive each pull request's live base and draft or ready state, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. when state provenance is unclear, inspect the github timeline event and actor. use the current live state as the publication state only when the shared rule authorizes its movement; stop on any other unexpected head, base, or state movement. an absent remote is valid only for a new unpublished layer.
 3. compare every old parent-to-layer patch range with its post-restack range. use `git range-diff <old-parent>..<old-layer> <new-parent>..<new-layer>` and require the same ordered patch set with no added, dropped, or changed patch, or use an equally strong per-layer patch-identity proof. review both per-layer diffs when the proof is ambiguous. treat an unproved layer as changed.
 4. run `git diff --check`, then run `git diff --check <parent>..<layer>` for every layer.
 5. scan every tracked file in every layer with `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --` and review every marker match.
@@ -71,9 +71,9 @@ prior focused and cumulative results may carry only when every layer is patch-id
 
 for initial publication, compare the cumulative top tree with the accepted combined source tree and require exact tree equality. when a layer patch changes intentionally, update the accepted combined source and require the same equality. after trunk-only movement, compare the stack-owned patch sequence instead of the raw top-tree oid, because unrelated trunk content necessarily changes that oid.
 
-## publish a validated draft stack
+## publish without changing pull request states
 
-when every existing pull request in the github-managed stack is draft and every new pull request will remain draft, normal advancement through the official cli is standing-authorized at any time:
+normal advancement through the official cli is standing-authorized when every new pull request will be draft and every published layer will keep the state recorded under the shared `CLAUDE.md` rule:
 
 - use `gh stack rebase` to restack.
 - use `gh stack rebase --continue` to resume after resolving and staging conflicts.
@@ -83,27 +83,36 @@ after any push, enumerate the complete stack again. require every local layer he
 
 `gh stack push` may update descendant remote heads with force-with-lease after a restack. those official, lease-checked updates are part of the standing authorization and do not need separate force-push permission.
 
-the shared default-branch rule in `CLAUDE.md` still applies: this authorization advances draft stack branches only and never permits a push to `main` or `master`.
+this authorization covers carrying a recorded ready layer through a validated restack and publication of its descendants. it does not authorize changing any layer's draft or ready state. after the push, rederive every layer and require its state to equal the state recorded immediately before publication.
+
+the shared default-branch rule in `CLAUDE.md` still applies: this authorization advances stack branches only and never permits a push to `main` or `master`.
 
 this authorization does not cover:
 
 - direct `git push --force`, `git push --force-with-lease`, their aliases, or another stack tool;
 - a push when another writer owns any layer;
 - overwriting remote movement that the current local stack does not account for;
-- changing or publishing a ready pull request unless the active project rules allow that action now; or
+- making an untouched draft layer ready, restoring a recorded ready layer to draft, or otherwise changing a layer's state;
 - bypassing a stronger project, branch, pull request, design, deployment, or safety rule.
 
 ## merge bottom-up
 
-merge a layer only after the user explicitly approves changing that layer from draft. keep every higher layer draft.
+merge bottom-up and select only a layer whose live github state is ready. the shared `CLAUDE.md` rule decides whether that state is authoritative and forbids a duplicate confirmation or automatic redraft. preserve every higher layer's recorded state.
 
-1. repeat the always-required full-stack checks and apply the validation decision above, then change only the bottom pull request to ready.
+1. repeat the always-required full-stack checks and apply the validation decision above. select only the current bottom pull request, and only when its live state is ready. stop if the bottom layer is still draft.
 2. run `gh stack merge <bottom-pr-number>`. the command merges everything through the selected pull request, so selecting the bottom pull request lands exactly one layer.
 3. rederive the merged pull request state and exact head before changing any remaining layer.
-4. restack the remaining drafts with `gh stack rebase`. if conflicts stop the command, use only `gh stack rebase --continue` after resolving and staging them.
-5. repeat the always-required full-stack checks and apply the validation decision above, then publish the validated restack with `gh stack push` and verify that every remaining pull request is still draft at the expected remote head.
+4. record every remaining layer's live state, then restack with `gh stack rebase`. if conflicts stop the command, use only `gh stack rebase --continue` after resolving and staging them.
+5. repeat the always-required full-stack checks and apply the validation decision above, then publish the validated restack with `gh stack push`. verify every remaining pull request at the expected remote head and require its live state to equal the state recorded immediately before publication.
 
 repeat from the new bottom layer. never substitute per-branch git commands for landing or restacking a github-managed stack.
+
+## stack state controls
+
+- accept a ready bottom layer verified under the shared `CLAUDE.md` rule with draft descendants; preserve the full state sequence through restack and publication, then allow only that bottom layer to merge.
+- accept a ready middle layer verified under the shared rule; preserve it while lower layers land, and do not select it until it becomes the bottom layer.
+- keep every untouched layer draft.
+- reject publication unless every post-push draft or ready state exactly equals the state recorded immediately before publication.
 
 ## recover after the wrong continuation
 
