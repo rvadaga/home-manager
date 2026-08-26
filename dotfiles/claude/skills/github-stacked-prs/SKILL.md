@@ -26,6 +26,8 @@ use selective publication as the normal path when the request prioritizes one co
 
 use a complete restack when syncing the default branch, resolving a conflict, adopting handoffs that must flow through descendants, or when a semantic change requires descendants to change together. the complete-restack rules below remain mandatory for that mode. do not turn a disallowed selective attempt into a partial restack.
 
+when a lower layer has merged and a service-side prefix rewrite leaves a later child at its old head, read [partial stack recovery](references/partial-stack-recovery.md) before changing local stack state. it permits a scoped official rebase only when every required previous boundary remains provable. it treats `gh stack unstack --local` followed by `gh stack init` as a negative control for this shape, never as a recovery.
+
 ## parallel source work and linear integration
 
 use a short-lived exclusive lock only while the stack integrator adopts a handoff, resolves a cherry-pick conflict, restacks, verifies remote leases, or publishes. each lock names the exact branch, history, or path resource it protects and an observable condition that releases it. release the lock as soon as that operation finishes or aborts. one stack integrator owns each locked operation and is the only public publisher.
@@ -186,9 +188,8 @@ repeat from the new bottom layer. never substitute per-branch git commands for l
 
 if `git rebase --continue` was used while a `gh stack rebase` conflict was paused, stop before any push. treat the complete upstack as untrusted even when no remote ref moved.
 
-restore trust in one of these ways:
+restore trust only from a known-good stack state whose prior boundaries are still provable. read [partial stack recovery](references/partial-stack-recovery.md) when a merged lower layer or a service-side rewrite may have broken a boundary. do not remove and recreate local tracking to guess that boundary.
 
-- reconstruct the stack from a known-good state through `gh stack`, then repeat the full pre-push verification; or
-- use `gh stack view --json` to enumerate every affected layer, scan every tracked file for conflict markers, review every layer's diff, and run every layer's tests.
+then use `gh stack view --json` to enumerate every affected layer, scan every tracked file for conflict markers, review every layer's diff, and run every layer's tests.
 
 do not clear the stop based only on the originally conflicted layer.
