@@ -47,6 +47,9 @@ in {
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
       ".claude/skills/github-stacked-prs/SKILL.md".source = ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/github-stacked-prs/references/preparation-and-publication.md".source = ../dotfiles/claude/skills/github-stacked-prs/references/preparation-and-publication.md;
+      ".claude/skills/github-stacked-prs/references/selective-publication.md".source = ../dotfiles/claude/skills/github-stacked-prs/references/selective-publication.md;
+      ".claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py;
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;

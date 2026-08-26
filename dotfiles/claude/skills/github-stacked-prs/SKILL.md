@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, sync, review, publish, restack, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, scoping that integrator's exclusive locks, syncing with the default branch, preserving the live pull request states recorded under the shared CLAUDE.md rule, deciding which validation must rerun after a restack, and deciding whether the cli's descendant-head updates are authorized.
+description: create, extend, selectively publish, restack, review, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, preserving live pull request states, selectively publishing a coherent changed subseries without moving unchanged descendants, and performing a complete restack when the stack must change together.
 ---
 
 # github stacked pull requests
@@ -19,6 +19,12 @@ use a stack only when the layers have a real code dependency. keep independent c
 keep one branch, pull request, and reviewer claim per layer. the integration and publication ownership below is exclusive; source work may run in parallel only under its handoff rules.
 
 before a stack publication or restack, read [preparation and publication](references/preparation-and-publication.md). it defines the reusable integrator checkout, handoff batching, one preflight snapshot, read-only parallel checks, carried-result proof, and separate preparation and push timing.
+
+## choose a publication mode
+
+use selective publication as the normal path when the request prioritizes one coherent, tested changed layer or contiguous changed subseries in a live draft stack. read [selective publication](references/selective-publication.md), produce its live-read manifest, and run its checker before and after the official command. selective publication does not restack or adopt pending handoffs. it leaves each untouched descendant ref in place and records that deferred restack work.
+
+use a complete restack when syncing the default branch, resolving a conflict, adopting handoffs that must flow through descendants, or when a semantic change requires descendants to change together. the complete-restack rules below remain mandatory for that mode. do not turn a disallowed selective attempt into a partial restack.
 
 ## parallel source work and linear integration
 
@@ -91,11 +97,11 @@ GIT_LFS_SKIP_SMUDGE=1 gh stack checkout <existing-stack-or-pull-request>
 
 this remote-only reconstruction is valid only when the accepted stack can be recovered from its published refs. stop if an accepted commit or required git lfs object exists only in another checkout; transfer that state through a separately verified immutable handoff before making the new checkout the integrator.
 
-repeat the complete verification below in that checkout before `gh stack push`. never use `GIT_LFS_SKIP_PUSH`, disable hooks, hydrate a partial clone in place, or substitute a direct push to make publication faster.
+for a complete restack, repeat the complete verification below in that checkout before `gh stack push`. for selective publication, use the targeted verification and independent readback in [selective publication](references/selective-publication.md). never use `GIT_LFS_SKIP_PUSH`, disable hooks, hydrate a partial clone in place, or substitute a direct push to make publication faster.
 
-## verify the full stack before publication
+## verify a complete restack before publication
 
-after every restack and before any push, run all of these checks even when prior test results may carry:
+after every complete restack and before its push, run all of these checks even when prior test results may carry:
 
 1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm the integrator checkout has clean `git status --porcelain` output, and confirm that every accepted handoff reported clean porcelain at its exact commit.
 2. capture every post-restack local parent and layer oid, every published layer's live remote head as its old push lease, and every pull request's live head, base, and draft or ready state in one preflight snapshot. require each live head to equal its recorded lease, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. immediately before the official publication command, re-read the same remote and pull request fields and require exact equality with that one snapshot. stop on any movement. an absent remote is valid only for a new unpublished layer.
@@ -131,15 +137,15 @@ prior focused and cumulative results may carry only when every layer is patch-id
 
 for initial publication, compare the cumulative top tree with the accepted combined source tree and require exact tree equality. when a layer patch changes intentionally, update the accepted combined source and require the same equality. after trunk-only movement, compare the stack-owned patch sequence instead of the raw top-tree oid, because unrelated trunk content necessarily changes that oid.
 
-## publish without changing pull request states
+## publish a complete restack without changing pull request states
 
-normal advancement through the official cli is standing-authorized when every new pull request will be draft and every published layer will keep the state recorded under the shared `CLAUDE.md` rule:
+complete-restack advancement through the official cli is standing-authorized when every new pull request will be draft and every published layer will keep the state recorded under the shared `CLAUDE.md` rule:
 
 - use `gh stack rebase` to restack.
 - use `gh stack rebase --continue` to resume after resolving and staging conflicts.
 - use `gh stack push` to publish the validated stack.
 
-after any push, enumerate the complete stack again. require every local layer head, live remote head, and pull request head to be exactly equal, then rederive every live base and draft or ready state and require the expected chain and state to remain unchanged.
+after a complete-restack push, enumerate the complete stack again. require every local layer head, live remote head, and pull request head to be exactly equal, then rederive every live base and draft or ready state and require the expected chain and state to remain unchanged.
 
 measure and report preparation time separately from the actual `gh stack push` time. preparation starts when this publication attempt starts preparing its selected integrator checkout and ends immediately before the official command begins. push time is only the elapsed time of that one official command. neither measurement changes the validation or readback requirements.
 

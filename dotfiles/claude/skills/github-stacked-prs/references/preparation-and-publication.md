@@ -1,6 +1,6 @@
 # preparation and publication
 
-use this procedure before an existing stack is restacked or published.
+use this procedure before a complete restack, and as the shared checkout and timing procedure for selective publication. for a selective changed layer or contiguous changed subseries, also read [selective publication](selective-publication.md).
 
 ## choose one integrator checkout
 
@@ -10,15 +10,15 @@ before using the checkout, verify its selected remote, complete objects, non-pro
 
 ## admit handoffs and read-only checks
 
-each candidate handoff must name its immutable base, one commit, allowed and changed paths, required checks, actual results, and known dependencies. admit independent handoffs together only when their path claims do not overlap and no handoff depends on another. validate those records before taking the integrator lock. adopt that batch in its declared order with `git cherry-pick <sha>`, then restack and publish once.
+each candidate handoff must name its immutable base, one commit, allowed and changed paths, required checks, actual results, and known dependencies. admit independent handoffs together only when their path claims do not overlap and no handoff depends on another. validate those records before taking the integrator lock. adopt that batch in its declared order with `git cherry-pick <sha>`, then complete-restack and publish once. a selective publication leaves pending handoffs deferred; it never adopts them merely to publish an earlier changed subseries.
 
 overlap, a dependency, an incomplete record, a changed path outside the claim, or uncertain independence makes the handoffs serial. accept the earlier handoff first, give the next worker its accepted tip, and validate it again. a conflict is serial integrator work and invalidates affected results.
 
 independent read-only checks may run concurrently in separate clean checkouts at immutable layer tips. this includes per-layer diffs, exact-marker scans, patch-identity or range-diff checks, and review reads. each result must name the layer oid it inspected. rerun a read that no longer names the final layer oid. integration, conflict resolution, history changes, and publication stay serialized under the exact branch or stack-history lock.
 
-## take one preflight snapshot
+## take one preflight snapshot for a complete restack
 
-after the final restack and before publication, record one complete snapshot of the stack:
+after the final restack and before its publication, record one complete snapshot of the stack:
 
 - the default-branch oid and ordered local parent and layer oids;
 - for every published layer, its branch, exact live remote head used as the lease, pull request head, base, and draft or ready state;
@@ -29,7 +29,7 @@ capture every remote and pull request field in this one snapshot. do not assembl
 
 run the required per-layer diff, marker, range-diff or patch-identity, linear-history, and review checks against the final layer tips. they may finish concurrently only when each report identifies that final immutable tip. the integrator records their results before the final live readback.
 
-## decide whether a result carries
+## decide whether a result carries through a complete restack
 
 initial publication always runs the required focused tests, builds, formatters, generators, generated-output checks, and cumulative validation. after a restack, carry a prior result only when all of these are proved:
 
