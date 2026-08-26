@@ -18,6 +18,8 @@ use a stack only when the layers have a real code dependency. keep independent c
 
 keep one branch, pull request, and reviewer claim per layer. the integration and publication ownership below is exclusive; source work may run in parallel only under its handoff rules.
 
+before a stack publication or restack, read [preparation and publication](references/preparation-and-publication.md). it defines the reusable integrator checkout, handoff batching, one preflight snapshot, read-only parallel checks, carried-result proof, and separate preparation and push timing.
+
 ## parallel source work and linear integration
 
 use a short-lived exclusive lock only while the stack integrator adopts a handoff, resolves a cherry-pick conflict, restacks, verifies remote leases, or publishes. each lock names the exact branch, history, or path resource it protects and an observable condition that releases it. release the lock as soon as that operation finishes or aborts. one stack integrator owns each locked operation and is the only public publisher.
@@ -29,6 +31,8 @@ when overlap, a semantic dependency, or uncertain independence requires serial s
 one isolated bounded worker returns exactly one immutable commit. the handoff records the exact commit sha and parent or base, changed paths, tests and test-quality evidence, clean porcelain, and known dependencies. the worker does not rewrite stack history, merge its branch into an owning layer or stack branch, or publish a stack ref.
 
 the integrator rederives readiness and remote leases; verifies each handoff's base, path scope, content, tests, and dependencies; and adopts each approved handoff onto its owning layer in dependency order with `git cherry-pick <sha>`. never merge the worker branch. only the integrator resolves a cherry-pick conflict, serially, and then reruns affected tests. the integrator proves one linear commit sequence for every layer and the cumulative stack. only then does the integrator restack, validate, and publish once with the official flow.
+
+accept independent, validated one-commit handoffs into one batch before opening one ordered integration, restack, and publication window. a batch is valid only when each handoff has a separate path claim, no dependency on another handoff in the batch, and complete validation evidence. adopt dependent or overlapping handoffs serially from the accepted earlier tip. do not acquire the integrator lock while a source worker or read-only validator is still running.
 
 | case | execution |
 |---|---|
@@ -69,7 +73,7 @@ create every new stacked pull request as a draft. after publication, the shared 
 
 ## publish from a complete-object checkout
 
-before verification or publication, confirm that the checkout has complete git objects for the stack. use `git config --get remote.<remote>.url` to verify the selected remote. then inspect both `git config --get --bool remote.<remote>.promisor` and `git config --get remote.<remote>.partialclonefilter`. stop if `promisor` is true or a partial-clone filter is present. git lfs pre-push scans can otherwise turn promised pointer blobs into one filtered fetch per object before any ref moves.
+before verification or publication, establish one reusable complete-object linked worktree as the normal stack integrator and publication checkout. confirm that checkout has complete git objects for the stack. use `git config --get remote.<remote>.url` to verify the selected remote. then inspect both `git config --get --bool remote.<remote>.promisor` and `git config --get remote.<remote>.partialclonefilter`. stop if `promisor` is true or a partial-clone filter is present. git lfs pre-push scans can otherwise turn promised pointer blobs into one filtered fetch per object before any ref moves.
 
 prefer the existing complete-object integrator checkout. when a separate clean checkout is required, make it the sole integration and publication checkout before it changes stack metadata, layer history, or refs. source workers remain in their isolated checkouts and stop at immutable one-commit handoffs. the checkout below names the selected remote `origin`. clone only the current stack top without a partial-clone filter, configure fetch refspecs for the default branch and every exact stack branch, fetch those refs together, and keep the standard git lfs hook. identify the existing stack with a verified stack number, pull request number or url, or branch name, then reconstruct it with `gh stack checkout`:
 
@@ -94,7 +98,7 @@ repeat the complete verification below in that checkout before `gh stack push`. 
 after every restack and before any push, run all of these checks even when prior test results may carry:
 
 1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm the integrator checkout has clean `git status --porcelain` output, and confirm that every accepted handoff reported clean porcelain at its exact commit.
-2. record every post-restack local parent and layer oid. for each published layer, run `git ls-remote --heads <remote> <branch>` and require the exact live head to equal its recorded old lease. rederive each pull request's live base and draft or ready state, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. when state provenance is unclear, inspect the github timeline event and actor. use the current live state as the publication state only when the shared rule authorizes its movement; stop on any other unexpected head, base, or state movement. an absent remote is valid only for a new unpublished layer.
+2. capture every post-restack local parent and layer oid, every published layer's live remote head as its old push lease, and every pull request's live head, base, and draft or ready state in one preflight snapshot. require each live head to equal its recorded lease, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. immediately before the official publication command, re-read the same remote and pull request fields and require exact equality with that one snapshot. stop on any movement. an absent remote is valid only for a new unpublished layer.
 3. compare every old parent-to-layer patch range with its post-restack range. use `git range-diff <old-parent>..<old-layer> <new-parent>..<new-layer>` and require the same ordered patch set with no added, dropped, or changed patch, or use an equally strong per-layer patch-identity proof. review both per-layer diffs when the proof is ambiguous. treat an unproved layer as changed.
 4. run `git diff --check`, then run `git diff --check <parent>..<layer>` for every layer.
 5. scan every tracked file in every layer with `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --` and review every marker match.
@@ -107,7 +111,7 @@ a clean current layer does not establish that the layers above it are clean.
 
 for initial publication, run every required focused test, build, formatter, generator, generated-output check, and the full cumulative end-to-end validation. after a restack, also rerun the affected checks and the relevant full cumulative validation when a conflict resolution changed a layer, a layer patch changed behavior, patch identity is unproved, or another semantic input changed.
 
-prior focused and cumulative results may carry only when every layer is patch-identical and the default-branch movement is proved unrelated to every result being carried. inspect the old-to-new trunk diff and trace semantic dependencies from the stack's source: imports, includes, libraries, generated inputs, build graph, toolchain and dependency configuration, formatter configuration, generated outputs, test fixtures, and test runtime or environment. a changed trunk oid proves only that trunk moved. a filename-only comparison cannot prove that a dependency or runtime input is unrelated. when the impact analysis is incomplete or uncertain, rerun the relevant full validation.
+prior focused and cumulative results may carry only when every layer is patch-identical and the default-branch movement is proved unrelated to every result being carried. record the patch-identity and unrelated-trunk proof with the result. inspect the old-to-new trunk diff and trace semantic dependencies from the stack's source: imports, includes, libraries, generated inputs, build graph, toolchain and dependency configuration, formatter configuration, generated outputs, test fixtures, and test runtime or environment. a changed trunk oid proves only that trunk moved. a filename-only comparison cannot prove that a dependency or runtime input is unrelated. when the impact analysis is incomplete or uncertain, rerun the relevant full validation.
 
 | case | always-required checks above | focused tests, builds, formatters, and generated checks | cumulative end-to-end validation |
 |---|---|---|---|
@@ -136,6 +140,8 @@ normal advancement through the official cli is standing-authorized when every ne
 - use `gh stack push` to publish the validated stack.
 
 after any push, enumerate the complete stack again. require every local layer head, live remote head, and pull request head to be exactly equal, then rederive every live base and draft or ready state and require the expected chain and state to remain unchanged.
+
+measure and report preparation time separately from the actual `gh stack push` time. preparation starts when this publication attempt starts preparing its selected integrator checkout and ends immediately before the official command begins. push time is only the elapsed time of that one official command. neither measurement changes the validation or readback requirements.
 
 `gh stack push` may update descendant remote heads with force-with-lease after a restack. those official, lease-checked updates are part of the standing authorization and do not need separate force-push permission.
 
