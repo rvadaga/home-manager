@@ -301,6 +301,10 @@ in {
           rpull = "pull --rebase --stat";
         };
 
+        advice = {
+          detachedHead = false;
+        };
+
         branch = {
           sort = "-committerdate";
         };
