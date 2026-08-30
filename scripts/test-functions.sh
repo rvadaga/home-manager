@@ -417,9 +417,19 @@ assert_equals "$main_oid" "$(git -C "$local_repo" rev-parse HEAD)" "missing pull
 pass "checkout returns repository, remote-shape, and git transport failures"
 
 python3 "${script_dir}/test-codex-sessions.py"
+python3 "${script_dir}/test-claude-sessions.py"
 
 codex_sessions_help=$(HM_CONFIG_DIR="${script_dir}/.." codex-sessions --help)
 assert_contains "usage: codex-sessions" "$codex_sessions_help" "codex sessions wrapper resolves its helper"
 pass "codex sessions wrapper resolves its helper"
+
+claude_sessions_help=$(HM_CONFIG_DIR="${script_dir}/.." claude-sessions --help)
+assert_contains "usage: claude-sessions" "$claude_sessions_help" "claude sessions wrapper resolves its helper"
+pass "claude sessions wrapper resolves its helper"
+
+if declare -F claude-recent >/dev/null; then
+  fail "claude recent remains defined"
+fi
+pass "claude recent is removed"
 
 echo "all function tests passed"
