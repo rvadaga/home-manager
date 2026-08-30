@@ -21,7 +21,20 @@
 * **denylist / allowlist, never blacklist / whitelist** — in prose and in code (etsy `go/inclusivecode`, linked from the pr template header).
 * **a code comment states the constraint a future reader must not break, and nothing about the process that produced the code.** the test: would this sentence still be true in six months, to someone who never saw the pr? if it turns on process state — which pr, whose approval, what deploys when — it belongs in the pr description. history that encodes a constraint is not process: "handles empty input, which the previous version crashed on" earns its place. a deliberately temporary marker sits outside the test, because it is deleted before it can age: a chained-series `TODO(pr2):` is fine, and the child pr removes it on merge. don't link a doc that changes on its own schedule (a wiki page, a ledger, a running design doc). it gets rewritten without anyone touching the code, so the link rots silently. this governs code comments; repo-resident narrative files (a top-level `MISTAKES.md`, an `IMPROVEMENTS.md`, a run log) are a related but separate concern with a different remedy.
 * when working on pull requests:
-    * unless specifically asked not to, create a DRAFT pr
+    * create every new pull request as a draft. a pull request that rahul has not made ready stays draft
+    * before a source push, title or body edit, other metadata change, polish pass, reviewer-bot loop, default-branch sync, pull request recreation or update, or github stack operation, rederive and record the pull request's live draft or ready state
+    * a github `ready_for_review` event authored by `rvadaga` is rahul's explicit ready instruction for that pull request. do not ask for the same confirmation in chat
+    * preserve the recorded live state through the operation. do not run `gh pr ready --undo`, recreate or update a live ready pull request as draft, or otherwise undo readiness unless rahul gives a later explicit instruction for that pull request
+    * when state provenance is unclear, inspect the github timeline event and actor. movement authored by `rvadaga` is authoritative for that pull request. stop for unexplained movement or movement by another actor outside the current authorization
+    * state preservation does not authorize a merge, make another pull request ready, bypass one-writer ownership or another project rule, or permit a push to `main` or `master`
+    * state controls:
+        * accept an ordinary or stacked pull request as ready when its live state and `rvadaga`-authored `ready_for_review` event agree; preserve it across source pushes, metadata and body edits, polish, bot loops, default-branch sync, and stack rebase or push
+        * keep every pull request that rahul has not made ready in its live draft state
+        * accept a later redraft only after a later explicit instruction from rahul for that same pull request, then verify the resulting live state
+        * reject a duplicate chat-confirmation requirement after the authoritative github event
+        * reject `gh pr ready --undo`, replacement, recreation, or update that would turn a live ready pull request into a draft without that later instruction
+        * stop when a state change has no clear provenance or has an unexpected non-rahul actor
+        * require every post-operation state to equal the state recorded before the operation unless the operation itself carried rahul's explicit state-change instruction
     * don't add ai generated prompt
     * always use pull request templates available in the repository
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
@@ -46,13 +59,13 @@
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
-* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. open every new pull request as draft and keep it draft unless rahul explicitly changes it. the standing `github-stacked-prs` publication authorization advances only draft stack branches; it never authorizes a push to `main` or `master`.
+* **every change in every repository reaches `main` or `master` through a pull request.** never push directly to either default branch with `git push`, an alias, or `git -C`, including in personal repositories and repositories with one maintainer. the pull request description is required review context beyond the commit message. follow the shared pull request state rule above before any branch publication. for a github-managed stack, `github-stacked-prs` owns the command and publication mechanics. its authorization never permits a push to `main` or `master`.
 * **reconcile every published ordinary branch local-first.** the owning local worktree is the source of the remote update:
     1. confirm one-writer ownership, then rederive the exact local, upstream, and live pr heads. stop on unexpected remote movement.
     2. fetch the exact current base and merge it into the local branch without rebasing.
     3. resolve conflicts and complete every required validation locally.
     4. push that exact validated head normally.
-    5. verify the local, upstream, and live pr heads match and the pr still has its intended draft state.
+    5. verify the local, upstream, and live pr heads match and the pr still has the live draft or ready state recorded before reconciliation.
     `gh pr update-branch` is not the normal path because it moves the remote before the owner has the merged and validated tree locally.
 * ad hoc force-push commands require explicit permission — never run `git push --force` or `git push --force-with-lease` directly or through an alias without it. for a github-managed draft stack, use `github-stacked-prs`; that skill owns the official cli publication authorization and safety checks.
 * commit autonomously as work reaches coherent milestones — don't wait for explicit permission. keep commits focused (one logical change per commit), follow the repo's existing commit message style, and omit AI-attribution trailers (no `co-authored-by: claude`, no "generated with claude code" footer)
@@ -85,7 +98,7 @@
     * a stale probe manufactures signals: `git diff origin/main -- <path>` in a stale worktree looks exactly like a concurrent edit, because main's own additions show up as that worktree's deletions, and `merge-tree` conflicts often reproduce identically against plain `origin/main`. probe with `git log origin/main..HEAD -- <path>` for unpushed commits and `git status --porcelain -- <path>` for uncommitted ones — that pair answers "what does this worktree hold that main lacks". keep that question apart from the worktree-removal data-loss gate above: the same two commands are right here and wrong there, because after a squash merge they report at-risk work on a branch that fully landed. use `git diff --word-diff` when two clauses share a line. run the control even when it feels unnecessary: a false alarm blocks a correct change, while a false all-clear costs at most a merge.
     * re-read the source before you re-flag something, not just before you act on it. a brief can be stale the moment it arrives, and the problem you are about to report may already be fixed.
     * silence is not success, and a broken check fails silently toward "clean". `gh pr merge --squash` prints nothing when it works, and chaining a check onto the same command also returns empty, so success and silent failure look identical — re-query `state` and `mergedAt` in a separate call, and run `gh pr ready` first because merge refuses a draft. audit the check itself too: `awk -F: '$2<=4'` compares the matched text rather than the line number, and `$?` after a pipeline is the last command's status, so `cmd | tee` reads as success whatever `cmd` did.
-* **memory routing — codify durable facts/rules in the nix-managed CLAUDE.md sources, scoped right.** shared behavioral rules → `CLAUDE-base.md`; os-specific → `CLAUDE-{mac,linux,nixos}.md`; **personal-only** reference facts (personal accounts, api access, machine-local setup) → `CLAUDE-personal-scope.md`, which is NOT inherited by downstream/work flakes that consume this config as a flake input (base IS); work-specific → the work config. don't stash durable facts in loose `~/.claude/memory/` — not version-controlled, not reliably loaded, can't be scoped. reserve harness memory for transient project-session state.
+* **memory routing — codify durable facts/rules in the nix-managed CLAUDE.md sources, scoped right.** shared behavioral rules and reference facts intentionally used on every machine → `CLAUDE-base.md`; os-specific → `CLAUDE-{mac,linux,nixos}.md`; reference facts that must stay off downstream/work machines → `CLAUDE-personal-scope.md`, which those flakes do not inherit; work-specific → the work config. scope follows where the fact should be loaded, not whether an account is personally owned. don't stash durable facts in loose `~/.claude/memory/` — not version-controlled, not reliably loaded, can't be scoped. reserve harness memory for transient project-session state.
 * **when you write or amend a rule — in CLAUDE.md, a skill, or a doc — check its shape, not only whether it is true.** these defects get past a reader who agrees with every sentence. worked examples for each: `reference-rule-shape-defects.md` in work-home-manager project memory.
     * assume the reader goes to whichever edge of your wording suits them, and make both edges safe. a list of options is permission to pick the laziest one, and "check the flagged lines" is obeyed by checking only those while the rest of the file stays broken, so say what has to be true rather than naming one example. the same gap runs the other way for a grant of latitude: an unscoped "decide, don't ask" authorizes deciding things that were never yours, so say where the autonomy stops.
     * never write an instruction that forbids its own correction. mark a dead form "dead → migrate to X" rather than protecting it as an exception, or every future reader keeps the error alive. and when a set of rules makes it impossible to obey them all, the violations are the rules' own output: a repeated violation says something about the rule before it says anything about the person, so check that obeying is even possible before asking anyone to try harder.
@@ -95,7 +108,7 @@
 
 ## multi-pr workflow
 
-for a real dependent series, use `github-stacked-prs` as the canonical owner of the stack lifecycle and commands. open the first layer as a draft, publish each ready dependent layer into the same visible draft stack, and land one layer at a time from the bottom while the skill restacks and verifies the remaining drafts.
+for a real dependent series, use `github-stacked-prs` as the canonical owner of the stack lifecycle and commands. open the first layer as a draft, publish each completed dependent layer into the same visible stack, and land one layer at a time from the bottom while the skill restacks and verifies the remaining layers.
 
 independent changes remain independent draft pull requests. do not force them into an artificial stack.
 
@@ -195,17 +208,17 @@ each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-ev
 
 # x api mcp
 
-the `xapi` mcp server (settings-base.json mcpServers) uses the `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp` bridge. oauth2 token cached in `~/.xurl` (auto-refreshes), authorized as @rahul_vadaga.
+the `xapi` mcp server uses the nix-managed `xurl-mcp mcp https://api.x.com/mcp` bridge. its patch coordinates oauth2 refresh across concurrent claude and codex processes, reloads the shared token after taking the lock, replaces the auth file atomically, and opens a browser only when no token exists. the token is cached in `~/.xurl` and authorized as @rahul_vadaga.
 
-* app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store (via `xurl auth app-only -`, reads from stdin).
+* app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store through `xurl-mcp auth app-only -`, which reads the token from stdin.
 * if the user-context token is ever revoked, re-auth with:
   ```bash
-  source ~/.config/secrets/x-mcp-oauth-client.env && npx -y @xdevplatform/xurl auth oauth2
+  source ~/.config/secrets/x-mcp-oauth-client.env && xurl-mcp auth oauth2
   ```
-* full-archive post search is the exception: the hosted mcp's `search_posts_all` tool requires app-only auth and 403s with the bridge's user-context token; the other 23 tools work user-context. run it from bash instead (deliberately not a second mcp server — that would persist the token in settings.local.json):
+* full-archive post search is the exception: the hosted mcp's `search_posts_all` tool requires app-only auth and rejects the bridge's user-context token. the other tools use user-context auth. run the full-archive request from bash instead of adding a second mcp server, which would persist the token in settings.local.json:
   ```bash
-  npx -y @xdevplatform/xurl --auth app "/2/tweets/search/all?query=<url-encoded>&max_results=10"
+  xurl-mcp --auth app "/2/tweets/search/all?query=<url-encoded>&max_results=10"
   ```
-  keep `max_results` low — pay-per-use bills $0.005 per post returned. a spending limit should be set in the developer console under billing (~$10/month).
-* the app-only bearer token cannot be minted via oauth2 client_credentials (403) — it comes from the developer console's app-only authentication section. if lost, regenerate there, then re-register in xurl's store from the secrets cache.
-* the `x-docs` server (https://docs.x.com/mcp) needs no auth.
+  keep `max_results` low because the api charges per post returned. set a spending limit in the developer console.
+* the app-only bearer token comes from the developer console's app-only authentication section. if it is lost, regenerate it there, then register it in xurl's store from the secrets cache.
+* the `x-docs` server at https://docs.x.com/mcp needs no auth.
