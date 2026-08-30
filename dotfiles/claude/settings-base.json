@@ -68,12 +68,10 @@
     },
     "xapi": {
       "args": [
-        "-y",
-        "@xdevplatform/xurl",
         "mcp",
         "https://api.x.com/mcp"
       ],
-      "command": "npx"
+      "command": "xurl-mcp"
     }
   },
   "model": "claude-fable-5[1m]",
