@@ -23,7 +23,6 @@ in
       clipboard-paste-protection = false;
 
       # window
-      confirm-close-surface = false;
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;

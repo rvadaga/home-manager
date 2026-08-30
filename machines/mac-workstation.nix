@@ -20,5 +20,8 @@
     };
   }];
 
+  # let unattended macos updates restart when ghostty has running processes.
+  programs.ghostty.settings.confirm-close-surface = false;
+
   programs.git.signing.key = "0CA84231BC45DEC79B5D3045281566EDEF2E7A00";
 }
