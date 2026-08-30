@@ -524,6 +524,10 @@ function claude-recent() {
   rm -f "$tmpnames" "$tmpfiles"
 }
 
+function codex-sessions() {
+  python3 "${HM_CONFIG_DIR}/scripts/codex-sessions.py" "$@"
+}
+
 # greppable man output: the nix groff emits ansi color codes even when piped
 # (TERM=dumb, MANPAGER=cat, GROFF_NO_SGR are all ignored), which breaks
 # patterns like '^ *-n'. strip the escapes so man text greps like plain text.
