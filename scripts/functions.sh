@@ -524,6 +524,10 @@ function claude-recent() {
   rm -f "$tmpnames" "$tmpfiles"
 }
 
+function claude-sessions() {
+  python3 "${HM_CONFIG_DIR}/scripts/claude-sessions.py" "$@"
+}
+
 function codex-sessions() {
   python3 "${HM_CONFIG_DIR}/scripts/codex-sessions.py" "$@"
 }
