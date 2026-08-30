@@ -1,10 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   user = config.users.users.${config.system.primaryUser};
-in {
+in
+{
   imports = [
     ./nix.nix
     ./homebrew.nix
+    ./macos-policy.nix
     ./system-defaults.nix
     ./provenance.nix
   ];
@@ -14,7 +21,7 @@ in {
   # ~/Library/Fonts, not ~/.nix-profile/share/fonts. nix-darwin's fonts.packages
   # symlinks these into /Library/Fonts/Nix Fonts/ during activation.
   fonts.packages = with pkgs; [
-    fira                  # fira sans + fira mono (mozilla)
+    fira # fira sans + fira mono (mozilla)
     nerd-fonts.fira-code
   ];
 
