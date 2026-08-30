@@ -169,10 +169,16 @@ class CodexSessionsTest(unittest.TestCase):
         }
         self.global_state.write_text(json.dumps(state), encoding="utf-8")
 
-    def run_command(self, *arguments):
+    def run_command(
+        self,
+        *arguments,
+        columns=200,
+        local_timezone="Etc/GMT+6",
+    ):
         environment = os.environ.copy()
         environment["CODEX_HOME"] = str(self.codex_home)
-        environment["TZ"] = "Etc/GMT+6"
+        environment["COLUMNS"] = str(columns)
+        environment["TZ"] = local_timezone
         return subprocess.run(
             [sys.executable, str(script_path), *arguments],
             check=False,
@@ -181,27 +187,139 @@ class CodexSessionsTest(unittest.TestCase):
             env=environment,
         )
 
+    @staticmethod
+    def logical_rows(output):
+        groups = []
+        current = []
+        for line in output.splitlines():
+            if line.startswith("+"):
+                if current:
+                    groups.append(current)
+                    current = []
+            elif line.startswith("|"):
+                current.append(line)
+        if current:
+            groups.append(current)
+        return groups
+
+    @staticmethod
+    def reconstructed_cells(lines):
+        cells = [[] for _ in range(5)]
+        for line in lines:
+            parts = line[1:-1].split("|")
+            if len(parts) != 5:
+                raise AssertionError(f"expected five cells in {line!r}")
+            for index, part in enumerate(parts):
+                cells[index].append(part.strip())
+        return ["".join("".join(cell).split()) for cell in cells]
+
     def test_lists_visible_tasks_with_canonical_titles_and_projects(self):
         result = self.run_command("4")
         self.assertEqual(0, result.returncode, result.stderr)
+        rows = self.logical_rows(result.stdout)
         self.assertEqual(
-            "\n".join(
+            ["project", "taskid", "title", "created", "lastupdated"],
+            self.reconstructed_cells(rows[0]),
+        )
+        self.assertEqual(
+            [
                 [
-                    "project  task id  title",
-                    "example-project  00000000-0000-7000-8000-000000000005  archived title",
-                    "  created 1969-12-31T18:00:05.000-06:00  last updated 1969-12-31T18:00:05.000-06:00",
-                    "example project  00000000-0000-7000-8000-000000000001  catalog title with [31mspacing",
-                    "  created 1969-12-31T18:00:01.000-06:00  last updated 1969-12-31T18:00:03.000-06:00",
-                    "(projectless)  00000000-0000-7000-8000-000000000002  projectless state title",
-                    "  created 1969-12-31T18:00:02.000-06:00  last updated 1969-12-31T18:00:02.000-06:00",
-                    "legacy-project  00000000-0000-7000-8000-000000000003  legacy title",
-                    "  created 1969-12-31T18:00:03.000-06:00  last updated 1969-12-31T18:00:01.000-06:00",
-                    "",
-                ]
-            ),
-            result.stdout,
+                    "example-project",
+                    "00000000-0000-7000-8000-000000000005",
+                    "archivedtitle",
+                    "WedDec31196918:00",
+                    "WedDec31196918:00",
+                ],
+                [
+                    "exampleproject",
+                    "00000000-0000-7000-8000-000000000001",
+                    "catalogtitlewith[31mspacing",
+                    "WedDec31196918:00",
+                    "WedDec31196918:00",
+                ],
+                [
+                    "(projectless)",
+                    "00000000-0000-7000-8000-000000000002",
+                    "projectlessstatetitle",
+                    "WedDec31196918:00",
+                    "WedDec31196918:00",
+                ],
+                [
+                    "legacy-project",
+                    "00000000-0000-7000-8000-000000000003",
+                    "legacytitle",
+                    "WedDec31196918:00",
+                    "WedDec31196918:00",
+                ],
+            ],
+            [self.reconstructed_cells(row) for row in rows[1:]],
         )
         self.assertNotIn("\x1b", result.stdout)
+
+    def test_wraps_every_cell_without_truncating_content(self):
+        result = self.run_command("1", columns=60)
+        self.assertEqual(0, result.returncode, result.stderr)
+
+        lines = result.stdout.splitlines()
+        self.assertTrue(lines)
+        self.assertTrue(all(len(line) == len(lines[0]) for line in lines))
+        self.assertLessEqual(len(lines[0]), 60)
+
+        borders = [line for line in lines if line.startswith("+")]
+        content = [line for line in lines if line.startswith("|")]
+        self.assertTrue(borders)
+        self.assertTrue(content)
+        separator_positions = [
+            index for index, character in enumerate(borders[0]) if character == "+"
+        ]
+        for line in borders:
+            self.assertEqual(
+                separator_positions,
+                [index for index, character in enumerate(line) if character == "+"],
+            )
+        for line in content:
+            self.assertEqual(
+                separator_positions,
+                [index for index, character in enumerate(line) if character == "|"],
+            )
+
+        task_lines = self.logical_rows(result.stdout)[1]
+        self.assertGreater(len(task_lines), 1)
+        fragments = [line[1:-1].split("|") for line in task_lines]
+        self.assertTrue(
+            all(
+                sum(bool(line[index].strip()) for line in fragments) > 1
+                for index in range(5)
+            )
+        )
+        self.assertEqual(
+            [
+                "example-project",
+                "00000000-0000-7000-8000-000000000005",
+                "archivedtitle",
+                "WedDec31196918:00",
+                "WedDec31196918:00",
+            ],
+            self.reconstructed_cells(task_lines),
+        )
+
+    def test_timezone_override_supports_short_and_long_options(self):
+        for arguments in (
+            ("-z", "America/Los_Angeles", "1"),
+            ("1", "--timezone=America/Los_Angeles"),
+        ):
+            with self.subTest(arguments=arguments):
+                result = self.run_command(*arguments)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(2, result.stdout.count("Wed Dec 31 1969 16:00"))
+                self.assertNotIn("Wed Dec 31 1969 18:00", result.stdout)
+
+    def test_rejects_unknown_timezone_without_a_traceback(self):
+        result = self.run_command("--timezone", "not/a-zone", "1")
+        self.assertNotEqual(0, result.returncode)
+        self.assertEqual("", result.stdout)
+        self.assertIn("unknown timezone: not/a-zone", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_limit_applies_after_non_session_tasks_are_filtered(self):
         result = self.run_command("1")
