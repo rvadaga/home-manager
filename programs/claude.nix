@@ -1,32 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
 let
-  # deep merge that concatenates + deduplicates arrays instead of replacing them.
-  # lib.recursiveUpdate replaces arrays wholesale, which breaks os-specific permissions.
-  deepMerge = a: b:
-    let
-      mergeable = key:
-        builtins.hasAttr key a && builtins.hasAttr key b
-        && builtins.isAttrs a.${key} && builtins.isAttrs b.${key};
-      concatable = key:
-        builtins.hasAttr key a && builtins.hasAttr key b
-        && builtins.isList a.${key} && builtins.isList b.${key};
-    in
-    a // b //
-    (lib.filterAttrs (k: _: mergeable k) (
-      builtins.mapAttrs (k: _: deepMerge a.${k} b.${k})
-        (lib.intersectAttrs a b)
-    )) //
-    (lib.filterAttrs (k: _: concatable k) (
-      builtins.mapAttrs (k: _: lib.unique (a.${k} ++ b.${k}))
-        (lib.intersectAttrs a b)
-    ));
+  # arrays concatenate and deduplicate so os-specific settings add to the base.
+  deepMerge = import ../shared/deep-merge.nix { inherit lib; };
 
-  nixMergedSettingsJson = builtins.toJSON (
-    lib.foldl deepMerge {} config.claude.settingsPieces
-  );
+  nixMergedSettingsJson = builtins.toJSON (lib.foldl deepMerge { } config.claude.settingsPieces);
   nixMergedSettings = pkgs.writeText "claude-settings-nix-merged.json" nixMergedSettingsJson;
   jq = "${pkgs.jq}/bin/jq";
 
@@ -56,7 +41,7 @@ in
   options.claude = {
     settingsPieces = mkOption {
       type = types.listOf types.attrs;
-      default = [];
+      default = [ ];
       description = "list of settings.json pieces to merge additively into the live file on each activation";
     };
   };

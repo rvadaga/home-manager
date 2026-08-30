@@ -10,8 +10,7 @@ in
 {
   imports = [
     ./nix.nix
-    ./homebrew.nix
-    ./macos-policy.nix
+    ./apps.nix
     ./system-defaults.nix
     ./provenance.nix
   ];

@@ -7,66 +7,7 @@
 let
   cfg = config.personal.macosPolicy;
 
-  permissionType = lib.types.submodule {
-    options = {
-      accessibility = lib.mkEnableOption "accessibility access";
-      fullDiskAccess = lib.mkEnableOption "full disk access";
-      screenRecording = lib.mkEnableOption "screen and system audio recording";
-      inputMonitoring = lib.mkEnableOption "input monitoring";
-      bluetooth = lib.mkEnableOption "bluetooth access";
-      camera = lib.mkEnableOption "camera access";
-      microphone = lib.mkEnableOption "microphone access";
-      localNetwork = lib.mkEnableOption "local network access";
-    };
-  };
-
-  applicationType = lib.types.submodule {
-    options = {
-      identifier = lib.mkOption {
-        type = lib.types.str;
-        description = "the tcc client identifier or executable path";
-      };
-
-      identifierType = lib.mkOption {
-        type = lib.types.enum [
-          "bundleID"
-          "path"
-        ];
-        default = "bundleID";
-        description = "the apple privacy payload identifier type";
-      };
-
-      codeRequirement = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "the designated requirement from codesign -dr -";
-      };
-
-      teamId = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "the signing team used by macos 27 app settings";
-      };
-
-      staticCode = lib.mkOption {
-        type = lib.types.bool;
-        default = false;
-        description = "whether the privacy payload validates static code";
-      };
-
-      organizationJustification = lib.mkOption {
-        type = lib.types.str;
-        default = "this app needs the selected permissions for its configured features.";
-        description = "the explanation shown by the macos 27 consent prompt";
-      };
-
-      permissions = lib.mkOption {
-        type = permissionType;
-        default = { };
-        description = "the desired privacy permissions for this application";
-      };
-    };
-  };
+  policyTypes = import ./macos-policy-types.nix { inherit lib; };
 
   applications = cfg.privacy.applications;
   applicationsFor =
@@ -218,7 +159,7 @@ in
     };
 
     privacy.applications = lib.mkOption {
-      type = lib.types.attrsOf applicationType;
+      type = lib.types.attrsOf policyTypes.application;
       default = { };
       description = "one application registry used by every generated privacy artifact";
     };

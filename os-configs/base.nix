@@ -1,25 +1,37 @@
-{ config, pkgs, lib, osConfig ? null, inputs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  osConfig ? null,
+  inputs,
+  ...
+}:
 let
   ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
   xurlMcp = pkgs.callPackage ../packages/xurl-mcp.nix { };
-  readInstructions = bannerPath: bodyPath:
+  readInstructions =
+    bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
         (builtins.readFile bannerPath)
       ]
       ++ [ (builtins.readFile bodyPath) ]
     );
-  baseInstructions = readInstructions
-    ../dotfiles/claude/CLAUDE-personal-scope.md
-    ../dotfiles/claude/CLAUDE-base.md;
+  baseInstructions = readInstructions ../dotfiles/claude/CLAUDE-personal-scope.md ../dotfiles/claude/CLAUDE-base.md;
   # preserve app-owned entries such as .system by managing only shared children.
-  codexSkillFiles = lib.mapAttrs' (skillName: _:
-    lib.nameValuePair ".codex/skills/${skillName}" {
-      source = ../dotfiles/claude/skills + "/${skillName}";
-    }
-  ) (lib.filterAttrs (_: fileType: fileType == "directory")
-    (builtins.readDir ../dotfiles/claude/skills));
-in {
+  codexSkillFiles =
+    lib.mapAttrs'
+      (
+        skillName: _:
+        lib.nameValuePair ".codex/skills/${skillName}" {
+          source = ../dotfiles/claude/skills + "/${skillName}";
+        }
+      )
+      (
+        lib.filterAttrs (_: fileType: fileType == "directory") (builtins.readDir ../dotfiles/claude/skills)
+      );
+in
+{
   imports = [
     ../os-configs/llm-instructions.nix
     ../programs/claude.nix
@@ -33,23 +45,36 @@ in {
     ../programs/zsh.nix
   ];
 
+  _module.args.personalAppRegistry = import ../darwin/app-registry.nix;
+
   # claude and codex configuration
-  claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
-  codex.settingsPieces = [ (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml)) ];
+  claude.settingsPieces = [
+    (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json))
+  ];
+  codex.settingsPieces = [
+    (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml))
+  ];
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
       ".claude/CLAUDE.md".text = baseInstructions;
-      ".claude/skills/sync-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
-      ".claude/skills/diff-claude-settings/SKILL.md".source = ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
+      ".claude/skills/sync-claude-settings/SKILL.md".source =
+        ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
+      ".claude/skills/diff-claude-settings/SKILL.md".source =
+        ../dotfiles/claude/skills/diff-claude-settings/SKILL.md;
       ".claude/skills/clean-plugins/SKILL.md".source = ../dotfiles/claude/skills/clean-plugins/SKILL.md;
-      ".claude/skills/bootstrap-plugins/SKILL.md".source = ../dotfiles/claude/skills/bootstrap-plugins/SKILL.md;
+      ".claude/skills/bootstrap-plugins/SKILL.md".source =
+        ../dotfiles/claude/skills/bootstrap-plugins/SKILL.md;
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
-      ".claude/skills/github-stacked-prs/SKILL.md".source = ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
-      ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
-      ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
-      ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
+      ".claude/skills/github-stacked-prs/SKILL.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
+      ".claude/skills/slack-mcp-formatting/SKILL.md".source =
+        ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
+      ".claude/skills/editing-google-docs/SKILL.md".source =
+        ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
+      ".claude/skills/editing-google-slides/SKILL.md".source =
+        ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
       # notes skill: base covers the general llm-wiki vaults (personal-software,
       # oss-vespa); a downstream config can compose into the same skill dir by
       # adding references/work-vault.md (registry entry for its work vault).
@@ -121,7 +146,8 @@ in {
           fi
         '';
       };
-    } // codexSkillFiles;
+    }
+    // codexSkillFiles;
 
     packages = [
       xurlMcp
@@ -214,7 +240,7 @@ in {
       }))
 
       # programming languages: java
-      pkgs.unstable.temurin-bin  # java 25
+      pkgs.unstable.temurin-bin # java 25
       pkgs.maven
 
       # programming languages: javascript/typescript

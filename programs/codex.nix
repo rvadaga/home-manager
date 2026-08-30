@@ -1,27 +1,15 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
 let
   # merge nested tables recursively and union arrays across nix-owned pieces.
-  deepMerge = a: b:
-    let
-      mergeable = key:
-        builtins.hasAttr key a && builtins.hasAttr key b
-        && builtins.isAttrs a.${key} && builtins.isAttrs b.${key};
-      concatable = key:
-        builtins.hasAttr key a && builtins.hasAttr key b
-        && builtins.isList a.${key} && builtins.isList b.${key};
-    in
-    a // b //
-    (lib.filterAttrs (key: _: mergeable key) (
-      builtins.mapAttrs (key: _: deepMerge a.${key} b.${key})
-        (lib.intersectAttrs a b)
-    )) //
-    (lib.filterAttrs (key: _: concatable key) (
-      builtins.mapAttrs (key: _: lib.unique (a.${key} ++ b.${key}))
-        (lib.intersectAttrs a b)
-    ));
+  deepMerge = import ../shared/deep-merge.nix { inherit lib; };
 
   tomlFormat = pkgs.formats.toml { };
   nixMergedSettings = tomlFormat.generate "codex-settings-nix-merged.toml" (

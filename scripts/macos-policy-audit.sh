@@ -1,6 +1,24 @@
 # shellcheck shell=bash
 set -uo pipefail
 
+usage() {
+  echo "usage: macos-policy-audit [--listeners]"
+  echo "compare the declared macos policy with effective privacy, firewall, sharing, and listener state"
+}
+
+case "${1:-}" in
+  "") ;;
+  --listeners) ;;
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
+
 policy_file="${MACOS_POLICY_FILE:-/etc/nix-darwin/policies/macos-policy.json}"
 drift=0
 

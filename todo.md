@@ -6,10 +6,11 @@
 - [x] extract overlays into shared `mkOverlays` / `mkPkgs` helpers
 - [x] add `darwinConfigurations.mac-workstation` output
 - [x] add `homeConfigurations.mac-workstation` output
-- [x] add `darwinModules` export (base, desktop, homebrew) for downstream configs
-- [x] create `darwin/default.nix` — umbrella: stateVersion, primaryUser, touch ID sudo
+- [x] add reusable `darwinModules` exports for downstream configs
+- [x] create `darwin/common.nix` — umbrella for the complete personal macos system
 - [x] create `darwin/nix.nix` — system-level nix settings
-- [x] create `darwin/homebrew.nix` — declarative casks, brew off PATH
+- [x] create `darwin/apps.nix` and `darwin/app-registry.nix` — declarative app lifecycle
+- [x] create `darwin/homebrew.nix` — homebrew activation policy
 - [x] create `darwin/system-defaults.nix` — dock, finder, NSGlobalDomain, trackpad, keyboard
 - [x] guard `nix` block and `programs.home-manager.enable` in base.nix with `osConfig ? null`
 - [x] add gpg-agent.conf and programs.ssh to mac.nix
@@ -17,13 +18,13 @@
 - [x] create `bootstrap.sh` — xcode CLT, determinate nix, homebrew, gh auth, clone, first darwin-rebuild
 - [x] create `scripts/setup-ssh.sh` — generate key, upload to github, store in 1password
 - [x] create `scripts/setup-gpg.sh` — generate key, upload to github, store in 1password
-- [x] create `scripts/setup-licenses.sh` — fetch licenses from 1password
+- [x] generate app-license setup from `darwin/app-registry.nix`
 - [x] verify all three configs build (`personal-laptop`, `mac-workstation` HM, `mac-workstation` darwin)
 - [x] apply config: `darwin-rebuild switch --flake .#mac-workstation`
 - [x] verify homebrew casks install correctly
 - [x] run `setup-ssh.sh` and `setup-gpg.sh` on first machine
-- [x] set GPG signing key in `machines/mac-workstation.nix`
-- [x] run `setup-licenses.sh` after 1password sign-in
+- [x] set the gpg signing key in `machines/hosts.nix`
+- [x] apply generated app licenses after 1password sign-in
 - [x] add `machine.json` for per-machine identity (replaces script args)
 - [x] dedupe shell scripts — shared helpers in `functions.sh`
 - [x] add `.state/` sentinel files for idempotent bootstrap
