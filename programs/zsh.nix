@@ -1,4 +1,17 @@
-{ ... }: {
+{ config, lib, personalAppRegistry, pkgs, ... }:
+let
+  configurationName = config.home.sessionVariables.HM_CONFIG_NAME or "default";
+  isEnabled = _: app:
+    let
+      profiles = app.profiles or [ ];
+    in
+    (app.enable or true) && (profiles == [ ] || lib.elem configurationName profiles);
+  enabledApps = lib.filterAttrs isEnabled personalAppRegistry;
+  appShellAliases = lib.foldl'
+    (aliases: app: aliases // (app.shellAliases or { }))
+    { }
+    (builtins.attrValues enabledApps);
+in {
   programs.zsh = {
     enable = true;
 
@@ -17,14 +30,11 @@
       # bat
       b = "bat -P";
 
-      # chrome
-      chrome = "open -a 'Google Chrome' --args --remote-debugging-port=9222";
-
       # k8s
       k = "kubectl";
       ctx = "kubectx";
       ns = "kubens";
-    };
+    } // lib.optionalAttrs pkgs.stdenv.isDarwin appShellAliases;
 
     history = {
       size = 100000000;

@@ -4,7 +4,7 @@ let
 in {
   imports = [
     ./nix.nix
-    ./homebrew.nix
+    ./apps.nix
     ./system-defaults.nix
     ./provenance.nix
   ];

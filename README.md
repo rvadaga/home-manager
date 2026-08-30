@@ -7,26 +7,28 @@ personal nix home-manager and nix-darwin configuration for managing development 
 * `flake.nix`: entry point defining available configurations and exported modules
 * `os-configs/`: reusable configuration building blocks
   * `base.nix`: common packages and settings for all systems
+  * `llm-instructions.nix`: shared composition of os instruction and settings layers
   * `mac.nix`: macos-specific configuration (gpg-agent, ssh, coreutils)
   * `linux.nix`: linux-specific configuration
   * `nixos.nix`: nixos-specific configuration
 * `darwin/`: nix-darwin system-level modules (macos only)
-  * `default.nix`: umbrella module (stateVersion, primaryUser, touch ID sudo, launchd agents)
+  * `common.nix`: umbrella module for the complete personal macos system
+  * `app-registry.nix`: app data shared by installation, dock, setup, preferences, and backups
+  * `apps.nix`: typed app module that validates the registry and generates app configuration
   * `nix.nix`: system-level nix settings
-  * `homebrew.nix`: declarative homebrew casks
-  * `system-defaults.nix`: macos system preferences (dock, finder, trackpad, keyboard, app settings for itsycal, meetingbar, ice)
+  * `homebrew.nix`: homebrew activation policy
+  * `system-defaults.nix`: app-independent macos preferences
 * `machines/`: per-machine configurations
-  * `personal-laptop.nix`: macos standalone home-manager configuration
-  * `mac-workstation.nix`: macos nix-darwin + home-manager configuration
-  * `nixos-workstation.nix`: nixos configuration
+  * `hosts.nix`: system, user, home directory, module paths, and machine flags
+  * `host.nix`: shared home-manager settings derived from the selected host
+  * machine modules: os imports and exceptional overrides only
 * `programs/`: program-specific configurations (zsh, kitty, fzf, claude)
 * `scripts/`: setup and helper scripts
   * `functions.sh`: shared helpers (machine config loading, 1password, github uploads, state tracking)
   * `setup-ssh.sh`: generate SSH key, upload to github, store in 1password
   * `setup-gpg.sh`: generate GPG key, upload to github, store in 1password
-  * `setup-licenses.sh`: fetch app license keys from 1password
-  * `backup-app-configs.sh`: daily backup of btt, bettermouse, and control center configs to google drive
 * `shared/`: configuration shared between nix-darwin and standalone home-manager
+  * `deep-merge.nix`: recursive settings merge used by claude and codex
   * `nix-settings.nix`: nix daemon settings (experimental features, buffer size)
 * `dotfiles/`: managed dotfiles (claude settings split by os, etc.)
 * `machine.json`: per-machine identity (machine name, user name, email) — gitignored, created locally during bootstrap
@@ -48,8 +50,8 @@ the bootstrap script will:
 3. clone this repo to `~/.config/home-manager`
 4. prompt you to create `machine.json` with your identity
 5. run `darwin-rebuild switch` (installs all casks, applies system defaults)
-6. prompt you to sign into 1password, then run SSH/GPG/license setup scripts
-7. print remaining manual steps (app logins, permissions, config restore)
+6. prompt you to sign into 1password, then run ssh, gpg, and generated app-license setup
+7. read the generated app manifest and print only the remaining app steps
 
 `machine.json` format (created during bootstrap):
 
@@ -61,7 +63,7 @@ the bootstrap script will:
 }
 ```
 
-after bootstrap, the only manual step is updating `machines/mac-workstation.nix` with the GPG key ID printed by the script, then rebuilding:
+after bootstrap, the only manual step is updating the selected entry in `machines/hosts.nix` with the gpg key id printed by the script, then rebuilding:
 
 ```bash
 darwin-rebuild switch --flake ~/.config/home-manager#mac-workstation
@@ -106,7 +108,8 @@ nix flake update
 ```
 
 ### add a new host
-copy an existing machine config from `machines/` and customize the imports and settings.
+
+add one entry to `machines/hosts.nix`, select its home-manager and optional nix-darwin modules, then keep exceptional overrides in the selected machine module. the configuration name passed by the flake becomes both `HM_CONFIG_NAME` and the app profile, so those values cannot drift apart.
 
 ## multiple package channels
 
@@ -137,11 +140,14 @@ this flake exports reusable modules that other configurations can import:
 * `homeManagerModules.nix-index` - comma and nix-index with pre-built database
 
 ### darwin modules
-* `darwinModules.base` - system-level nix settings
-* `darwinModules.desktop` - macos system preferences (dock, finder, keyboard, trackpad, app settings)
-* `darwinModules.homebrew` - declarative homebrew casks
+* `darwinModules.common` - complete personal macos system module
+* `darwinModules.base` - compatibility name for system-level nix settings
+* `darwinModules.apps` - app registry, homebrew casks, dock, app preferences, setup manifest, and backups
+* `darwinModules.desktop` - app-independent macos preferences
+* `darwinModules.homebrew` - compatibility name for `darwinModules.apps`
+* `darwinModules.provenance` - active flake source stamp
 
-all darwin module values use `lib.mkDefault` so downstream configs can override without `lib.mkForce`.
+desktop defaults and registry-generated app outputs use `lib.mkDefault`. downstream configs can change app records through `personal.apps.registry` without replacing generated lists.
 
 to bootstrap nix-darwin for the first time on a downstream config:
 ```bash
@@ -152,11 +158,17 @@ subsequent rebuilds use `darwin-rebuild switch` directly (installed by nix-darwi
 
 ## homebrew management
 
-nix-darwin manages homebrew declaratively — casks are declared in `darwin/homebrew.nix`. homebrew is intentionally kept off `$PATH` to prevent it from interfering with the nix-managed dev environment. nix-darwin calls brew directly via absolute path during activation.
+nix-darwin manages homebrew declaratively. enabled casks are generated from `darwin/app-registry.nix`; `darwin/homebrew.nix` owns only activation behavior. homebrew is intentionally kept off `$PATH` so it does not interfere with the nix-managed development environment.
 
-`cleanup = "zap"` ensures the mac converges to exactly what's declared — any unlisted cask is removed on rebuild.
+cleanup is temporarily set to `"none"` because the current nix-darwin integration emits a homebrew flag that homebrew 5.x removed for the destructive cleanup modes. declared casks are still installed, but undeclared casks are not removed until that integration is fixed.
 
 note: `masApps` (mac app store apps) is currently disabled due to a compatibility issue between `mas` 2.x and `brew bundle`. app store apps must be installed manually for now.
+
+## app registry
+
+`darwin/app-registry.nix` is the only place that names an app-specific cask, dock path, preference domain, bootstrap step, login item step, privacy permission, license target, shell alias, or backup source. `darwin/apps.nix` validates that data and derives the nix-darwin values, setup commands, and bootstrap manifest.
+
+set an app record's `enable` field to `false`, or remove the record, to remove every generated reference. profile-specific apps use the `profiles` field instead of machine-local cask or dock overrides. the flake check disables apps that exercise installation, dock, preferences, privacy, login items, and backups, then checks that none of those outputs retain the app ids or paths.
 
 ## comma and nix-index
 
@@ -203,7 +215,7 @@ use `/diff-claude-settings` for a read-only comparison without modifying anythin
 
 ## app config backups
 
-a daily launchd agent (`backup-app-configs`) backs up app configs that can't be managed declaratively to google drive (`gdrive documents/software/`). it only overwrites when the local copy is newer, and skips gracefully if google drive isn't mounted.
+a daily launchd agent (`backup-app-configs`) backs up app configs that cannot be managed declaratively to google drive (`gdrive documents/software/`). `darwin/apps.nix` generates the command from backup fields on enabled app records, so disabling an app also removes its backup source. it only overwrites when the local copy is newer and skips gracefully if google drive is not mounted.
 
 ### what's backed up
 
@@ -239,7 +251,7 @@ killall ControlCenter  # restarts automatically
 
 ### what's managed declaratively in nix
 
-app settings for itsycal, meetingbar, and ice are managed via `system.defaults.CustomUserPreferences` in `darwin/system-defaults.nix` — these are applied automatically on `darwin-rebuild switch`.
+app settings for itsycal, meetingbar, and ice are stored beside their app records and rendered to `system.defaults.CustomUserPreferences` by `darwin/apps.nix`.
 
 ## architecture notes
 

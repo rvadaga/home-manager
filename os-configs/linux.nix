@@ -1,14 +1,7 @@
-{ config, pkgs, lib, ... }:
-let
-  osInstructions = "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-linux.md;
-in {
-  # claude configuration
-  claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-linux.json)) ];
+{ config, pkgs, lib, ... }: {
+  llmInstructions.platforms = [ "linux" ];
+
   home = {
-    file.".codex/AGENTS.md".text = lib.mkAfter osInstructions;
-
-    file.".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
-
     packages = [
       pkgs.pinentry-curses
     ];

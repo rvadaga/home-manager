@@ -32,6 +32,8 @@ in {
     ../programs/zsh.nix
   ];
 
+  _module.args.personalAppRegistry = import ../darwin/app-registry.nix;
+
   # claude and codex configuration
   claude.settingsPieces = [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json)) ];
   codex.settingsPieces = [ (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml)) ];
