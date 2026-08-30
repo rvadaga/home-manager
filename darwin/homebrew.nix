@@ -25,7 +25,6 @@
       "bettertouchtool"
       "chatgpt"
       "claude"
-      "codex"
       "docker-desktop"
       "ghostty"
       "google-chrome"

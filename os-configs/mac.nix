@@ -1,12 +1,23 @@
 { config, pkgs, lib, ... }:
 let
   osInstructions = "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-mac.md;
+  codex = pkgs.callPackage ../packages/codex.nix { };
 in {
   # claude configuration
   claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
   home = {
     file = {
       ".codex/AGENTS.md".text = lib.mkAfter osInstructions;
+
+      # keep the cli and its runtime companion on the same nix-managed version.
+      ".local/bin/codex" = {
+        source = "${codex}/bin/codex";
+        force = true;
+      };
+      ".local/bin/codex-code-mode-host" = {
+        source = "${codex}/bin/codex-code-mode-host";
+        force = true;
+      };
 
       ".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
 
@@ -32,6 +43,7 @@ in {
     };
 
     packages = [
+      codex
       pkgs.unstable.coreutils-prefixed  # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
     ];
