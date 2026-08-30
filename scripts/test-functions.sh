@@ -427,4 +427,9 @@ claude_sessions_help=$(HM_CONFIG_DIR="${script_dir}/.." claude-sessions --help)
 assert_contains "usage: claude-sessions" "$claude_sessions_help" "claude sessions wrapper resolves its helper"
 pass "claude sessions wrapper resolves its helper"
 
+if declare -F claude-recent >/dev/null; then
+  fail "claude recent remains defined"
+fi
+pass "claude recent is removed"
+
 echo "all function tests passed"
