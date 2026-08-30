@@ -416,4 +416,10 @@ fi
 assert_equals "$main_oid" "$(git -C "$local_repo" rev-parse HEAD)" "missing pull request keeps head"
 pass "checkout returns repository, remote-shape, and git transport failures"
 
+python3 "${script_dir}/test-codex-sessions.py"
+
+codex_sessions_help=$(HM_CONFIG_DIR="${script_dir}/.." codex-sessions --help)
+assert_contains "usage: codex-sessions" "$codex_sessions_help" "codex sessions wrapper resolves its helper"
+pass "codex sessions wrapper resolves its helper"
+
 echo "all function tests passed"
