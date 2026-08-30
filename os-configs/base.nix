@@ -221,6 +221,7 @@ in {
       pkgs.unstable.nodejs_24
 
       # programming languages: python
+      pkgs.python3
       pkgs.poetry
       pkgs.unstable.uv
 
