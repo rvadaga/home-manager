@@ -313,6 +313,18 @@ in {
           ui = "auto";
         };
 
+        # clear platform helpers before gh so headless sessions do not fall
+        # through to a keychain that their process context cannot access.
+        credential = lib.genAttrs [
+          "https://github.com"
+          "https://gist.github.com"
+        ] (_: {
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
+        });
+
         core = {
           fsmonitor = true;
           untrackedCache = true;
