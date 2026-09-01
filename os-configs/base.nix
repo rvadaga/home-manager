@@ -1,6 +1,7 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
   ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
+  xurlMcp = pkgs.callPackage ../packages/xurl-mcp.nix { };
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -130,6 +131,8 @@ in {
     } // codexSkillFiles;
 
     packages = [
+      xurlMcp
+
       # shell and terminal
       pkgs.bash
       pkgs.nerd-fonts.fira-code
@@ -225,6 +228,7 @@ in {
       pkgs.unstable.nodejs_24
 
       # programming languages: python
+      pkgs.python3
       pkgs.poetry
       pkgs.unstable.uv
 
@@ -315,6 +319,18 @@ in {
         column = {
           ui = "auto";
         };
+
+        # clear platform helpers before gh so headless sessions do not fall
+        # through to a keychain that their process context cannot access.
+        credential = lib.genAttrs [
+          "https://github.com"
+          "https://gist.github.com"
+        ] (_: {
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
+        });
 
         core = {
           fsmonitor = true;
