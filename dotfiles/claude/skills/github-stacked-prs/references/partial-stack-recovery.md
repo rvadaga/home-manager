@@ -4,7 +4,7 @@ use this procedure when a lower layer has merged, a service-side rebase has move
 
 ## decide whether the local recovery is supported
 
-first capture one live snapshot of the remaining stack: local and remote heads, pull request heads and bases, draft or ready states, exact leases, current trunk, and `gh stack view --json`. require a clean complete-object integrator checkout, no rebase or cherry-pick state, unchanged live heads and states, and patch identity for every service-rebased prefix layer.
+first capture one live snapshot of the remaining stack: local and remote heads, pull request heads and bases, draft or ready states, exact leases, current trunk, and `gh stack view --json`. require the clean complete-object linked integrator checkout prepared in [preparation and publication](preparation-and-publication.md), no rebase or cherry-pick state, unchanged live heads and states, and patch identity for every service-rebased prefix layer.
 
 for every child the scoped rebase would touch, prove one previous boundary that the child contains. the official cli can use only the current parent tip, the retained recorded base, or a valid fork point. record the candidate, its source, and the ancestry proof. also require the recorded base in `gh stack view --json` to match the recorded boundary for that child.
 

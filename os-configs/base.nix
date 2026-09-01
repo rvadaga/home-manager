@@ -54,6 +54,8 @@ in {
       ".claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py;
       ".claude/skills/github-stacked-prs/scripts/check-partial-stack-recovery-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-partial-stack-recovery-contract.py;
       ".claude/skills/github-stacked-prs/scripts/test-partial-stack-recovery-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-partial-stack-recovery-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/check-integrator-checkout-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-integrator-checkout-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/test-integrator-checkout-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-integrator-checkout-contract.py;
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;

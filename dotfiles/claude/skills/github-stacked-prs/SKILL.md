@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: create, extend, selectively publish, restack, review, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one integrator, preserving live pull request states, selectively publishing a coherent changed subseries without moving unchanged descendants, and performing a complete restack when the stack must change together.
+description: create, extend, selectively publish, restack, review, recover, and merge visible github stacks with the official gh stack cli. use for any real dependent pull request series, including coordinating isolated commit handoffs through one trusted-primary linked integrator checkout, preserving live pull request states, selectively publishing a coherent changed subseries without moving unchanged descendants, and performing a complete restack when the stack must change together.
 ---
 
 # github stacked pull requests
@@ -79,27 +79,13 @@ create every new stacked pull request as a draft. after publication, the shared 
 - in the interactive editor, change every new pull request from the default ready state to draft before submitting.
 - never let the interactive default ready state escape. pass `--open` only when the user explicitly asks to make the pull requests ready.
 
-## publish from a complete-object checkout
+## prepare a complete-object integrator checkout
 
-before verification or publication, establish one reusable complete-object linked worktree as the normal stack integrator and publication checkout. confirm that checkout has complete git objects for the stack. use `git config --get remote.<remote>.url` to verify the selected remote. then inspect both `git config --get --bool remote.<remote>.promisor` and `git config --get remote.<remote>.partialclonefilter`. stop if `promisor` is true or a partial-clone filter is present. git lfs pre-push scans can otherwise turn promised pointer blobs into one filtered fetch per object before any ref moves.
+the normal stack integrator and publication checkout is one reusable detached linked worktree backed by a trusted primary repository object store. source workers remain in separate immutable checkouts and stop at one-commit handoffs. before changing stack metadata, layer history, or refs, follow [preparation and publication](references/preparation-and-publication.md) and run its checkout manifest checker.
 
-prefer the existing complete-object integrator checkout. when a separate clean checkout is required, make it the sole integration and publication checkout before it changes stack metadata, layer history, or refs. source workers remain in their isolated checkouts and stop at immutable one-commit handoffs. the checkout below names the selected remote `origin`. clone only the current stack top without a partial-clone filter, configure fetch refspecs for the default branch and every exact stack branch, fetch those refs together, and keep the standard git lfs hook. identify the existing stack with a verified stack number, pull request number or url, or branch name, then reconstruct it with `gh stack checkout`:
+when an object is missing, hydrate only the exact trunk and stack refs in the trusted primary object store, then repair or recreate the new disposable linked worktree and verify it again. a missing object or git lfs object does not by itself justify a separate full clone. use a separate full clone only as the recorded exception in that reference, after narrow exact-ref hydration cannot produce a safe linked checkout.
 
-```sh
-GIT_LFS_SKIP_SMUDGE=1 git clone --no-checkout --single-branch --branch <top-branch> <remote-url> <publication-checkout>
-cd <publication-checkout>
-git config --unset-all remote.origin.fetch
-git config --add remote.origin.fetch '+refs/heads/<default-branch>:refs/remotes/origin/<default-branch>'
-git config --add remote.origin.fetch '+refs/heads/<stack-branch>:refs/remotes/origin/<stack-branch>'
-# add one exact refspec for every remaining stack branch
-git fetch --no-tags origin <the-exact-default-and-stack-refspecs>
-git lfs install --local
-GIT_LFS_SKIP_SMUDGE=1 gh stack checkout <existing-stack-or-pull-request>
-```
-
-this remote-only reconstruction is valid only when the accepted stack can be recovered from its published refs. stop if an accepted commit or required git lfs object exists only in another checkout; transfer that state through a separately verified immutable handoff before making the new checkout the integrator.
-
-for a complete restack, repeat the complete verification below in that checkout before `gh stack push`. for selective publication, use the targeted verification and independent readback in [selective publication](references/selective-publication.md). never use `GIT_LFS_SKIP_PUSH`, disable hooks, hydrate a partial clone in place, or substitute a direct push to make publication faster.
+for a complete restack, repeat the complete verification below before `gh stack push`. for selective publication, use the targeted verification and independent readback in [selective publication](references/selective-publication.md). never use `GIT_LFS_SKIP_PUSH`, disable hooks, skip lfs, hydrate a partial clone in place, or substitute a direct push to make publication faster.
 
 ## verify a complete restack before publication
 

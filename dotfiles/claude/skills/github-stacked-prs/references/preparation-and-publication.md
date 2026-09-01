@@ -4,9 +4,38 @@ use this procedure before a complete restack, and as the shared checkout and tim
 
 ## choose one integrator checkout
 
-keep one reusable, complete-object linked worktree for stack integration and publication. it owns stack metadata, history changes, the final checks, and the only official publication command. source workers use separate immutable checkouts and return one commit each. do not rebuild the integrator checkout for each handoff when the existing one is clean, complete, and at the accepted stack state.
+keep one reusable, complete-object detached linked worktree for stack integration and publication. it shares the trusted primary repository object store and owns stack metadata, history changes, the final checks, and the only official publication command. source workers use separate immutable checkouts and return one commit each. do not rebuild the integrator checkout for each handoff when the existing one is clean, complete, and at the accepted stack state.
 
-before using the checkout, verify its selected remote, complete objects, non-promisor configuration, absence of a partial-clone filter, clean porcelain, and normal git lfs hook. these checks remain required when a reusable checkout avoids earlier setup time.
+first verify the trusted primary repository: the selected remote is the intended remote, `remote.<remote>.promisor` is not true, no partial-clone filter is present, and its git lfs hook is installed. it must contain the exact current trunk and every stack ref. create a new integrator as a detached linked worktree at the verified top oid:
+
+```sh
+git -C <trusted-primary> worktree add --detach <integrator-path> <top-oid>
+```
+
+before using the linked worktree, verify its exact head, a complete nonempty index, clean porcelain, complete required objects, and materialized required git lfs objects. identify an existing published stack with a verified stack number, pull request number or url, or branch name, then use `gh stack checkout` only in this sole integrator checkout.
+
+when a required object is missing, fetch only the exact trunk and stack refs into the trusted primary object store. do not fetch all branches, use a wildcard refspec, or hydrate a promisor checkout in place:
+
+```sh
+git -C <trusted-primary> fetch --no-tags <remote> \
+  '+refs/heads/<default-branch>:refs/remotes/<remote>/<default-branch>' \
+  '+refs/heads/<stack-branch>:refs/remotes/<remote>/<stack-branch>'
+# add one exact stack refspec for every remaining stack branch
+git -C <trusted-primary> lfs fetch <remote> <default-branch>
+git -C <trusted-primary> lfs fetch <remote> <stack-branch>
+```
+
+then repair or recreate only a new disposable linked worktree from the hydrated primary store. do not reset an established integrator checkout. recheck its head, index, objects, git lfs objects, hook, remote configuration, and clean porcelain before stack work resumes. if an accepted commit or required git lfs object exists only in another checkout, stop and transfer it through a separately verified immutable handoff before making it part of the integrator state.
+
+a separate full clone is an exception, never the response to an incomplete object store or git lfs concern. allow it only after recording a concrete reason that a detached linked worktree plus narrow exact-ref hydration cannot satisfy this checkout. make that clone the sole integrator, use no partial-clone filter, fetch only the same exact refs, retain the standard git lfs hook, and complete the same verification. a failed or unproved linked-worktree setup is a stop, not permission for a broad fetch, a promisor checkout, lfs bypass, hook bypass, or direct push.
+
+record the checkout before changing stack state and validate it with:
+
+```sh
+python3 scripts/check-integrator-checkout-contract.py checkout.json
+```
+
+the manifest records the checkout kind, trusted primary checks, exact refs, hydration destination and result, linked-worktree state, git lfs and hook state, and the official publication command. a `full_clone_exception` additionally records the concrete failure of the linked-worktree path and its exact-ref hydration attempt.
 
 ## admit handoffs and read-only checks
 

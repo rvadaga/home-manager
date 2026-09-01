@@ -26,7 +26,7 @@ the checker proves the manifest is internally consistent. it never substitutes f
 
 ## prepare the selected subseries
 
-use the normal complete-object integrator checkout and retain its promisor, partial-clone, trunk, lfs, hook, linear-history, and exact-resource-lock safeguards. keep its porcelain clean.
+use the normal complete-object linked integrator checkout from [preparation and publication](preparation-and-publication.md). retain its trusted-primary, exact-ref hydration, promisor, partial-clone, trunk, lfs, hook, linear-history, and exact-resource-lock safeguards. keep its porcelain clean.
 
 run the selected layer or subseries tests and hooks. before publication, perform a diff check, exact conflict-marker review, and linear-history and topology checks that cover the selected range and show that unchanged refs can remain in place. independently read every recorded lease and pull request state immediately before the official command; they must equal the one preflight snapshot.
 
