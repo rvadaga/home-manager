@@ -175,7 +175,7 @@ in {
       pkgs.fastfetch
 
       # version control
-      pkgs.gh
+      pkgs.unstable.gh
 
       # kubernetes
       pkgs.kubectl
@@ -321,7 +321,7 @@ in {
         ] (_: {
           helper = [
             ""
-            "!${pkgs.gh}/bin/gh auth git-credential"
+            "!${pkgs.unstable.gh}/bin/gh auth git-credential"
           ];
         });
 
