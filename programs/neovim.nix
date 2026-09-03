@@ -171,14 +171,13 @@
         plugin = nvim-treesitter.withAllGrammars;
         type = "lua";
         config = ''
-          require('nvim-treesitter.configs').setup({
-            highlight = {
-              enable = true,
-              additional_vim_regex_highlighting = false,
-            },
-            indent = {
-              enable = true,
-            },
+          vim.api.nvim_create_autocmd('FileType', {
+            pattern = '*',
+            callback = function(args)
+              if pcall(vim.treesitter.start, args.buf) then
+                vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+              end
+            end,
           })
         '';
       }

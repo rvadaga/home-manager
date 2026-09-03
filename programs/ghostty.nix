@@ -13,7 +13,7 @@ in
       font-family = "FiraCode Nerd Font Mono";
       font-size = 14;
       font-style = "Semibold";
-      theme = "Gruvbox Dark Hard";
+      theme = "Matte Black";
       scrollback-limit = 100000000;
 
       # bell — disable audible bell, keep notification features
@@ -23,7 +23,7 @@ in
       clipboard-paste-protection = false;
 
       # window
-      confirm-close-surface = true;
+      confirm-close-surface = false;
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;
@@ -110,4 +110,17 @@ in
 
     enableZshIntegration = true;
   };
+
+  # home manager generates this file in the read-only nix store. materialize
+  # the link after activation so external tools can update the live config.
+  xdg.configFile."ghostty/config".force = true;
+  home.activation.makeGhosttyConfigWritable = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    ghostty_config="${config.xdg.configHome}/ghostty/config"
+    if [ -L "$ghostty_config" ]; then
+      ghostty_config_tmp="$(${pkgs.coreutils}/bin/mktemp "$ghostty_config.tmp.XXXXXX")"
+      ${pkgs.coreutils}/bin/cp --dereference "$ghostty_config" "$ghostty_config_tmp"
+      ${pkgs.coreutils}/bin/chmod 0644 "$ghostty_config_tmp"
+      ${pkgs.coreutils}/bin/mv --force "$ghostty_config_tmp" "$ghostty_config"
+    fi
+  '';
 }
