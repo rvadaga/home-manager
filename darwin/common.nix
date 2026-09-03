@@ -1,7 +1,4 @@
-{ config, lib, pkgs, ... }:
-let
-  user = config.users.users.${config.system.primaryUser};
-in {
+{ pkgs, ... }: {
   imports = [
     ./nix.nix
     ./homebrew.nix
@@ -29,15 +26,5 @@ in {
     ];
     RunAtLoad = true;
     ProcessType = "Background";
-  };
-
-  # SETENV tag on /usr/sbin/installer is required because homebrew cask's pkg
-  # installer invokes `sudo -u root -E ...` to preserve HOMEBREW_* env vars;
-  # without it, sudo refuses with "not allowed to preserve the environment".
-  environment.etc."sudoers.d/darwin-rebuild" = {
-    text = ''
-      ${user.name} ALL=(root) NOPASSWD: /run/current-system/sw/bin/darwin-rebuild *
-      ${user.name} ALL=(root) NOPASSWD:SETENV: /usr/sbin/installer *
-    '';
   };
 }

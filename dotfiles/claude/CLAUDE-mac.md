@@ -4,16 +4,29 @@
 * use macos-native tools where appropriate (e.g., pbcopy, pbpaste)
 * **strong preference for nix; homebrew is a last resort.** add packages to the nix config and rebuild — nixpkgs `home.packages`/`systemPackages` for cli tools, or the declarative `homebrew.brews`/`homebrew.casks` list for brew-only formulae/casks. never install or remove packages imperatively with brew unless nix genuinely cannot do it. (`brew update` during a nix-darwin rebuild is expected and fine.) **enforced by a PreToolUse Bash hook in settings-mac.json — imperative `brew install`/`reinstall`/`tap`/`upgrade`/`uninstall` (and the `remove`/`rm` aliases) triggers an `ask` gate with this reminder.**
 
-## nix-darwin rebuild
+## home and system activation
 
-macos machines use nix-darwin, not home-manager. the rebuild command is:
+macos uses standalone home-manager for known home-only changes and nix-darwin for system changes.
 
 ```bash
-darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
+home-manager switch --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
-* for personal mac: `darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME`
-* for machines built from a downstream flake: use that flake's path (see machine-specific instructions)
+home-manager activation is user-scoped and must not use sudo. the pinned home-manager cli is also present in the embedded nix-darwin home generation, so a later system switch does not remove the command needed for the next home-only change.
+
+for a system change, or a change whose ownership is unclear, build without activation first:
+
+```bash
+darwin-rebuild build --flake <flake-path>#$HM_CONFIG_NAME
+```
+
+the actual system activation requires rahul to authenticate and run or explicitly authorize the exact command:
+
+```bash
+sudo darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
+```
+
+an agent stops before that authenticated command. machines built from a downstream flake use the downstream flake path for both graphs.
 
 ## system.defaults gotchas
 
