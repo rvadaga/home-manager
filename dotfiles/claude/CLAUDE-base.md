@@ -54,8 +54,8 @@
     * rename only the branch (`git branch -m <old> <new>`), never move the worktree directory — directory moves break the current session's cwd resolution.
 * when making any nix config changes:
     * **every change goes worktree → draft pr → rahul's "looks ok" → merge to main → rebuild, via the `/nix-rebuild` skill.** NEVER edit/commit/push on the primary checkout's `main`, and NEVER `git push origin HEAD:main` — no config change lands on main without a reviewable pr first, no matter how small. (an explicit "ship it / land this / squash merge" instead uses `/ship-config`, which merges autonomously once the pre-merge test passes — the explicit command is the approval.)
-    * do not ask whether to rebuild after a change MERGES — once it's on main, rebuild autonomously (the approval gate is at merge, not at rebuild) unless the rebuild target is genuinely ambiguous
-    * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
+    * after merge, activate a known home-only change with sudo-free `home-manager switch`. a macos system activation is a separate authorization: build it without sudo, then stop for rahul to run or explicitly authorize the exact authenticated `sudo darwin-rebuild switch` command
+    * when a change can affect both home-manager and the system, or ownership is unclear, build both graphs. do not choose an activation command from a filename list
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
@@ -143,24 +143,23 @@ when a change is large enough to warrant multiple prs:
 
 ## rebuild commands by os
 
-* **macos (nix-darwin):** `darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
+* **macos, known home-only change:** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
+* **macos, system or shared change:** build with `darwin-rebuild build --flake <flake-path>#$HM_CONFIG_NAME`, then stop for rahul to run or explicitly authorize `sudo darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
 * **linux (home-manager):** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
 
 ## parallel-worktree foot-gun
 
-* **the active system carries no visible cue about which worktree it was built from.** parallel worktrees of this config all activate into the same `/run/current-system` (and home-manager profile); whichever one ran `darwin-rebuild switch` most recently wins. **run `nix-provenance` as your FIRST diagnostic in any of these situations**, before deeper troubleshooting:
+* parallel worktrees activate into the same system and home locations. **run `nix-provenance` as your FIRST diagnostic in any of these situations**, before deeper troubleshooting:
     * before trusting "i rebuilt and my change took effect" / before reporting a fix as verified
     * when an expected change isn't visible in the active system ("i added module X but it's not loaded", "i edited setting Y but the system still shows the old value", "my new alias / script / command isn't on PATH")
     * when behavior diverges from what the source files imply (e.g. you read a file and it has feature A, but the running system behaves like it's still on the old version)
     * before blaming a bug on the code — first rule out "wrong build is active"
 
-  `darwin/provenance.nix` writes the flake's rev + content hash to `/etc/nix-config-provenance` at activation; `~/.local/bin/nix-provenance` (PATH bash script installed via `os-configs/base.nix`) reads it and compares with the current worktree's git state:
+  `darwin/provenance.nix` writes the system source stamp to `/etc/nix-config-provenance`. home-manager writes its source, generation, and activation mode to `~/.local/state/home-manager/provenance`. `~/.local/bin/nix-provenance` reports both layers, checks the home stamp against `current-home`, and compares both source revisions with the current worktree:
   ```bash
-  cat /etc/nix-config-provenance   # rev, narHash, lastModified, storePath
-  nix-provenance                   # same, plus comparison with `pwd`'s git state
+  nix-provenance
   ```
-  rev mismatch → rebuild from this worktree. rev matches but you've edited since → `narHash` (and the `-dirty` suffix on rev) catches that; rebuild anyway.
-* this only kicks in on nix-darwin (the module lives under `darwin/`). linux home-manager doesn't have an equivalent stamp yet.
+  the system and home revisions can differ when the commands are interleaved. `activation=standalone` means the last home activation was sudo-free home-manager; `activation=embedded` means it came from nix-darwin. rollback stays split between the nix-darwin system profile and the standalone home-manager generation profile.
 * downstream configs must opt in by importing `inputs.personal-config.darwinModules.provenance` and ensuring their `darwinSystem` sets `specialArgs = { inherit inputs; }`.
 
 ## multi-repo structure

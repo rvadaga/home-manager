@@ -47,7 +47,7 @@ the bootstrap script will:
 2. authenticate the github CLI (opens browser)
 3. clone this repo to `~/.config/home-manager`
 4. prompt you to create `machine.json` with your identity
-5. run `darwin-rebuild switch` (installs all casks, applies system defaults)
+5. authenticate for `sudo darwin-rebuild switch` (installs all casks, applies system defaults)
 6. prompt you to sign into 1password, then run SSH/GPG/license setup scripts
 7. print remaining manual steps (app logins, permissions, config restore)
 
@@ -64,7 +64,7 @@ the bootstrap script will:
 after bootstrap, the only manual step is updating `machines/mac-workstation.nix` with the GPG key ID printed by the script, then rebuilding:
 
 ```bash
-darwin-rebuild switch --flake ~/.config/home-manager#mac-workstation
+sudo darwin-rebuild switch --flake ~/.config/home-manager#mac-workstation
 ```
 
 the bootstrap tracks completed steps in `.state/` — re-running it is safe and skips already-completed steps.
@@ -86,16 +86,21 @@ nix run home-manager/release-25.11 -- switch --flake ".#personal-laptop"
 
 ## usage
 
-### rebuild configuration
+### apply configuration
 
-for nix-darwin (mac-workstation):
+for a known home-only change on any home-manager target:
+```bash
+home-manager switch --flake ".#$HM_CONFIG_NAME"
+```
+
+for a nix-darwin system change:
 ```bash
 sudo darwin-rebuild switch --flake ".#mac-workstation"
 ```
 
-for standalone home-manager:
+build a system change without activation before asking the user to authenticate:
 ```bash
-home-manager switch --flake ".#$HM_CONFIG_NAME"
+darwin-rebuild build --flake ".#mac-workstation"
 ```
 
 the `HM_CONFIG_NAME` environment variable is set by your machine config and identifies which configuration to use.
@@ -148,7 +153,7 @@ to bootstrap nix-darwin for the first time on a downstream config:
 nix run nix-darwin -- switch --flake <path>#<config-name>
 ```
 
-subsequent rebuilds use `darwin-rebuild switch` directly (installed by nix-darwin).
+subsequent system activations use authenticated `sudo darwin-rebuild switch`. home-only activations use sudo-free `home-manager switch`.
 
 ## homebrew management
 
@@ -246,7 +251,7 @@ app settings for itsycal, meetingbar, and ice are managed via `system.defaults.C
 ### dual-context modules (`osConfig ? null`)
 
 `os-configs/base.nix` uses the `osConfig ? null` pattern so the same module works in both standalone home-manager and nix-darwin contexts. when running under nix-darwin (`osConfig` is set):
-- `programs.home-manager.enable` is disabled (nix-darwin manages activation)
+- `programs.home-manager.enable` keeps the pinned cli in the embedded user profile
 - the `nix` settings block is skipped (nix-darwin owns these at system level via `darwin/nix.nix`)
 
 nix settings are shared via `shared/nix-settings.nix` to avoid drift between the two contexts.
