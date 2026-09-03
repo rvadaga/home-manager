@@ -337,6 +337,7 @@
         base = ./darwin/nix.nix;
         apps = ./darwin/apps.nix;
         desktop = ./darwin/system-defaults.nix;
+        fonts = ./darwin/fonts.nix;
         # compatibility alias: app installation now belongs to the app registry.
         homebrew = ./darwin/apps.nix;
         # downstream consumers must also set `specialArgs = { inherit inputs; }`

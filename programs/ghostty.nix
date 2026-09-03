@@ -1,4 +1,9 @@
-{config, pkgs, lib,...}:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   isDarwin = pkgs.stdenv.isDarwin;
 in
@@ -13,7 +18,7 @@ in
       font-family = "FiraCode Nerd Font Mono";
       font-size = 14;
       font-style = "Semibold";
-      theme = "Gruvbox Dark Hard";
+      theme = "Matte Black";
       scrollback-limit = 100000000;
 
       # bell — disable audible bell, keep notification features
@@ -23,7 +28,6 @@ in
       clipboard-paste-protection = false;
 
       # window
-      confirm-close-surface = false;
       window-decoration = true;
       working-directory = "home";
       window-inherit-working-directory = false;
@@ -33,12 +37,14 @@ in
 
       # undo close — 60s window to recover closed tabs/splits/windows
       undo-timeout = "60s";
-    } // lib.optionalAttrs isDarwin {
+    }
+    // lib.optionalAttrs isDarwin {
       # cmd+z works natively; add browser-style cmd+shift+t as well
       keybind = [
         "cmd+shift+t=undo"
       ];
-    } // lib.optionalAttrs (!isDarwin) {
+    }
+    // lib.optionalAttrs (!isDarwin) {
       font-size = 12;
       gtk-tabs-location = "top";
 

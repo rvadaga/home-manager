@@ -20,7 +20,7 @@
 - [x] create `scripts/setup-gpg.sh` — generate key, upload to github, store in 1password
 - [x] generate app-license setup from `darwin/app-registry.nix`
 - [x] verify all three configs build (`personal-laptop`, `mac-workstation` HM, `mac-workstation` darwin)
-- [x] apply config: `darwin-rebuild switch --flake .#mac-workstation`
+- [x] apply config: `sudo darwin-rebuild switch --flake .#mac-workstation`
 - [x] verify homebrew casks install correctly
 - [x] run `setup-ssh.sh` and `setup-gpg.sh` on first machine
 - [x] set the gpg signing key in `machines/hosts.nix`

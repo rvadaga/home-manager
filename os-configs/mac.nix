@@ -4,11 +4,24 @@
   lib,
   ...
 }:
+let
+  codex = pkgs.callPackage ../packages/codex.nix { };
+in
 {
   llmInstructions.platforms = [ "mac" ];
 
   home = {
     file = {
+      # keep the cli and its runtime companion on the same nix-managed version.
+      ".local/bin/codex" = {
+        source = "${codex}/bin/codex";
+        force = true;
+      };
+      ".local/bin/codex-code-mode-host" = {
+        source = "${codex}/bin/codex-code-mode-host";
+        force = true;
+      };
+
       # claude and codex capture path through marked login-shell probes, then
       # direct-spawn git from their gui processes. macos 26 intermittently
       # blocks the ad-hoc-signed nix git at that boundary with eacces. expose
@@ -30,6 +43,7 @@
     };
 
     packages = [
+      codex
       pkgs.unstable.coreutils-prefixed # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
     ];

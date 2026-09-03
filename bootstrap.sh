@@ -100,7 +100,7 @@ done
 
 echo "==> running darwin-rebuild switch (target: ${FLAKE_TARGET})..."
 if command -v darwin-rebuild &>/dev/null; then
-  darwin-rebuild switch --flake "${CONFIG_DIR}#${FLAKE_TARGET}"
+  sudo darwin-rebuild switch --flake "${CONFIG_DIR}#${FLAKE_TARGET}"
 else
   echo "    (first run — bootstrapping nix-darwin, this will take a while)"
   nix --extra-experimental-features "nix-command flakes" \
@@ -162,7 +162,7 @@ NEXT_STEPS=()
 # gpg key needs to be added to nix config and rebuilt
 if [ ! -f "${STATE_DIR}/gpg-config-done" ]; then
   NEXT_STEPS+=("update the ${FLAKE_TARGET} entry in machines/hosts.nix with the gpg key id printed above")
-  NEXT_STEPS+=("  → run: darwin-rebuild switch --flake ${CONFIG_DIR}#${FLAKE_TARGET}")
+  NEXT_STEPS+=("  → run: sudo darwin-rebuild switch --flake ${CONFIG_DIR}#${FLAKE_TARGET}")
 fi
 
 SIGN_IN_STEPS=$(manifest_lines signIn)
