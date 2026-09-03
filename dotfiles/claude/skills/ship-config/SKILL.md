@@ -13,6 +13,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 1. **preflight**
    - `gfo main` (git fetch origin main — never fetch all branches)
+   - before any source push or pull request metadata or body edit, rederive and preserve the live pull request state under the shared rule in `CLAUDE.md`
    - **branch not pushed yet → `grbom` (git rebase origin/main). published ordinary branch → follow the canonical local-first rule in `CLAUDE.md`. github-managed stack → use `github-stacked-prs` for full-stack synchronization and publication.** never apply the ordinary merge-main procedure or `gh pr update-branch` to a stack layer.
    - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
@@ -45,7 +46,8 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - test fails → fix and re-test. never merge a failing branch.
 
 5. **merge** (no confirmation gate after a passing test)
-   - `gh pr ready <n>`, then `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
+   - github-managed stack → invoke `github-stacked-prs`; preserve every live layer state and select only a live ready bottom layer. do not run the ordinary commands below.
+   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, this explicit shipping request authorizes `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. then run `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
    - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
      ```bash
      gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'

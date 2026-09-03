@@ -33,7 +33,7 @@ git -C <worktree> add -A && git -C <worktree> commit -m "<describe change>"
 git -C <worktree> push -u origin rahul/nix-rebuild-<topic>
 ```
 
-an existing published ordinary draft follows the canonical local-first rule in `CLAUDE.md`. a github-managed stack follows `github-stacked-prs` for full-stack synchronization and publication; never apply the ordinary merge-main procedure or `gh pr update-branch` to one stack layer. a rejected push or unexpected remote movement is a stop signal.
+before any source push or pull request metadata or body edit, rederive and preserve the live pull request state under the shared rule in `CLAUDE.md`. an existing published ordinary branch follows the canonical local-first rule there. a github-managed stack follows `github-stacked-prs` for full-stack synchronization, publication, and merge selection; never apply the ordinary merge-main procedure or `gh pr update-branch` to one stack layer. a rejected push or unexpected remote movement is a stop signal.
 
 ## 3. open a DRAFT pr
 
@@ -67,7 +67,7 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
 
 ## 6. on approval — merge, activate, verify, clean up
 
-1. **mark ready, THEN merge** (squash is the default) — §3 opened this pr as a DRAFT and github refuses to merge a draft (`GraphQL: Pull Request is still a draft (mergePullRequest)`), so `gh pr ready` is required, not optional; /ship-config §5 does the same:
+1. **merge through the branch's workflow.** a github-managed stack uses `github-stacked-prs`; preserve its live states and select only a live ready bottom layer. for an ordinary pull request, rederive its live state under the shared `CLAUDE.md` rule. if it is draft, the approval for this merge authorizes `gh pr ready`; if it is already ready, preserve that state without a duplicate confirmation or ready command. then merge it (squash is the default):
    ```bash
    gh pr ready <n> --repo <owner>/<repo>
    gh pr merge <n> --repo <owner>/<repo> --squash

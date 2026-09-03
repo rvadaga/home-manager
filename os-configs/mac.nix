@@ -1,12 +1,23 @@
 { config, pkgs, lib, ... }:
 let
   osInstructions = "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-mac.md;
+  codex = pkgs.callPackage ../packages/codex.nix { };
 in {
   # claude configuration
   claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
   home = {
     file = {
       ".codex/AGENTS.md".text = lib.mkAfter osInstructions;
+
+      # keep the cli and its runtime companion on the same nix-managed version.
+      ".local/bin/codex" = {
+        source = "${codex}/bin/codex";
+        force = true;
+      };
+      ".local/bin/codex-code-mode-host" = {
+        source = "${codex}/bin/codex-code-mode-host";
+        force = true;
+      };
 
       ".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
 
@@ -18,6 +29,11 @@ in {
       ".local/libexec/gui-git/git".source =
         config.lib.file.mkOutOfStoreSymlink "/usr/bin/git";
 
+      ".local/libexec/stay-awake" = {
+        source = ../scripts/stay-awake.zsh;
+        executable = true;
+      };
+
       # gpg-agent config (services.gpg-agent is systemd-only, not available on mac)
       ".gnupg/gpg-agent.conf".text = ''
         pinentry-program ${pkgs.pinentry_mac}/bin/pinentry-mac
@@ -27,12 +43,17 @@ in {
     };
 
     packages = [
+      codex
       pkgs.unstable.coreutils-prefixed  # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
     ];
   };
 
   programs.zsh.initContent = lib.mkAfter ''
+    function stay-awake() {
+      sudo /bin/zsh "$HOME/.local/libexec/stay-awake" "$@"
+    }
+
     if [[ "$CLAUDE_DESKTOP_RESOLVING_ENVIRONMENT" = 1 || "$CODEX_SHELL" = 1 ]]; then
       gui_git_dir="$HOME/.local/libexec/gui-git"
       if [[ ":$PATH:" != *":$gui_git_dir:"* ]]; then
