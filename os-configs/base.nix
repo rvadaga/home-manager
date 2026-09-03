@@ -1,6 +1,15 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
   ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
+  xurlMcp = pkgs.callPackage ../packages/xurl-mcp.nix { };
+  self = inputs.self;
+  selfRev =
+    if self ? rev then self.rev
+    else if self ? dirtyRev then self.dirtyRev
+    else "unknown";
+  selfNarHash = self.narHash or "unknown";
+  selfLastModified = self.lastModifiedDate or "unknown";
+  selfStorePath = self.outPath;
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -46,6 +55,15 @@ in {
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
       ".claude/skills/github-stacked-prs/SKILL.md".source = ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
+      ".claude/skills/github-stacked-prs/references/preparation-and-publication.md".source = ../dotfiles/claude/skills/github-stacked-prs/references/preparation-and-publication.md;
+      ".claude/skills/github-stacked-prs/references/selective-publication.md".source = ../dotfiles/claude/skills/github-stacked-prs/references/selective-publication.md;
+      ".claude/skills/github-stacked-prs/references/partial-stack-recovery.md".source = ../dotfiles/claude/skills/github-stacked-prs/references/partial-stack-recovery.md;
+      ".claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/check-partial-stack-recovery-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-partial-stack-recovery-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/test-partial-stack-recovery-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-partial-stack-recovery-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/check-integrator-checkout-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/check-integrator-checkout-contract.py;
+      ".claude/skills/github-stacked-prs/scripts/test-integrator-checkout-contract.py".source = ../dotfiles/claude/skills/github-stacked-prs/scripts/test-integrator-checkout-contract.py;
       ".claude/skills/slack-mcp-formatting/SKILL.md".source = ../dotfiles/claude/skills/slack-mcp-formatting/SKILL.md;
       ".claude/skills/editing-google-docs/SKILL.md".source = ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source = ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
@@ -53,16 +71,22 @@ in {
       # oss-vespa); a downstream config can compose into the same skill dir by
       # adding references/work-vault.md (registry entry for its work vault).
       ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
+      ".claude/skills/notes/scripts/validate-mermaid.py" = {
+        source = ../dotfiles/claude/skills/notes/scripts/validate-mermaid.py;
+        executable = true;
+      };
+      ".claude/skills/notes/scripts/test-validate-mermaid.py" = {
+        source = ../dotfiles/claude/skills/notes/scripts/test-validate-mermaid.py;
+        executable = true;
+      };
       ".claude/commands/wt-name.md".source = ../dotfiles/claude/commands/wt-name.md;
 
-      # nix-provenance: print the active system's flake provenance (written to
-      # /etc/nix-config-provenance by darwin/provenance.nix at activation) and
-      # compare with the current worktree's git state. use after `darwin-rebuild
-      # switch` to confirm the active system was built from the source state
-      # you intended (see CLAUDE.md parallel-worktree foot-gun).
+      # nix-provenance: print both active configuration layers and compare them
+      # with the current worktree. nix-darwin writes the system stamp; the home
+      # activation below writes the home stamp.
       #
       # bash script (not a zsh function) so it works in any shell, including
-      # the claude-code bash harness. mirrors the ecurl/esudo pattern.
+      # the claude-code bash harness, like the other installed command helpers.
       ".local/bin/nix-provenance" = {
         executable = true;
         text = ''
@@ -73,13 +97,45 @@ in {
           # and pwd's git state isn't a rebuild-actionable signal.
           set -uo pipefail
 
-          pf=/etc/nix-config-provenance
-          if [ ! -r "$pf" ]; then
-            echo "no provenance at $pf — host hasn't activated since the provenance module landed, or it's not nix-darwin managed"
+          system_pf=/etc/nix-config-provenance
+          home_pf="''${XDG_STATE_HOME:-$HOME/.local/state}/home-manager/provenance"
+          system_rev=""
+          home_rev=""
+          home_generation=""
+          found_provenance=no
+
+          echo "== active system =="
+          if [ -r "$system_pf" ]; then
+            cat "$system_pf"
+            system_rev=$(awk -F= '/^rev=/{print $2; exit}' "$system_pf")
+            system_generation=$(readlink -f /run/current-system 2>/dev/null || true)
+            echo "generation=''${system_generation:-unknown}"
+            found_provenance=yes
+          else
+            echo "unavailable: $system_pf is not readable"
+          fi
+
+          echo
+          echo "== active home =="
+          if [ -r "$home_pf" ]; then
+            cat "$home_pf"
+            home_rev=$(awk -F= '/^rev=/{print $2; exit}' "$home_pf")
+            home_generation=$(awk -F= '/^generation=/{print $2; exit}' "$home_pf")
+            current_home=$(readlink -f "''${XDG_STATE_HOME:-$HOME/.local/state}/home-manager/gcroots/current-home" 2>/dev/null || true)
+            echo "currentHome=''${current_home:-unknown}"
+            if [ -n "$current_home" ] && [ "$home_generation" = "$current_home" ]; then
+              echo "generationState=match"
+            else
+              echo "generationState=mismatch"
+            fi
+            found_provenance=yes
+          else
+            echo "unavailable: $home_pf is not readable"
+          fi
+
+          if [ "$found_provenance" != yes ]; then
             exit 1
           fi
-          echo "== active system =="
-          cat "$pf"
 
           if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
             exit 0
@@ -96,8 +152,6 @@ in {
             is_flake_repo=yes
           fi
           cur_origin=$(git config --get remote.origin.url 2>/dev/null)
-          active_rev=$(awk -F= '/^rev=/{print $2; exit}' "$pf")
-
           echo
           echo "== current worktree =="
           echo "path=$(pwd)"
@@ -111,18 +165,54 @@ in {
             exit 0
           fi
 
-          if [ "$active_rev" = "$cur_rev$cur_dirty" ]; then
-            echo "match — active system is from this flake repo at this rev"
-          else
-            echo "mismatch — active=$active_rev worktree=$cur_rev$cur_dirty"
-            echo "  if this repo built the active system: rebuild from here to make your changes live."
-            echo "  if this repo did NOT build the active system (different flake): no rebuild needed from here."
+          if [ -n "$system_rev" ]; then
+            if [ "$system_rev" = "$cur_rev$cur_dirty" ]; then
+              echo "system=match"
+            else
+              echo "system=mismatch active=$system_rev worktree=$cur_rev$cur_dirty"
+            fi
+          fi
+          if [ -n "$home_rev" ]; then
+            if [ "$home_rev" = "$cur_rev$cur_dirty" ]; then
+              echo "home=match"
+            else
+              echo "home=mismatch active=$home_rev worktree=$cur_rev$cur_dirty"
+            fi
           fi
         '';
       };
     } // codexSkillFiles;
 
+    activation.writeNixHomeProvenance = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      if [[ -z "''${DRY_RUN:-}" ]]; then
+        provenance_dir="${config.xdg.stateHome}/home-manager"
+        provenance_file="$provenance_dir/provenance"
+        provenance_tmp="$provenance_file.tmp.$$"
+        activation_mode=standalone
+        if (( hmDriverVersion >= 1 )); then
+          activation_mode=embedded
+        fi
+
+        mkdir -p "$provenance_dir"
+        {
+          printf '%s\n' \
+            "rev=${selfRev}" \
+            "narHash=${selfNarHash}" \
+            "lastModified=${selfLastModified}" \
+            "storePath=${selfStorePath}" \
+            "generation=$newGenPath" \
+            "activation=$activation_mode"
+        } > "$provenance_tmp"
+        chmod 0644 "$provenance_tmp"
+        mv -f "$provenance_tmp" "$provenance_file"
+      else
+        echo "would write home provenance to ${config.xdg.stateHome}/home-manager/provenance"
+      fi
+    '';
+
     packages = [
+      xurlMcp
+
       # shell and terminal
       pkgs.bash
       pkgs.nerd-fonts.fira-code
@@ -218,6 +308,7 @@ in {
       pkgs.unstable.nodejs_24
 
       # programming languages: python
+      pkgs.python3
       pkgs.poetry
       pkgs.unstable.uv
 
@@ -226,7 +317,7 @@ in {
 
       # programming languages: zig
       pkgs.zig
-    ];
+    ] ++ lib.optional (osConfig != null) config.programs.home-manager.package;
 
     sessionPath = [
       "$HOME/.local/bin"
@@ -260,9 +351,9 @@ in {
   };
 
   programs = {
-    # home manager (disabled under nix-darwin which manages activation itself)
+    # keep the pinned cli available in both standalone and embedded generations.
     home-manager = {
-      enable = lib.mkDefault (osConfig == null);
+      enable = true;
     };
 
     # development environment
@@ -312,6 +403,18 @@ in {
         column = {
           ui = "auto";
         };
+
+        # clear platform helpers before gh so headless sessions do not fall
+        # through to a keychain that their process context cannot access.
+        credential = lib.genAttrs [
+          "https://github.com"
+          "https://gist.github.com"
+        ] (_: {
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
+        });
 
         core = {
           fsmonitor = true;

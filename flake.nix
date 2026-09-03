@@ -175,6 +175,7 @@
       darwinModules = {
         base = ./darwin/nix.nix;
         desktop = ./darwin/system-defaults.nix;
+        fonts = ./darwin/fonts.nix;
         homebrew = ./darwin/homebrew.nix;
         # downstream consumers must also set `specialArgs = { inherit inputs; }`
         # on their darwinSystem so provenance.nix can read inputs.self.
