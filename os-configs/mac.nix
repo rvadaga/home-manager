@@ -1,14 +1,17 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
-  osInstructions = "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-mac.md;
   codex = pkgs.callPackage ../packages/codex.nix { };
-in {
-  # claude configuration
-  claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-mac.json)) ];
+in
+{
+  llmInstructions.platforms = [ "mac" ];
+
   home = {
     file = {
-      ".codex/AGENTS.md".text = lib.mkAfter osInstructions;
-
       # keep the cli and its runtime companion on the same nix-managed version.
       ".local/bin/codex" = {
         source = "${codex}/bin/codex";
@@ -19,15 +22,12 @@ in {
         force = true;
       };
 
-      ".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
-
       # claude and codex capture path through marked login-shell probes, then
       # direct-spawn git from their gui processes. macos 26 intermittently
       # blocks the ad-hoc-signed nix git at that boundary with eacces. expose
       # apple's platform-signed git only to those probes; regular shells keep
       # using the nix-managed git.
-      ".local/libexec/gui-git/git".source =
-        config.lib.file.mkOutOfStoreSymlink "/usr/bin/git";
+      ".local/libexec/gui-git/git".source = config.lib.file.mkOutOfStoreSymlink "/usr/bin/git";
 
       ".local/libexec/stay-awake" = {
         source = ../scripts/stay-awake.zsh;
@@ -44,7 +44,7 @@ in {
 
     packages = [
       codex
-      pkgs.unstable.coreutils-prefixed  # g-prefixed gnu coreutils (gpaste, gstat, etc.)
+      pkgs.unstable.coreutils-prefixed # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
     ];
   };

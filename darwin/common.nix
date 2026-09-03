@@ -1,7 +1,8 @@
-{ pkgs, ... }: {
+{ ... }:
+{
   imports = [
     ./nix.nix
-    ./homebrew.nix
+    ./apps.nix
     ./fonts.nix
     ./system-defaults.nix
     ./provenance.nix

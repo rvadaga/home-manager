@@ -1,16 +1,8 @@
-{ config, pkgs, lib, ... }: {
+{ ... }:
+{
   imports = [
+    ./host.nix
     ../os-configs/base.nix
     ../os-configs/mac.nix
   ];
-
-  home = {
-    username = "rvadaga";
-    homeDirectory = "/Users/rvadaga";
-    stateVersion = "24.11";
-
-    sessionVariables = {
-      HM_CONFIG_NAME = "personal-laptop";
-    };
-  };
 }

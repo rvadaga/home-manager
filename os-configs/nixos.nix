@@ -1,14 +1,13 @@
-{ config, pkgs, lib, ... }:
-let
-  osInstructions = "\n\n" + builtins.readFile ../dotfiles/claude/CLAUDE-nixos.md;
-in {
-  # claude configuration
-  claude.settingsPieces = lib.mkAfter [ (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-nixos.json)) ];
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
+{
+  llmInstructions.platforms = lib.mkAfter [ "nixos" ];
+
   home = {
-    file.".codex/AGENTS.md".text = lib.mkAfter osInstructions;
-
-    file.".claude/CLAUDE.md".text = lib.mkAfter osInstructions;
-
     packages = [
       pkgs.unstable.claude-code
     ];

@@ -107,7 +107,17 @@ else
     run nix-darwin -- switch --flake "${CONFIG_DIR}#${FLAKE_TARGET}"
 fi
 
-# --- phase 3: setup scripts (need 1password) ---
+# load the generated app manifest after nix has validated the registry.
+APP_MANIFEST=$(nix eval --json \
+  "${CONFIG_DIR}#darwinConfigurations.${FLAKE_TARGET}.config.personal.apps.manifest")
+
+manifest_lines() {
+  local section="$1"
+  jq -r --arg section "$section" \
+    '.[$section][]? | "\(.name): \(.text)"' <<< "$APP_MANIFEST"
+}
+
+# --- phase 3: setup scripts ---
 
 SETUP_NEEDED=false
 if [ ! -f "${STATE_DIR}/ssh-setup-done" ] || [ ! -f "${STATE_DIR}/gpg-setup-done" ] || [ ! -f "${STATE_DIR}/licenses-setup-done" ]; then
@@ -115,10 +125,16 @@ if [ ! -f "${STATE_DIR}/ssh-setup-done" ] || [ ! -f "${STATE_DIR}/gpg-setup-done
 fi
 
 if [ "$SETUP_NEEDED" = true ]; then
-  echo ""
-  echo "==> setup scripts need 1Password. open the 1Password app and sign in now."
-  echo "    press enter when signed in..."
-  read -r
+  SETUP_STEPS=$(manifest_lines setup)
+  if [ -n "$SETUP_STEPS" ]; then
+    echo ""
+    echo "==> complete this app setup before the setup scripts run:"
+    while IFS= read -r step; do
+      echo "    ${step}"
+    done <<< "$SETUP_STEPS"
+    echo "    press enter when ready..."
+    read -r
+  fi
 
   if [ ! -f "${STATE_DIR}/ssh-setup-done" ]; then
     echo "==> running setup-ssh.sh..."
@@ -131,8 +147,9 @@ if [ "$SETUP_NEEDED" = true ]; then
   fi
 
   if [ ! -f "${STATE_DIR}/licenses-setup-done" ]; then
-    echo "==> running setup-licenses.sh..."
-    "${CONFIG_DIR}/scripts/setup-licenses.sh"
+    echo "==> applying app licenses..."
+    /run/current-system/sw/bin/setup-app-licenses
+    mark_step_done "licenses-setup-done"
   fi
 fi
 
@@ -144,43 +161,45 @@ NEXT_STEPS=()
 
 # gpg key needs to be added to nix config and rebuilt
 if [ ! -f "${STATE_DIR}/gpg-config-done" ]; then
-  NEXT_STEPS+=("update machines/${FLAKE_TARGET}.nix with the GPG key ID printed above")
+  NEXT_STEPS+=("update the ${FLAKE_TARGET} entry in machines/hosts.nix with the gpg key id printed above")
   NEXT_STEPS+=("  → run: sudo darwin-rebuild switch --flake ${CONFIG_DIR}#${FLAKE_TARGET}")
 fi
 
-# google account apps — chrome first (signs into google), then drive (syncs backup configs)
-NEXT_STEPS+=("")
-NEXT_STEPS+=("sign in: Google Chrome (google account — syncs bookmarks, extensions, passwords)")
-NEXT_STEPS+=("sign in: Google Drive (same google account — syncs BTT/BetterMouse config backups)")
+SIGN_IN_STEPS=$(manifest_lines signIn)
+if [ -n "$SIGN_IN_STEPS" ]; then
+  NEXT_STEPS+=("")
+  while IFS= read -r step; do
+    NEXT_STEPS+=("sign in: ${step}")
+  done <<< "$SIGN_IN_STEPS"
+fi
 
-# apps with accounts (independent, any order)
-NEXT_STEPS+=("")
-NEXT_STEPS+=("sign in: Claude (anthropic account)")
-NEXT_STEPS+=("sign in: ChatGPT (openai account)")
-NEXT_STEPS+=("sign in: Notion")
-NEXT_STEPS+=("sign in: Obsidian (obsidian sync account, if using sync)")
-NEXT_STEPS+=("sign in: Spotify")
-NEXT_STEPS+=("sign in: WhatsApp (scan QR code from phone)")
-NEXT_STEPS+=("sign in: Docker Desktop (docker hub account — optional)")
-NEXT_STEPS+=("sign in: VS Code (github account for settings sync)")
-
-# grant permissions (macos will prompt on first launch)
+PRIVACY_STEPS=$(manifest_lines privacy)
 NEXT_STEPS+=("")
 NEXT_STEPS+=("grant permissions when prompted:")
-NEXT_STEPS+=("  → Itsycal: calendar access")
-NEXT_STEPS+=("  → MeetingBar: calendar access")
-NEXT_STEPS+=("  → Ice: accessibility access")
-NEXT_STEPS+=("  → BetterTouchTool: accessibility access")
-NEXT_STEPS+=("  → BetterMouse: accessibility access")
-NEXT_STEPS+=("  → Ghostty (or terminal running darwin-rebuild): App Management access")
+while IFS= read -r step; do
+  [ -n "$step" ] && NEXT_STEPS+=("  → ${step}")
+done <<< "$PRIVACY_STEPS"
+NEXT_STEPS+=("  → terminal running darwin-rebuild: app management access")
 NEXT_STEPS+=("     — required for homebrew casks to adopt existing /Applications/*.app")
 NEXT_STEPS+=("       bundles; without it, xattr writes on adopted apps fail with EPERM")
 
-# restore configs from google drive (after gdrive sync completes)
-NEXT_STEPS+=("")
-NEXT_STEPS+=("after google drive finishes syncing:")
-NEXT_STEPS+=("  → quit BetterTouchTool, then: rsync -a \"\$GDRIVE/bettertouchtool/\" ~/Library/Application\\ Support/BetterTouchTool/")
-NEXT_STEPS+=("  → quit BetterMouse, then: rsync -a \"\$GDRIVE/bettermouse/\" ~/Library/Application\\ Support/BetterMouse/")
+LOGIN_ITEM_STEPS=$(manifest_lines loginItems)
+if [ -n "$LOGIN_ITEM_STEPS" ]; then
+  NEXT_STEPS+=("")
+  NEXT_STEPS+=("configure login items:")
+  while IFS= read -r step; do
+    NEXT_STEPS+=("  → ${step}")
+  done <<< "$LOGIN_ITEM_STEPS"
+fi
+
+RESTORE_STEPS=$(manifest_lines restore)
+if [ -n "$RESTORE_STEPS" ]; then
+  NEXT_STEPS+=("")
+  NEXT_STEPS+=("after google drive finishes syncing:")
+  while IFS= read -r step; do
+    NEXT_STEPS+=("  → ${step}")
+  done <<< "$RESTORE_STEPS"
+fi
 
 echo ""
 echo "remaining steps:"
