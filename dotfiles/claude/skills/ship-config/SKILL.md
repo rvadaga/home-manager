@@ -1,11 +1,11 @@
 ---
 name: ship-config
-description: Use when shipping, landing, or squash-merging a config change from a worktree to main. Covers draft pr, pre-merge closure testing, squash merge, downstream cascade, rebuild, verification, and worktree cleanup — autonomous once tests pass.
+description: use when shipping, landing, or squash-merging a config change from a worktree to main. covers the draft pr, closure testing, merge, downstream cascade, activation authorization, verification, and cleanup.
 ---
 
 # /ship-config
 
-ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → rebuild → verify → cleanup. fully autonomous once the pre-merge test passes — test pass is merge authorization.
+ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → activate → verify → cleanup. a passing test authorizes the merge. it does not authorize an agent to satisfy or bypass sudo authentication for a macos system activation.
 
 use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. without explicit shipping approval, use `/nix-rebuild`; it opens a reviewable draft pull request and waits for approval before merging.
 
@@ -13,6 +13,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 1. **preflight**
    - `gfo main` (git fetch origin main — never fetch all branches)
+   - before any source push or pull request metadata or body edit, rederive and preserve the live pull request state under the shared rule in `CLAUDE.md`
    - **branch not pushed yet → `grbom` (git rebase origin/main). published ordinary branch → follow the canonical local-first rule in `CLAUDE.md`. github-managed stack → use `github-stacked-prs` for full-stack synchronization and publication.** never apply the ordinary merge-main procedure or `gh pr update-branch` to a stack layer.
    - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
@@ -23,9 +24,11 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - `gpsup` (git push --set-upstream origin <branch>)
    - `gh pr create --draft` using the repo's pr template (fallback: `~/development/.github/pull_request_template.md`); no ai-generated footer
 
-4. **pre-merge test** — build the full closure through the flake this machine rebuilds from (check `$HM_CONFIG_NAME` and machine-specific instructions):
+4. **pre-merge test** — classify the evaluated outputs, then build through the flake this machine uses. a known home-only change builds home-manager. a known system-only change builds nix-darwin. a shared input or unclear change builds both; do not encode a manual filename list.
    - machine rebuilds from a downstream flake:
      ```bash
+     home-manager build --flake <downstream-repo>#$HM_CONFIG_NAME \
+       --override-input personal-config path:<worktree>
      darwin-rebuild build --flake <downstream-repo>#$HM_CONFIG_NAME \
        --override-input personal-config path:<worktree>
      ```
@@ -43,7 +46,8 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - test fails → fix and re-test. never merge a failing branch.
 
 5. **merge** (no confirmation gate after a passing test)
-   - `gh pr ready <n>`, then `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
+   - github-managed stack → invoke `github-stacked-prs`; preserve every live layer state and select only a live ready bottom layer. do not run the ordinary commands below.
+   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, this explicit shipping request authorizes `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. then run `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
    - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
      ```bash
      gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'
@@ -55,11 +59,10 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
 
 6. **cascade** — if machine-specific instructions define a downstream config consuming this flake as `personal-config`: bump its lock, commit, push (/nix-rebuild steps 4–5). fold any downstream-side edits identified in step 4 into the same commit.
 
-7. **rebuild** — switch from the flake this machine rebuilds from. macos activation requires root: use the machine-mandated sudo wrapper if one exists, plain sudo otherwise.
-   - known failure: the homebrew activation step aborts with a stale-api-cache message ("have not updated today") → run `brew update`, retry the switch once. still failing → stop and report.
+7. **activate** — a known home-only change uses sudo-free `home-manager switch` from the merged flake. for a macos system or shared change, run a final non-activating nix-darwin build, then stop and give rahul the exact `sudo darwin-rebuild switch` command. continue only after rahul runs it or explicitly authorizes that authenticated step.
 
 8. **verify** (evidence before claims)
-   - `cat /etc/nix-config-provenance` — rev equals the rebuilt repo's HEAD, tree clean (macos)
+   - `nix-provenance` — the active home generation matches after a home-manager switch; the active system and embedded home generation match after a user-authenticated nix-darwin switch
    - `readlink /run/current-system` equals the freshly built path
    - the changed artifact carries the new value (step-4 check against the real lock)
    - where the change flows into a live-merged file, confirm the merge ran (target file mtime)
