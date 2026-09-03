@@ -1,4 +1,10 @@
-{ config, pkgs, lib, ... }: {
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
+{
   imports = [
     ../os-configs/base.nix
     ../os-configs/mac.nix
@@ -14,11 +20,13 @@
     };
   };
 
-  claude.settingsPieces = lib.mkAfter [{
-    permissions = {
-      defaultMode = "bypassPermissions";
-    };
-  }];
+  claude.settingsPieces = lib.mkAfter [
+    {
+      permissions = {
+        defaultMode = "bypassPermissions";
+      };
+    }
+  ];
 
   # let unattended macos updates restart when ghostty has running processes.
   programs.ghostty.settings.confirm-close-surface = false;

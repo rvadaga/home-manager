@@ -1,4 +1,9 @@
-{config, pkgs, lib,...}:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   isDarwin = pkgs.stdenv.isDarwin;
 in
@@ -32,12 +37,14 @@ in
 
       # undo close — 60s window to recover closed tabs/splits/windows
       undo-timeout = "60s";
-    } // lib.optionalAttrs isDarwin {
+    }
+    // lib.optionalAttrs isDarwin {
       # cmd+z works natively; add browser-style cmd+shift+t as well
       keybind = [
         "cmd+shift+t=undo"
       ];
-    } // lib.optionalAttrs (!isDarwin) {
+    }
+    // lib.optionalAttrs (!isDarwin) {
       font-size = 12;
       gtk-tabs-location = "top";
 
