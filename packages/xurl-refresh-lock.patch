@@ -1,0 +1,587 @@
+diff --git a/api/client_test.go b/api/client_test.go
+index b8bd67a..af87437 100644
+--- a/api/client_test.go
++++ b/api/client_test.go
+@@ -15,0 +16 @@ import (
++	"github.com/xdevplatform/xurl/version"
+@@ -171 +172 @@ func TestBuildRequest(t *testing.T) {
+-			assert.Equal(t, "xurl/dev", req.Header.Get("User-Agent"))
++			assert.Equal(t, "xurl/"+version.Version, req.Header.Get("User-Agent"))
+diff --git a/auth/auth.go b/auth/auth.go
+index 32a6eaa..bb16e26 100644
+--- a/auth/auth.go
++++ b/auth/auth.go
+@@ -49,3 +49,7 @@ var startListenerFunc = StartListener
+-// oauth2ExpirySkewSeconds refreshes a token slightly before its real expiry so a
+-// token handed to a caller does not expire mid-request.
+-const oauth2ExpirySkewSeconds = 30
++const (
++	// oauth2ExpirySkewSeconds refreshes a token slightly before its real expiry so a
++	// token handed to a caller does not expire mid-request.
++	oauth2ExpirySkewSeconds = 30
++	// oauth2RefreshTimeout bounds how long one process can hold the shared refresh lock.
++	oauth2RefreshTimeout = 30 * time.Second
++)
+@@ -437,11 +441,4 @@ func (a *Auth) refreshOAuth2Token(username string, force bool) (string, error) {
+-	storedUsername, token := a.getOAuth2TokenRecord(username)
+-	if token == nil || token.OAuth2 == nil {
+-		return "", xurlErrors.NewAuthError("TokenNotFound", errors.New("oauth2 token not found"))
+-	}
+-
+-	if !force {
+-		currentTime := time.Now().Unix()
+-		// Refresh slightly before the real expiry so a token handed to a caller
+-		// does not expire in-flight (mirrors x/oauth2's expiryDelta).
+-		if uint64(currentTime)+oauth2ExpirySkewSeconds < token.OAuth2.ExpirationTime {
+-			return token.OAuth2.AccessToken, nil
++	_, observedToken := a.getOAuth2TokenRecord(username)
++	if observedToken == nil || observedToken.OAuth2 == nil {
++		if _, err := os.Stat(a.TokenStore.FilePath); os.IsNotExist(err) {
++			return "", xurlErrors.NewAuthError("TokenNotFound", errors.New("oauth2 token not found"))
+@@ -450,0 +448,44 @@ func (a *Auth) refreshOAuth2Token(username string, force bool) (string, error) {
++	if !force && oauth2TokenIsValid(observedToken) {
++		return observedToken.OAuth2.AccessToken, nil
++	}
++
++	observedAccessToken := ""
++	observedRefreshToken := ""
++	if observedToken != nil && observedToken.OAuth2 != nil {
++		observedAccessToken = observedToken.OAuth2.AccessToken
++		observedRefreshToken = observedToken.OAuth2.RefreshToken
++	}
++
++	return withOAuth2RefreshLock(a.TokenStore.FilePath, func() (string, error) {
++		if err := a.TokenStore.Reload(); err != nil {
++			return "", xurlErrors.NewAuthError("RefreshTokenError", err)
++		}
++
++		storedUsername, token := a.getOAuth2TokenRecord(username)
++		if token == nil || token.OAuth2 == nil {
++			return "", xurlErrors.NewAuthError("TokenNotFound", errors.New("oauth2 token not found"))
++		}
++
++		// another process may have refreshed while this process waited for the lock.
++		if force && observedToken != nil &&
++			(token.OAuth2.AccessToken != observedAccessToken || token.OAuth2.RefreshToken != observedRefreshToken) {
++			return token.OAuth2.AccessToken, nil
++		}
++
++		if !force && oauth2TokenIsValid(token) {
++			return token.OAuth2.AccessToken, nil
++		}
++
++		return a.refreshAndSaveOAuth2Token(storedUsername, token)
++	})
++}
++
++func oauth2TokenIsValid(token *store.Token) bool {
++	if token == nil || token.OAuth2 == nil {
++		return false
++	}
++	currentTime := time.Now().Unix()
++	return uint64(currentTime)+oauth2ExpirySkewSeconds < token.OAuth2.ExpirationTime
++}
++
++func (a *Auth) refreshAndSaveOAuth2Token(storedUsername string, token *store.Token) (string, error) {
+@@ -460 +501,3 @@ func (a *Auth) refreshOAuth2Token(username string, force bool) (string, error) {
+-	tokenSource := config.TokenSource(context.Background(), &oauth2.Token{
++	refreshContext, cancelRefresh := context.WithTimeout(context.Background(), oauth2RefreshTimeout)
++	defer cancelRefresh()
++	tokenSource := config.TokenSource(refreshContext, &oauth2.Token{
+diff --git a/auth/auth_test.go b/auth/auth_test.go
+index ef1aedf..6dc0d1b 100644
+--- a/auth/auth_test.go
++++ b/auth/auth_test.go
+@@ -8,0 +9,2 @@ import (
++	"sync"
++	"sync/atomic"
+@@ -441,0 +444,133 @@ func TestRefreshOAuth2TokenSavesToDefaultAppWhenNoOverride(t *testing.T) {
++func TestRefreshOAuth2TokenCoordinatesAcrossTokenStores(t *testing.T) {
++	var refreshRequests atomic.Int32
++	firstRequestStarted := make(chan struct{})
++	releaseFirstRequest := make(chan struct{})
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		requestNumber := refreshRequests.Add(1)
++		w.Header().Set("Content-Type", "application/json")
++		if requestNumber > 1 {
++			w.WriteHeader(http.StatusBadRequest)
++			_ = json.NewEncoder(w).Encode(map[string]string{
++				"error":             "invalid_grant",
++				"error_description": "refresh token expired",
++			})
++			return
++		}
++		close(firstRequestStarted)
++		<-releaseFirstRequest
++		_ = json.NewEncoder(w).Encode(map[string]interface{}{
++			"access_token":  "new-access-token",
++			"token_type":    "Bearer",
++			"expires_in":    3600,
++			"refresh_token": "new-refresh-token",
++		})
++	}))
++	defer server.Close()
++
++	firstStore, tempDir := createTempTokenStore(t)
++	defer os.RemoveAll(tempDir)
++	firstStore.Apps["default"].ClientID = "client-id"
++	firstStore.Apps["default"].ClientSecret = "client-secret"
++	expiredTime := uint64(time.Now().Add(-time.Hour).Unix())
++	require.NoError(t, firstStore.SaveOAuth2TokenForApp("default", "alice", "old-access", "old-refresh", expiredTime))
++
++	secondStore := &store.TokenStore{FilePath: firstStore.FilePath}
++	require.NoError(t, secondStore.Reload())
++
++	cfg := &config.Config{
++		ClientID:     "client-id",
++		ClientSecret: "client-secret",
++		TokenURL:     server.URL,
++	}
++	auths := []*Auth{
++		NewAuth(cfg).WithTokenStore(firstStore),
++		NewAuth(cfg).WithTokenStore(secondStore),
++	}
++
++	results := make(chan struct {
++		token string
++		err   error
++	}, len(auths))
++	var workers sync.WaitGroup
++	workers.Add(1)
++	go func() {
++		defer workers.Done()
++		token, err := auths[0].RefreshOAuth2Token("alice")
++		results <- struct {
++			token string
++			err   error
++		}{token: token, err: err}
++	}()
++	<-firstRequestStarted
++
++	workers.Add(1)
++	go func() {
++		defer workers.Done()
++		token, err := auths[1].RefreshOAuth2Token("alice")
++		results <- struct {
++			token string
++			err   error
++		}{token: token, err: err}
++	}()
++	close(releaseFirstRequest)
++
++	workers.Wait()
++	close(results)
++
++	for result := range results {
++		require.NoError(t, result.err)
++		assert.Equal(t, "new-access-token", result.token)
++	}
++	assert.Equal(t, int32(1), refreshRequests.Load())
++}
++
++func TestForceRefreshOAuth2TokenUsesTokenRefreshedByAnotherStore(t *testing.T) {
++	var refreshRequests atomic.Int32
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		requestNumber := refreshRequests.Add(1)
++		w.Header().Set("Content-Type", "application/json")
++		if requestNumber > 1 {
++			w.WriteHeader(http.StatusBadRequest)
++			_ = json.NewEncoder(w).Encode(map[string]string{
++				"error":             "invalid_grant",
++				"error_description": "refresh token expired",
++			})
++			return
++		}
++		_ = json.NewEncoder(w).Encode(map[string]interface{}{
++			"access_token":  "new-access-token",
++			"token_type":    "Bearer",
++			"expires_in":    3600,
++			"refresh_token": "new-refresh-token",
++		})
++	}))
++	defer server.Close()
++
++	firstStore, tempDir := createTempTokenStore(t)
++	defer os.RemoveAll(tempDir)
++	firstStore.Apps["default"].ClientID = "client-id"
++	firstStore.Apps["default"].ClientSecret = "client-secret"
++	expiredTime := uint64(time.Now().Add(-time.Hour).Unix())
++	require.NoError(t, firstStore.SaveOAuth2TokenForApp("default", "alice", "old-access", "old-refresh", expiredTime))
++
++	secondStore := &store.TokenStore{FilePath: firstStore.FilePath}
++	require.NoError(t, secondStore.Reload())
++
++	cfg := &config.Config{
++		ClientID:     "client-id",
++		ClientSecret: "client-secret",
++		TokenURL:     server.URL,
++	}
++	firstAuth := NewAuth(cfg).WithTokenStore(firstStore)
++	secondAuth := NewAuth(cfg).WithTokenStore(secondStore)
++
++	token, err := firstAuth.RefreshOAuth2Token("alice")
++	require.NoError(t, err)
++	assert.Equal(t, "new-access-token", token)
++
++	token, err = secondAuth.ForceRefreshOAuth2Token("alice")
++	require.NoError(t, err)
++	assert.Equal(t, "new-access-token", token)
++	assert.Equal(t, int32(1), refreshRequests.Load())
++}
++
+diff --git a/auth/refresh_lock_unix.go b/auth/refresh_lock_unix.go
+new file mode 100644
+index 0000000..dfcd72d
+--- /dev/null
++++ b/auth/refresh_lock_unix.go
+@@ -0,0 +1,37 @@
++//go:build !windows
++
++package auth
++
++import (
++	"fmt"
++	"os"
++	"syscall"
++)
++
++// WithOAuth2TokenStoreLock serializes OAuth2 refresh and MCP bootstrap login across local xurl processes.
++func WithOAuth2TokenStoreLock(authFilePath string, operation func() error) error {
++	lockFile, err := os.OpenFile(authFilePath+".lock", os.O_CREATE|os.O_RDWR, 0600)
++	if err != nil {
++		return fmt.Errorf("open oauth2 token-store lock: %w", err)
++	}
++	defer lockFile.Close()
++
++	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
++		return fmt.Errorf("lock oauth2 token store: %w", err)
++	}
++	defer func() {
++		_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
++	}()
++
++	return operation()
++}
++
++func withOAuth2RefreshLock(authFilePath string, refresh func() (string, error)) (string, error) {
++	var accessToken string
++	err := WithOAuth2TokenStoreLock(authFilePath, func() error {
++		var refreshErr error
++		accessToken, refreshErr = refresh()
++		return refreshErr
++	})
++	return accessToken, err
++}
+diff --git a/auth/refresh_lock_unix_test.go b/auth/refresh_lock_unix_test.go
+new file mode 100644
+index 0000000..f06cf63
+--- /dev/null
++++ b/auth/refresh_lock_unix_test.go
+@@ -0,0 +1,54 @@
++//go:build !windows
++
++package auth
++
++import (
++	"path/filepath"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++)
++
++func TestOAuth2TokenStoreLockSerializesCallers(t *testing.T) {
++	tokenPath := filepath.Join(t.TempDir(), "auth.yml")
++	firstEntered := make(chan struct{})
++	releaseFirst := make(chan struct{})
++	firstDone := make(chan error, 1)
++	go func() {
++		err := WithOAuth2TokenStoreLock(tokenPath, func() error {
++			close(firstEntered)
++			<-releaseFirst
++			return nil
++		})
++		firstDone <- err
++	}()
++	<-firstEntered
++
++	secondEntered := make(chan struct{})
++	secondDone := make(chan error, 1)
++	go func() {
++		err := WithOAuth2TokenStoreLock(tokenPath, func() error {
++			close(secondEntered)
++			return nil
++		})
++		secondDone <- err
++	}()
++
++	enteredEarly := false
++	select {
++	case <-secondEntered:
++		enteredEarly = true
++	case <-time.After(100 * time.Millisecond):
++	}
++	close(releaseFirst)
++	require.NoError(t, <-firstDone)
++	require.False(t, enteredEarly, "the second writer entered while the first still held the lock")
++
++	select {
++	case <-secondEntered:
++	case <-time.After(time.Second):
++		t.Fatal("the second refresh did not enter after the first released the lock")
++	}
++	require.NoError(t, <-secondDone)
++}
+diff --git a/cli/mcp.go b/cli/mcp.go
+index 1ff19d3..93614f2 100644
+--- a/cli/mcp.go
++++ b/cli/mcp.go
+@@ -7,0 +8 @@ import (
++	"errors"
+@@ -20,0 +22 @@ import (
++	xurlErrors "github.com/xdevplatform/xurl/errors"
+@@ -125 +127,2 @@ func (b *mcpBridge) bootstrap() error {
+-	if _, err := b.accessToken(); err == nil {
++	_, err := b.accessToken()
++	if err == nil {
+@@ -128,4 +131,33 @@ func (b *mcpBridge) bootstrap() error {
+-	b.logf("no valid OAuth2 token; opening the browser to sign in -- complete the login to start the bridge...")
+-	if _, err := b.oauth2Flow(b.username); err != nil {
+-		hint := appFlagHint(b.auth.AppName())
+-		return fmt.Errorf("authentication failed: %w\n(on a headless machine, run `xurl auth oauth2%s --headless` first)", err, hint)
++	if !isMissingOAuth2Token(err) {
++		return b.oauth2UnavailableError(err)
++	}
++
++	resolveAfterUnlock := false
++	err = auth.WithOAuth2TokenStoreLock(b.auth.TokenStore.FilePath, func() error {
++		if _, statErr := os.Stat(b.auth.TokenStore.FilePath); statErr == nil {
++			if reloadErr := b.auth.TokenStore.Reload(); reloadErr != nil {
++				return b.oauth2UnavailableError(reloadErr)
++			}
++			if b.hasStoredOAuth2Token() {
++				resolveAfterUnlock = true
++				return nil
++			}
++		} else if !os.IsNotExist(statErr) {
++			return b.oauth2UnavailableError(statErr)
++		}
++
++		b.logf("no valid OAuth2 token; opening the browser to sign in -- complete the login to start the bridge...")
++		if _, loginErr := b.oauth2Flow(b.username); loginErr != nil {
++			hint := appFlagHint(b.auth.AppName())
++			return fmt.Errorf("authentication failed: %w\n(on a headless machine, run `xurl-mcp auth oauth2%s --headless` first)", loginErr, hint)
++		}
++		b.logf("authentication complete; starting bridge")
++		return nil
++	})
++	if err != nil {
++		return err
++	}
++	if resolveAfterUnlock {
++		if _, err := b.accessToken(); err != nil {
++			return b.oauth2UnavailableError(err)
++		}
+@@ -133 +164,0 @@ func (b *mcpBridge) bootstrap() error {
+-	b.logf("authentication complete; starting bridge")
+@@ -136,0 +168,19 @@ func (b *mcpBridge) bootstrap() error {
++func isMissingOAuth2Token(err error) bool {
++	var authErr *xurlErrors.Error
++	return errors.As(err, &authErr) && authErr.Type == xurlErrors.ErrTypeAuth && authErr.Message == "TokenNotFound"
++}
++
++func (b *mcpBridge) oauth2UnavailableError(err error) error {
++	hint := appFlagHint(b.auth.AppName())
++	return fmt.Errorf("oauth2 token unavailable: %w\nrun `xurl-mcp auth oauth2%s` to reauthenticate", err, hint)
++}
++
++func (b *mcpBridge) hasStoredOAuth2Token() bool {
++	if b.username != "" {
++		token := b.auth.TokenStore.GetOAuth2TokenForApp(b.auth.AppName(), b.username)
++		return token != nil && token.OAuth2 != nil
++	}
++	_, token := b.auth.TokenStore.GetFirstOAuth2TokenRecordForApp(b.auth.AppName())
++	return token != nil && token.OAuth2 != nil
++}
++
+@@ -731 +781 @@ func CreateMCPCommand(a *auth.Auth) *cobra.Command {
+-xurl reads newline-delimited JSON-RPC from stdin, forwards each message to the
++xurl-mcp reads newline-delimited JSON-RPC from stdin, forwards each message to the
+@@ -737 +787 @@ session id is maintained across requests.
+-The access token is resolved exactly like 'xurl token': an existing token is
++The access token is resolved exactly like 'xurl-mcp token': an existing token is
+@@ -741,2 +791,2 @@ login on startup and blocks until it completes, so a first run needs no separate
+-'xurl auth oauth2' step. On a remote/headless machine without a browser,
+-authenticate first with 'xurl auth oauth2 [--app NAME] --headless'. All
++'xurl-mcp auth oauth2' step. On a remote/headless machine without a browser,
++authenticate first with 'xurl-mcp auth oauth2 [--app NAME] --headless'. All
+@@ -751,3 +801,2 @@ Example MCP client config:
+-        "command": "npx",
+-        "args": ["-y", "@xdevplatform/xurl", "mcp", "https://api.x.com/mcp"],
+-        "env": { "CLIENT_ID": "...", "CLIENT_SECRET": "..." }
++        "command": "xurl-mcp",
++        "args": ["mcp", "https://api.x.com/mcp"]
+diff --git a/cli/mcp_test.go b/cli/mcp_test.go
+index eed662d..da29634 100644
+--- a/cli/mcp_test.go
++++ b/cli/mcp_test.go
+@@ -14,0 +15 @@ import (
++	"sync/atomic"
+@@ -605,0 +607,93 @@ func TestMCPBridgeBootstrapRunsLoginWithoutToken(t *testing.T) {
++func TestMCPBridgeBootstrapCoordinatesLoginAcrossTokenStores(t *testing.T) {
++	tempDir := t.TempDir()
++	tokenPath := filepath.Join(tempDir, "auth.yml")
++	firstStore := &store.TokenStore{
++		Apps:       map[string]*store.App{"default": {OAuth2Tokens: map[string]store.Token{}}},
++		DefaultApp: "default",
++		FilePath:   tokenPath,
++	}
++	require.NoError(t, firstStore.SaveBearerToken("app-token"))
++	secondStore := &store.TokenStore{FilePath: tokenPath}
++	require.NoError(t, secondStore.Reload())
++
++	var loginCalls atomic.Int32
++	loginStarted := make(chan struct{})
++	secondLoginStarted := make(chan struct{})
++	releaseLogin := make(chan struct{})
++	newBridge := func(tokenStore *store.TokenStore) *mcpBridge {
++		a := auth.NewAuth(&config.Config{}).WithTokenStore(tokenStore)
++		b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "alice", strings.NewReader(""), &bytes.Buffer{})
++		b.oauth2Flow = func(string) (string, error) {
++			if loginCalls.Add(1) == 1 {
++				close(loginStarted)
++				<-releaseLogin
++			} else {
++				close(secondLoginStarted)
++			}
++			expiresAt := uint64(time.Now().Add(time.Hour).Unix())
++			return "new-token", tokenStore.SaveOAuth2Token("alice", "new-token", "new-refresh", expiresAt)
++		}
++		return b
++	}
++
++	firstBridge := newBridge(firstStore)
++	secondBridge := newBridge(secondStore)
++	results := make(chan error, 2)
++	go func() { results <- firstBridge.bootstrap() }()
++	<-loginStarted
++	go func() { results <- secondBridge.bootstrap() }()
++
++	secondLoginRan := false
++	select {
++	case <-time.After(100 * time.Millisecond):
++	case <-secondLoginStarted:
++		secondLoginRan = true
++	}
++	close(releaseLogin)
++
++	require.NoError(t, <-results)
++	require.NoError(t, <-results)
++	assert.False(t, secondLoginRan)
++	assert.Equal(t, int32(1), loginCalls.Load())
++}
++
++func TestMCPBridgeBootstrapDoesNotLoginAfterRefreshFailure(t *testing.T) {
++	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Set("Content-Type", "application/json")
++		w.WriteHeader(http.StatusBadRequest)
++		_ = json.NewEncoder(w).Encode(map[string]string{
++			"error":             "invalid_grant",
++			"error_description": "refresh token expired",
++		})
++	}))
++	defer tokenServer.Close()
++
++	tokenStore := &store.TokenStore{
++		Apps: map[string]*store.App{
++			"default": {
++				ClientID:     "client-id",
++				ClientSecret: "client-secret",
++				OAuth2Tokens: map[string]store.Token{},
++			},
++		},
++		DefaultApp: "default",
++		FilePath:   filepath.Join(t.TempDir(), "auth.yml"),
++	}
++	expiredTime := uint64(time.Now().Add(-time.Hour).Unix())
++	require.NoError(t, tokenStore.SaveOAuth2Token("alice", "old-access", "old-refresh", expiredTime))
++
++	a := auth.NewAuth(&config.Config{
++		ClientID:     "client-id",
++		ClientSecret: "client-secret",
++		TokenURL:     tokenServer.URL,
++	}).WithTokenStore(tokenStore)
++	b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "alice", strings.NewReader(""), &bytes.Buffer{})
++	loginCalled := false
++	b.oauth2Flow = func(string) (string, error) { loginCalled = true; return "", nil }
++
++	err := b.bootstrap()
++	require.Error(t, err)
++	assert.False(t, loginCalled)
++	assert.Contains(t, err.Error(), "oauth2 token unavailable")
++}
++
+diff --git a/store/tokens.go b/store/tokens.go
+index 5eb2be4..0f58b44 100644
+--- a/store/tokens.go
++++ b/store/tokens.go
+@@ -161,0 +162,25 @@ func NewTokenStoreWithCredentials(clientID, clientSecret string) *TokenStore {
++// Reload replaces the in-memory snapshot with the current complete auth file.
++func (s *TokenStore) Reload() error {
++	data, err := os.ReadFile(s.FilePath)
++	if err != nil {
++		return errors.NewIOError(err)
++	}
++
++	var sf storeFile
++	if err := yaml.Unmarshal(data, &sf); err != nil {
++		return errors.NewJSONError(err)
++	}
++	if len(sf.Apps) == 0 {
++		return errors.NewTokenStoreError("token store has no apps")
++	}
++
++	s.Apps = sf.Apps
++	s.DefaultApp = sf.DefaultApp
++	for _, app := range s.Apps {
++		if app.OAuth2Tokens == nil {
++			app.OAuth2Tokens = make(map[string]Token)
++		}
++	}
++	return nil
++}
++
+@@ -623 +648 @@ func (s *TokenStore) HasBearerToken() bool {
+-// Saves the token store to ~/.xurl in YAML format.
++// saveToFile replaces the token store atomically so readers never see a partial yaml document.
+@@ -634 +659,2 @@ func (s *TokenStore) saveToFile() error {
+-	err = os.WriteFile(s.FilePath, data, 0600)
++	dir := filepath.Dir(s.FilePath)
++	tempFile, err := os.CreateTemp(dir, ".auth.yml.tmp-*")
+@@ -637,0 +664,26 @@ func (s *TokenStore) saveToFile() error {
++	tempPath := tempFile.Name()
++	defer os.Remove(tempPath)
++	defer tempFile.Close()
++
++	if err := tempFile.Chmod(0600); err != nil {
++		return errors.NewIOError(err)
++	}
++	if _, err := tempFile.Write(data); err != nil {
++		return errors.NewIOError(err)
++	}
++	if err := tempFile.Sync(); err != nil {
++		return errors.NewIOError(err)
++	}
++	if err := tempFile.Close(); err != nil {
++		return errors.NewIOError(err)
++	}
++	if err := os.Rename(tempPath, s.FilePath); err != nil {
++		return errors.NewIOError(err)
++	}
++
++	// persist the directory entry when the filesystem supports it.
++	dirHandle, err := os.Open(dir)
++	if err == nil {
++		_ = dirHandle.Sync()
++		_ = dirHandle.Close()
++	}

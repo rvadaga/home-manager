@@ -1,6 +1,7 @@
 { config, pkgs, lib, osConfig ? null, inputs, ... }:
 let
   ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
+  xurlMcp = pkgs.callPackage ../packages/xurl-mcp.nix { };
   readInstructions = bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
       lib.optionals config.llmInstructions.includePersonalRepoBanner [
@@ -123,6 +124,8 @@ in {
     } // codexSkillFiles;
 
     packages = [
+      xurlMcp
+
       # shell and terminal
       pkgs.bash
       pkgs.nerd-fonts.fira-code
@@ -200,7 +203,15 @@ in {
 
       # nix tools
       pkgs.nix-direnv
-      pkgs.unstable.mcp-nixos
+      # test_read_text_file reads an arbitrary text file out of the real
+      # /nix/store and asserts "Error" is absent from the tool output — but it
+      # matches against the file's own contents. macos builds run unsandboxed
+      # (nix sandbox defaults to false on darwin), so the test sees the host
+      # store and trips over any file containing the word, e.g. a minified
+      # highlight.js bundle. impure upstream test; the other 281 still run.
+      (pkgs.unstable.mcp-nixos.overrideAttrs (old: {
+        disabledTests = (old.disabledTests or [ ]) ++ [ "test_read_text_file" ];
+      }))
 
       # programming languages: java
       pkgs.unstable.temurin-bin  # java 25
@@ -210,6 +221,7 @@ in {
       pkgs.unstable.nodejs_24
 
       # programming languages: python
+      pkgs.python3
       pkgs.poetry
       pkgs.unstable.uv
 
@@ -300,6 +312,18 @@ in {
         column = {
           ui = "auto";
         };
+
+        # clear platform helpers before gh so headless sessions do not fall
+        # through to a keychain that their process context cannot access.
+        credential = lib.genAttrs [
+          "https://github.com"
+          "https://gist.github.com"
+        ] (_: {
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
+        });
 
         core = {
           fsmonitor = true;
