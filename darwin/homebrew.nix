@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   user = config.users.users.${config.system.primaryUser};
 
@@ -84,7 +89,8 @@ let
     done
     exit $rc
   '';
-in {
+in
+{
   homebrew = {
     enable = true;
 
