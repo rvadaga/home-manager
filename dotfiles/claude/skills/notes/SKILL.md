@@ -1,6 +1,6 @@
 ---
 name: notes
-description: read, save, or curate notes in the obsidian llm-wiki vaults. "read <topic>" to pull up notes, "save <topic>" to save durable findings, "answer [<page>]" to answer inline "> q:" questions, "cleanup <page>" to refactor accumulated q&a into atomic pages, "lint [<vault>|all]" to run the health check.
+description: read, save, or curate notes in the obsidian llm-wiki vaults. use for reading a topic, saving durable findings, answering inline questions, refactoring accumulated q&a into atomic pages, or running the health check for one or all vaults.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(mkdir *), Bash(ls *), Bash(git *), Bash(python3 *), Bash(find *), Bash(gstat *)
 ---
 
@@ -165,6 +165,13 @@ rules:
 
 **when to use mermaid vs ascii:** check the longest line in the diagram. if it exceeds ~60 characters, use mermaid — ascii diagrams wider than that wrap badly on mobile screens. below ~60 chars, a simple ascii diagram (e.g. `A → B → C`) is fine.
 
+mermaid direction tokens are case-sensitive grammar, not prose. start a flowchart with one of the exact uppercase forms `LR`, `RL`, `TD`, `TB`, or `BT`:
+
+```mermaid
+flowchart LR
+  source --> result
+```
+
 obsidian's mermaid renderer does **not** interpret `\n` as a line break in node labels or edge labels — it renders literally as `\n`. always use `<br/>` instead:
 
 ```
@@ -178,12 +185,12 @@ specific rules by diagram element:
 - **sequence diagram participant aliases** (`participant x as "..."`) — single-line only; `<br/>` does not work here; keep aliases short and descriptive
 - **subgraph titles** (`subgraph title["..."]`) — use `<br/>` if multi-line is needed
 
-when writing a new diagram, scan all node/edge label strings for `\n` before saving.
+before saving new or edited markdown that contains a mermaid fence, run `<notes-skill>/scripts/validate-mermaid.py <exact-markdown-path>...`. it inspects only mermaid fences, rejects invalid flowchart direction tokens and literal `\n`, and leaves prose and other code fences alone.
 
 ## important notes
 
 - defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, layout, and log direction
-- lowercase everything (filenames and content) per global CLAUDE.md
+- lowercase filenames and human-written prose per global CLAUDE.md; preserve case-sensitive syntax and identifiers. the mermaid section names its valid direction grammar
 - **the vaults are git repos** (since 2026-07-18; `.obsidian/workspace.json` ignored) — commit at the end of any session that wrote to a vault; a plain descriptive message, no push (local-only repos)
 - prefer atomic pages — many small focused files over one big file
 - when editing a page for any reason, preserve unanswered `> q:` blocks the user has added — they are pending work, not clutter

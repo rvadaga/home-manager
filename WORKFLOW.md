@@ -57,13 +57,15 @@ this allows scripts to use `home-manager switch --flake ".#$HM_CONFIG_NAME"` wit
 
 when you make changes to shared modules (base.nix, programs/*, etc.):
 
-1. make changes in this repo
-2. commit and push to main
-3. other flakes that import this config can update their lock file:
+1. make changes in a worktree and open a draft pull request
+2. merge only after approval
+3. other flakes that import this config update their lock file in their own review branch:
    ```bash
    nix flake update personal-config
    home-manager switch --flake ".#$HM_CONFIG_NAME"
    ```
+
+known home-only changes use sudo-free home-manager activation. system changes use a non-activating nix-darwin build, then wait for the user to run or explicitly authorize the authenticated system switch. shared inputs and unclear changes build both graphs before either command is chosen.
 
 ## claude settings infrastructure
 
