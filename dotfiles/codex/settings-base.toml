@@ -93,8 +93,8 @@ enabled = true
 url = "https://docs.x.com/mcp"
 
 [mcp_servers.xapi]
-args = ["-y", "@xdevplatform/xurl", "mcp", "https://api.x.com/mcp"]
-command = "npx"
+args = ["mcp", "https://api.x.com/mcp"]
+command = "xurl-mcp"
 default_tools_approval_mode = "auto"
 enabled = true
 

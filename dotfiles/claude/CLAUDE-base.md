@@ -54,8 +54,8 @@
     * rename only the branch (`git branch -m <old> <new>`), never move the worktree directory — directory moves break the current session's cwd resolution.
 * when making any nix config changes:
     * **every change goes worktree → draft pr → rahul's "looks ok" → merge to main → rebuild, via the `/nix-rebuild` skill.** NEVER edit/commit/push on the primary checkout's `main`, and NEVER `git push origin HEAD:main` — no config change lands on main without a reviewable pr first, no matter how small. (an explicit "ship it / land this / squash merge" instead uses `/ship-config`, which merges autonomously once the pre-merge test passes — the explicit command is the approval.)
-    * do not ask whether to rebuild after a change MERGES — once it's on main, rebuild autonomously (the approval gate is at merge, not at rebuild) unless the rebuild target is genuinely ambiguous
-    * rebuild command depends on the os — see os-specific instructions (darwin-rebuild on macos, home-manager switch on linux)
+    * after merge, activate a known home-only change with sudo-free `home-manager switch`. a macos system activation is a separate authorization: build it without sudo, then stop for rahul to run or explicitly authorize the exact authenticated `sudo darwin-rebuild switch` command
+    * when a change can affect both home-manager and the system, or ownership is unclear, build both graphs. do not choose an activation command from a filename list
     * use `--override-input` for significant `*.nix` file changes and whenever a change should be validated before pushing or merging (pre-merge testing — see /ship-config and /nix-rebuild)
     * skip `exec $SHELL` — claude code's shell snapshot is captured at conversation start and won't update mid-conversation; new shell changes take effect in the next conversation
 * never fetch or pull all remote branches — always fetch only the specific branch needed (e.g., `gfo main`, never `gfa` or bare `gf`). fetching everything pollutes `git branch --all` output
@@ -98,7 +98,7 @@
     * a stale probe manufactures signals: `git diff origin/main -- <path>` in a stale worktree looks exactly like a concurrent edit, because main's own additions show up as that worktree's deletions, and `merge-tree` conflicts often reproduce identically against plain `origin/main`. probe with `git log origin/main..HEAD -- <path>` for unpushed commits and `git status --porcelain -- <path>` for uncommitted ones — that pair answers "what does this worktree hold that main lacks". keep that question apart from the worktree-removal data-loss gate above: the same two commands are right here and wrong there, because after a squash merge they report at-risk work on a branch that fully landed. use `git diff --word-diff` when two clauses share a line. run the control even when it feels unnecessary: a false alarm blocks a correct change, while a false all-clear costs at most a merge.
     * re-read the source before you re-flag something, not just before you act on it. a brief can be stale the moment it arrives, and the problem you are about to report may already be fixed.
     * silence is not success, and a broken check fails silently toward "clean". `gh pr merge --squash` prints nothing when it works, and chaining a check onto the same command also returns empty, so success and silent failure look identical — re-query `state` and `mergedAt` in a separate call, and run `gh pr ready` first because merge refuses a draft. audit the check itself too: `awk -F: '$2<=4'` compares the matched text rather than the line number, and `$?` after a pipeline is the last command's status, so `cmd | tee` reads as success whatever `cmd` did.
-* **memory routing — codify durable facts/rules in the nix-managed CLAUDE.md sources, scoped right.** shared behavioral rules → `CLAUDE-base.md`; os-specific → `CLAUDE-{mac,linux,nixos}.md`; **personal-only** reference facts (personal accounts, api access, machine-local setup) → `CLAUDE-personal-scope.md`, which is NOT inherited by downstream/work flakes that consume this config as a flake input (base IS); work-specific → the work config. don't stash durable facts in loose `~/.claude/memory/` — not version-controlled, not reliably loaded, can't be scoped. reserve harness memory for transient project-session state.
+* **memory routing — codify durable facts/rules in the nix-managed CLAUDE.md sources, scoped right.** shared behavioral rules and reference facts intentionally used on every machine → `CLAUDE-base.md`; os-specific → `CLAUDE-{mac,linux,nixos}.md`; reference facts that must stay off downstream/work machines → `CLAUDE-personal-scope.md`, which those flakes do not inherit; work-specific → the work config. scope follows where the fact should be loaded, not whether an account is personally owned. don't stash durable facts in loose `~/.claude/memory/` — not version-controlled, not reliably loaded, can't be scoped. reserve harness memory for transient project-session state.
 * **when you write or amend a rule — in CLAUDE.md, a skill, or a doc — check its shape, not only whether it is true.** these defects get past a reader who agrees with every sentence. worked examples for each: `reference-rule-shape-defects.md` in work-home-manager project memory.
     * assume the reader goes to whichever edge of your wording suits them, and make both edges safe. a list of options is permission to pick the laziest one, and "check the flagged lines" is obeyed by checking only those while the rest of the file stays broken, so say what has to be true rather than naming one example. the same gap runs the other way for a grant of latitude: an unscoped "decide, don't ask" authorizes deciding things that were never yours, so say where the autonomy stops.
     * never write an instruction that forbids its own correction. mark a dead form "dead → migrate to X" rather than protecting it as an exception, or every future reader keeps the error alive. and when a set of rules makes it impossible to obey them all, the violations are the rules' own output: a repeated violation says something about the rule before it says anything about the person, so check that obeying is even possible before asking anyone to try harder.
@@ -143,24 +143,23 @@ when a change is large enough to warrant multiple prs:
 
 ## rebuild commands by os
 
-* **macos (nix-darwin):** `darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
+* **macos, known home-only change:** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
+* **macos, system or shared change:** build with `darwin-rebuild build --flake <flake-path>#$HM_CONFIG_NAME`, then stop for rahul to run or explicitly authorize `sudo darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME`
 * **linux (home-manager):** `home-manager switch --flake <flake-path>#$HM_CONFIG_NAME`
 
 ## parallel-worktree foot-gun
 
-* **the active system carries no visible cue about which worktree it was built from.** parallel worktrees of this config all activate into the same `/run/current-system` (and home-manager profile); whichever one ran `darwin-rebuild switch` most recently wins. **run `nix-provenance` as your FIRST diagnostic in any of these situations**, before deeper troubleshooting:
+* parallel worktrees activate into the same system and home locations. **run `nix-provenance` as your FIRST diagnostic in any of these situations**, before deeper troubleshooting:
     * before trusting "i rebuilt and my change took effect" / before reporting a fix as verified
     * when an expected change isn't visible in the active system ("i added module X but it's not loaded", "i edited setting Y but the system still shows the old value", "my new alias / script / command isn't on PATH")
     * when behavior diverges from what the source files imply (e.g. you read a file and it has feature A, but the running system behaves like it's still on the old version)
     * before blaming a bug on the code — first rule out "wrong build is active"
 
-  `darwin/provenance.nix` writes the flake's rev + content hash to `/etc/nix-config-provenance` at activation; `~/.local/bin/nix-provenance` (PATH bash script installed via `os-configs/base.nix`) reads it and compares with the current worktree's git state:
+  `darwin/provenance.nix` writes the system source stamp to `/etc/nix-config-provenance`. home-manager writes its source, generation, and activation mode to `~/.local/state/home-manager/provenance`. `~/.local/bin/nix-provenance` reports both layers, checks the home stamp against `current-home`, and compares both source revisions with the current worktree:
   ```bash
-  cat /etc/nix-config-provenance   # rev, narHash, lastModified, storePath
-  nix-provenance                   # same, plus comparison with `pwd`'s git state
+  nix-provenance
   ```
-  rev mismatch → rebuild from this worktree. rev matches but you've edited since → `narHash` (and the `-dirty` suffix on rev) catches that; rebuild anyway.
-* this only kicks in on nix-darwin (the module lives under `darwin/`). linux home-manager doesn't have an equivalent stamp yet.
+  the system and home revisions can differ when the commands are interleaved. `activation=standalone` means the last home activation was sudo-free home-manager; `activation=embedded` means it came from nix-darwin. rollback stays split between the nix-darwin system profile and the standalone home-manager generation profile.
 * downstream configs must opt in by importing `inputs.personal-config.darwinModules.provenance` and ensuring their `darwinSystem` sets `specialArgs = { inherit inputs; }`.
 
 ## multi-repo structure
@@ -208,17 +207,17 @@ each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-ev
 
 # x api mcp
 
-the `xapi` mcp server (settings-base.json mcpServers) uses the `npx -y @xdevplatform/xurl mcp https://api.x.com/mcp` bridge. oauth2 token cached in `~/.xurl` (auto-refreshes), authorized as @rahul_vadaga.
+the `xapi` mcp server uses the nix-managed `xurl-mcp mcp https://api.x.com/mcp` bridge. its patch coordinates oauth2 refresh across concurrent claude and codex processes, reloads the shared token after taking the lock, replaces the auth file atomically, and opens a browser only when no token exists. the token is cached in `~/.xurl` and authorized as @rahul_vadaga.
 
-* app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store (via `xurl auth app-only -`, reads from stdin).
+* app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store through `xurl-mcp auth app-only -`, which reads the token from stdin.
 * if the user-context token is ever revoked, re-auth with:
   ```bash
-  source ~/.config/secrets/x-mcp-oauth-client.env && npx -y @xdevplatform/xurl auth oauth2
+  source ~/.config/secrets/x-mcp-oauth-client.env && xurl-mcp auth oauth2
   ```
-* full-archive post search is the exception: the hosted mcp's `search_posts_all` tool requires app-only auth and 403s with the bridge's user-context token; the other 23 tools work user-context. run it from bash instead (deliberately not a second mcp server — that would persist the token in settings.local.json):
+* full-archive post search is the exception: the hosted mcp's `search_posts_all` tool requires app-only auth and rejects the bridge's user-context token. the other tools use user-context auth. run the full-archive request from bash instead of adding a second mcp server, which would persist the token in settings.local.json:
   ```bash
-  npx -y @xdevplatform/xurl --auth app "/2/tweets/search/all?query=<url-encoded>&max_results=10"
+  xurl-mcp --auth app "/2/tweets/search/all?query=<url-encoded>&max_results=10"
   ```
-  keep `max_results` low — pay-per-use bills $0.005 per post returned. a spending limit should be set in the developer console under billing (~$10/month).
-* the app-only bearer token cannot be minted via oauth2 client_credentials (403) — it comes from the developer console's app-only authentication section. if lost, regenerate there, then re-register in xurl's store from the secrets cache.
-* the `x-docs` server (https://docs.x.com/mcp) needs no auth.
+  keep `max_results` low because the api charges per post returned. set a spending limit in the developer console.
+* the app-only bearer token comes from the developer console's app-only authentication section. if it is lost, regenerate it there, then register it in xurl's store from the secrets cache.
+* the `x-docs` server at https://docs.x.com/mcp needs no auth.
