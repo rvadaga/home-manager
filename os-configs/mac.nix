@@ -6,9 +6,17 @@
 }:
 let
   codex = pkgs.callPackage ../packages/codex.nix { };
+  patchedBash = pkgs.callPackage ../packages/bash-darwin-pipe-fallback.nix { };
 in
 {
   llmInstructions.platforms = [ "mac" ];
+
+  programs.bash.package = patchedBash;
+  programs.direnv = {
+    package = pkgs.direnv.override { bash = patchedBash; };
+    stdlib = builtins.replaceStrings [ "@patched_bash_bin@" ] [ "${patchedBash}/bin" ]
+      (builtins.readFile ../scripts/direnv-patched-bash.sh);
+  };
 
   home = {
     file = {
@@ -43,6 +51,8 @@ in
     };
 
     packages = [
+      # the base module also installs bash; this one must win profile selection.
+      (lib.hiPrio patchedBash)
       codex
       pkgs.unstable.coreutils-prefixed # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
