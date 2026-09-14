@@ -1,0 +1,2 @@
+# patch context preserves upstream whitespace.
+packages/bash-darwin-pipe-fallback.patch -whitespace

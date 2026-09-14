@@ -2,6 +2,7 @@
 {
   imports = [
     ./nix.nix
+    ./bash.nix
     ./apps.nix
     ./fonts.nix
     ./system-defaults.nix
