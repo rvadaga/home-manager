@@ -82,10 +82,16 @@ in
         ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/github-stacked-prs/references/preparation-and-publication.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/preparation-and-publication.md;
+      ".claude/skills/github-stacked-prs/references/source-handoffs.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/references/source-handoffs.md;
+      ".claude/skills/github-stacked-prs/references/complete-restack.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/references/complete-restack.md;
       ".claude/skills/github-stacked-prs/references/selective-publication.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/selective-publication.md;
       ".claude/skills/github-stacked-prs/references/partial-stack-recovery.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/partial-stack-recovery.md;
+      ".claude/skills/github-stacked-prs/scripts/test-gh-stack-command.py".source =
+        ../dotfiles/claude/skills/github-stacked-prs/scripts/test-gh-stack-command.py;
       ".claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py".source =
         ../dotfiles/claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py;
       ".claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py".source =
