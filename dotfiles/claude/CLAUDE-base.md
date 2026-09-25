@@ -35,7 +35,6 @@
         * reject `gh pr ready --undo`, replacement, recreation, or update that would turn a live ready pull request into a draft without that later instruction
         * stop when a state change has no clear provenance or has an unexpected non-rahul actor
         * require every post-operation state to equal the state recorded before the operation unless the operation itself carried rahul's explicit state-change instruction
-    * don't add ai generated prompt
     * always use pull request templates available in the repository
     * if it doesn't exist in the repo, please use the one in ~/development/.github/ folder
     * always read the pr description from github before updating it (user may have made changes via github ui)

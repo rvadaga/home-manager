@@ -1,56 +1,57 @@
 # selective publication
 
-use this path to prioritize one coherent, tested changed layer or one contiguous changed subseries in a live draft stack. it is distinct from a complete restack: it moves only the selected local heads and deliberately leaves untouched descendants at their recorded remote heads.
+finish and publish one coherent, tested changed layer or contiguous subseries while leaving every unselected head in place. descendant migrations and pending handoffs may be explicitly deferred. neither deferral requires weakening the selected implementation or silently claiming that descendants work with it.
 
-## admit the selective path
+## admit selected work
 
-use it only when all of these facts come from one current live read:
+establish one current snapshot of the ordered stack with the assigned integrator. record every branch, local head, live remote head, pull request head, lease, base reference and readiness. the selected indexes must be contiguous; each selected head must contain unpublished changes. every unselected local, remote and pull request head must equal its recorded lease.
 
-- no restack has run in this attempt;
-- the selected changed layer indexes are contiguous;
-- every selected layer has a local head that differs from its recorded remote lease and pull request head;
-- every untouched descendant has the same local head, remote head, pull request head, and recorded lease;
-- every layer has a recorded pull request base reference and draft or ready state;
-- no remote head, pull request head, base reference, or state has moved unexpectedly; and
-- the selected patches do not semantically require a descendant change.
+reject a default-branch sync, conflict, restack already run, handoff adoption during this attempt, noncontiguous selection, incomplete selected behavior or checks, or unexpected head/base/state movement. use [complete restack](complete-restack.md) for work that actually integrates handoffs or changes descendant history. the existence of a pending handoff alone does not require adoption during selected publication.
 
-reject this path for a default-branch sync, a conflict, noncontiguous selected changes, a restack already run, missing or stale leases, unexpected state movement, a pending handoff that must be adopted, or a semantic change that must propagate. use the complete-restack path instead. do not simulate a selective path with a partial rebase.
+when a semantic change needs descendant migrations, name those migrations in `deferred_restack.work`. do the same for pending handoffs, with their immutable commit and base. each deferred item names its descendant indexes, remaining work and required checks. only work unnecessary for the selected layers may be deferred. if the selected behavior itself requires that handoff or migration, finish it before publication.
 
-record these facts in a json manifest backed by the live reads. run:
+keep one deferred record with the snapshot's exact parent and child heads, completed checks and their inputs, pending migrations and checks, and which earlier evidence the changed parent invalidates. the first untouched descendant needs a later rebase. mark the descendants `not_validated_against_selected_heads`; their earlier tests do not establish compatibility with the new parent.
+
+## validate and prepare
+
+use [preparation and publication](preparation-and-publication.md) for the complete-object linked integrator, ownership, hooks and lfs requirements. require clean porcelain. run the selected range's required compilation, behavior tests, formatters, generators and packaging checks according to the changed contracts. record actual check names, results and inputs with the attempt.
+
+review every selected layer's diff, run `git diff --check`, review exact conflict-marker matches and prove linear history within the selected range. the unchanged descendant's old parent boundary must remain recorded even though it is no longer based on the selected tip. do not claim a fully restacked topology.
+
+run the structural checker against the saved live-read manifest:
 
 ```sh
 python3 scripts/check-selective-publication-contract.py preflight.json
 ```
 
-the checker proves the manifest is internally consistent. it never substitutes for the live reads, review, or command output retained with the attempt.
+the checker verifies manifest consistency, not live state, test quality or the command's effective leases. immediately before the command, independently read every remote head, pull request head, base and readiness and compare them with the snapshot. stop on any movement.
 
-## prepare the selected subseries
+## pinned cli limitation
 
-use the normal complete-object linked integrator checkout from [preparation and publication](preparation-and-publication.md). retain its trusted-primary, exact-ref hydration, promisor, partial-clone, trunk, lfs, hook, linear-history, and exact-resource-lock safeguards. keep its porcelain clean.
+use only `gh stack push`. official version 0.1.1 has no per-layer push flag: it includes all active branches, so every unselected local head must remain at its remote lease. unchanged descendants need no new tests or handoff adoption during this pass. normal hooks still run for the command's actual ref set.
 
-run the selected layer or subseries tests and hooks. before publication, perform a diff check, exact conflict-marker review, and linear-history and topology checks that cover the selected range and show that unchanged refs can remain in place. independently read every recorded lease and pull request state immediately before the official command; they must equal the one preflight snapshot.
+the [pinned push implementation](https://github.com/github/gh-stack/blob/2bd699a544a09cb5c45a013d03416e0894b0454e/cmd/push.go) fetches active branches before [constructing leases from tracking refs](https://github.com/github/gh-stack/blob/2bd699a544a09cb5c45a013d03416e0894b0454e/internal/git/gitops.go). these files are unchanged from 0.1.0. a disposable local-remote fixture reproduces an intervening remote commit being overwritten after that refresh. neither more preflight reads nor a successful post-push readback protects the recorded lease during that interval. reproduce both the unchanged-child case and this limitation with `python3 scripts/test-gh-stack-command.py <official-binary>`; it uses disposable local remotes and no github access.
 
-the untouched descendants do not need a rebase, new tests, hooks, or pending-handoff adoption during this pass. record each as deferred restack work, including its exact lease and the first untouched descendant that now needs rebase. this deferral is expected, not a publication failure.
+retain the requirement that publication enforces the saved leases at the write. stock 0.1.1 alone does not meet it. when no separately verified enforcement exists, stop the actual push and report the cli blocker; continue selected implementation, validation and the deferred-work record. do not substitute a direct push, suppress the fetch, bypass hooks, or claim the package bump fixes the race. this limitation also affects complete-restack pushes.
 
-## publish and read back
+## read back the complete result
 
-use only `gh stack push`. version 0.1.0 has no single-branch publication flag, and its printed branch count can be broader than the refs that moved. do not infer success from that count, and never direct-push a managed stack ref.
-
-after the command, create a post-push manifest from fresh remote and pull request reads and run:
+retain the preflight file unchanged. after any permitted command attempt, including an error or partial update, obtain fresh local, remote and pull request state for the complete stack:
 
 ```sh
-python3 scripts/check-selective-publication-contract.py post-push.json
+python3 scripts/check-selective-publication-contract.py post-push.json --preflight preflight.json
 ```
 
-the post-push manifest must prove all of these facts:
+require selected remote and pull request heads to equal the saved selected local heads. require every unselected local, remote and pull request head to equal the saved lease. preserve every base and readiness. compare the post-push snapshot id, leases and deferred record with the original file; a newly rewritten expectation cannot prove preservation.
 
-- every changed remote and pull request head equals its selected local head;
-- every untouched descendant remote and pull request head still equals its exact recorded lease;
-- every pull request draft or ready state remains unchanged; and
-- every pull request base reference remains unchanged.
+report the exact changed heads and the named deferred work. for example: `the selected layer's compilation and interface tests passed at <head>. child <branch> still needs its caller migration and rebase; its integration tests have not run against this parent.` adapt the checks to the actual evidence. measure preparation and the official command separately.
 
-report the first untouched descendant as needing rebase and retain the deferred restack record. measure preparation through the instant before `gh stack push`, then measure the command itself separately. the later restack performs the complete per-layer and cumulative validation; selective publication never claims to have satisfied that later gate.
+when deferred work is integrated or restacked, apply the complete per-layer and cumulative validation at those heads and at final publication. selected-layer results never stand in for that validation or authorize a descendant merge.
 
 ## manifest fields
 
-the checker accepts `phase` as `preflight` or `post-push`, a `layers` array in parent-to-child order, and `changed_indices`. each layer records `local_head`, `remote_head`, `pr_head`, `lease_head`, `base_ref`, `state`, and `expected_state`. the preflight manifest also records one nonempty `preflight_snapshot_id`, `pre_push_readback`, `restack_ran`, `unexpected_remote_movement`, `semantic_propagation`, `integrator_clean`, `publication_command`, the six required checks, and a `deferred_restack` object when descendants remain. the post-push manifest retains that preflight snapshot id plus the preflight lease, expected state, and base reference for each layer.
+both phases contain `phase`, `preflight_snapshot_id`, the complete ordered `layers`, and `changed_indices`. each layer contains `branch`, `local_head`, `remote_head`, `pr_head`, `lease_head`, `base_ref`, `expected_base_ref`, `state`, and `expected_state`.
+
+preflight requires true `pre_push_readback` and `integrator_clean`; false `restack_ran`, `default_branch_sync`, `conflict`, `handoffs_adopted`, and `unexpected_remote_movement`; boolean `semantic_propagation` and `pending_handoffs`; `publication_command: "gh stack push"`; and the six true checks named by the checker. these assertions must have retained evidence.
+
+when descendants remain, `deferred_restack` names `first_descendant`, `reason`, `validation_status: "not_validated_against_selected_heads"`, and a `work` array. each work item contains `kind` (`migration`, `handoff`, or `validation`), `layer_indices`, `remaining_work`, `required_checks`, and `required_for_selected: false`. a handoff also has `commit` and `base`. semantic propagation requires a migration item; pending handoffs require a handoff item. post-push retains this record verbatim and requires the original preflight file.

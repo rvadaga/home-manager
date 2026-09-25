@@ -4,23 +4,23 @@
   fetchurl,
 }:
 let
-  version = "0.1.0";
+  version = "0.1.1";
   sources = {
     aarch64-darwin = {
       asset = "darwin-arm64";
-      hash = "sha256-XKmCQaJl1t4BgJXNrl88QNpcp4JFDuwOqRqo4+sYMQM=";
+      hash = "sha256-8Jqssu5y/bHUAe5PW5DgYpGahS/Dx7Zr8bGoUxBGF9g=";
     };
     x86_64-darwin = {
       asset = "darwin-amd64";
-      hash = "sha256-cSJmk5v0A0nc5siJMDe4jgRTM00w0GdQthzhpshkC7k=";
+      hash = "sha256-QHQPgmRcKMTh2kfGvQKmrEl9OCpFfBCTaUozaxdQr3E=";
     };
     aarch64-linux = {
       asset = "linux-arm64";
-      hash = "sha256-p5ZJ4SGEW3QEEJ3iHWVgHAnIxtAh2Tc4o0KNI5hqiEE=";
+      hash = "sha256-LaE/jEbydwI3x0SzQatr6fB1CFhaZ2JjTEqIqjVUYLw=";
     };
     x86_64-linux = {
       asset = "linux-amd64";
-      hash = "sha256-NYVS3X3OCkbOFT/hlicM7EgrhPCAlHiQqtQGGo1EvAs=";
+      hash = "sha256-ntEDk0+rD5DTNB/fxKNCeFOW059WIfxzE6YmAs4rVGI=";
     };
   };
   source =
@@ -49,6 +49,7 @@ stdenvNoCC.mkDerivation {
   installCheckPhase = ''
     runHook preInstallCheck
     "$out/bin/gh-stack" --version | grep -F "gh stack version ${version}"
+    "$out/bin/gh-stack" push --help | grep -F "gh stack push"
     "$out/bin/gh-stack" view --help | grep -F "gh stack view"
     "$out/bin/gh-stack" rebase --help | grep -F "gh stack rebase"
     "$out/bin/gh-stack" rebase --help | grep -F -- "--continue"
