@@ -29,6 +29,7 @@ let
       ++ [ (builtins.readFile bodyPath) ]
     );
   baseInstructions = readInstructions ../dotfiles/claude/CLAUDE-personal-scope.md ../dotfiles/claude/CLAUDE-base.md;
+  codexBaseSettings = builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml);
   # preserve app-owned entries such as .system by managing only shared children.
   codexSkillFiles =
     lib.mapAttrs'
@@ -62,9 +63,8 @@ in
   claude.settingsPieces = [
     (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json))
   ];
-  codex.settingsPieces = [
-    (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml))
-  ];
+  codex.settingsPieces = [ codexBaseSettings ];
+  codex.forcedSettings.model = codexBaseSettings.model;
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
