@@ -65,6 +65,7 @@ in
   ];
   codex.settingsPieces = [ codexBaseSettings ];
   codex.forcedSettings.model = codexBaseSettings.model;
+  codex.forcedSettings.model_reasoning_effort = codexBaseSettings.model_reasoning_effort;
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
