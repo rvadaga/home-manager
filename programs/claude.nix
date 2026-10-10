@@ -11,34 +11,21 @@ let
   # arrays concatenate and deduplicate so os-specific settings add to the base.
   deepMerge = import ../shared/deep-merge.nix { inherit lib; };
 
-  nixMergedSettingsJson = builtins.toJSON (lib.foldl deepMerge { } config.claude.settingsPieces);
+  nixMergedSettingsJson = builtins.toJSON (
+    lib.recursiveUpdate (lib.foldl deepMerge { } config.claude.settingsPieces) config.claude.forcedSettings
+  );
   nixMergedSettings = pkgs.writeText "claude-settings-nix-merged.json" nixMergedSettingsJson;
+  forcedSettings = pkgs.writeText "claude-settings-forced.json" (builtins.toJSON config.claude.forcedSettings);
   jq = "${pkgs.jq}/bin/jq";
-
-  # jq filter: deep merge two objects with array union.
-  # nix merged settings (.[0]) provide new keys; live file (.[1]) wins on scalar conflicts.
-  # uses two-argument def form to avoid jq scoping issues with reduce.
-  deepMergeFilter = ''
-    def deep_merge(a; b):
-      a as $aa | b as $bb |
-      if ($aa | type) == "object" and ($bb | type) == "object" then
-        (($aa | keys_unsorted) + ($bb | keys_unsorted)) | unique |
-        reduce .[] as $k ({};
-          if ($aa | has($k)) and ($bb | has($k)) then
-            . + {($k): deep_merge($aa[$k]; $bb[$k])}
-          elif ($bb | has($k)) then . + {($k): $bb[$k]}
-          else . + {($k): $aa[$k]}
-          end
-        )
-      elif ($aa | type) == "array" and ($bb | type) == "array" then
-        ($aa + $bb) | unique
-      else $bb
-      end;
-    deep_merge(.[0]; .[1])
-  '';
 in
 {
   options.claude = {
+    forcedSettings = mkOption {
+      type = types.attrs;
+      default = { };
+      description = "settings.json values that replace live values on each activation; other live settings are preserved";
+    };
+
     settingsPieces = mkOption {
       type = types.listOf types.attrs;
       default = [ ];
@@ -58,9 +45,9 @@ in
           cp "$nix_merged" "$target"
           echo "seeded $target from nix config"
         else
-          # additive merge: nix merged settings bring new keys/entries, live wins on conflicts
+          # declared forced settings replace live values; other live scalars keep their values.
           local merged
-          merged=$(${jq} -s '${deepMergeFilter}' "$nix_merged" "$target")
+          merged=$(${jq} -s -f ${../scripts/merge-claude-settings.jq} "$nix_merged" "$target" "${forcedSettings}")
           chmod u+w "$target"
           echo "$merged" > "$target"
           echo "merged nix settings into $target"

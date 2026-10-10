@@ -68,6 +68,25 @@ class MergeCodexSettingsTest(unittest.TestCase):
             "features": {"fast_mode": True}, "items": ["live", "shared", "default"],
         })
 
+    def test_managed_x_launcher_replaces_the_old_npx_entry(self):
+        managed = {"command": "xurl-mcp", "args": ["mcp", "https://api.x.com/mcp"]}
+        self.write(self.defaults, {"mcp_servers": {"xapi": managed}})
+        self.write(self.forced, {"mcp_servers": {"xapi": managed}})
+        self.write(self.target, {
+            "mcp_servers": {
+                "xapi": {"command": "npx", "args": ["-y", "@xdevplatform/xurl", "mcp", "https://api.x.com/mcp"],
+                         "enabled": False, "default_tools_approval_mode": "auto"},
+                "other": {"command": "other-tool", "args": ["custom"]},
+            },
+            "model": "custom-model",
+        })
+        expected = self.read()
+        expected["mcp_servers"]["xapi"].update(managed)
+        self.merge()
+        self.assertEqual(self.read(), expected)
+        self.merge()
+        self.assertEqual(self.read(), expected)
+
     def test_forced_arrays_replace_existing_arrays(self):
         self.write(self.defaults, {"nested": {"items": ["default"], "keep": True}})
         self.write(self.target, {"nested": {"items": ["live"]}})

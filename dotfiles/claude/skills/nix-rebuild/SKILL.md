@@ -105,7 +105,7 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
   python3 -c "import json; print(json.load(open('$M')).get('<key>'))"
   ```
 - tools / scripts / skills: `which <tool>`, `ls ~/.claude/skills/`.
-- live `~/.claude/settings.json` is an additive merge (live wins scalar conflicts, arrays union-merge) — a nix-side scalar change can be invisible live; the closure artifact is the truth about what nix ships.
+- settings precedence is defined in `home-manager-reference.md`; this pointer keeps that rule in one place. a nix-side default can be invisible live unless declared as a forced value; inspect the generated artifact and the resulting live value.
 
 ## settings precedence (scalar bumps)
 

@@ -12,7 +12,9 @@ for the condensed version, see CLAUDE.md.
     * on every home activation, the nix baseline is deep-merged into the live file
     * objects merge recursively — live values win on scalar conflicts
     * arrays are union-merged (concat + deduplicate) — new nix permissions appear without losing locally-approved ones
-    * on first run (or if the file is missing/still a symlink), the file is seeded from the nix baseline
+    * values declared in `claude.forcedSettings` replace their live values after the merge, including whole arrays; other live values keep the precedence above
+    * the x bridge command and arguments use this override so obsolete launchers cannot survive a rebuild
+    * on first run (or if the file is missing/still a symlink), the file is seeded from the nix baseline with those overrides applied
 * settings.local.json is **not managed by nix** — claude code owns it entirely
 * to export live settings back to nix source files, use the `/sync-claude-settings` skill
 * to compare live vs nix source without modifying anything, use the `/diff-claude-settings` skill
@@ -84,7 +86,7 @@ use `/diff-claude-settings` for a read-only comparison without making changes.
 
 1. edit the source file in `~/.config/home-manager/dotfiles/claude/`
 2. commit and push
-3. rebuild — merges nix baseline into live file (live values win on conflicts, arrays are unioned)
+3. rebuild — merges the nix baseline using the precedence described in the overview above
 
 ### for syncing locally-approved permissions to nix source
 

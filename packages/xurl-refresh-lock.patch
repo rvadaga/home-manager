@@ -245,7 +245,7 @@ index 0000000..dfcd72d
 +	"syscall"
 +)
 +
-+// WithOAuth2TokenStoreLock serializes OAuth2 refresh and MCP bootstrap login across local xurl processes.
++// concurrent processes must share one token refresh at a time.
 +func WithOAuth2TokenStoreLock(authFilePath string, operation func() error) error {
 +	lockFile, err := os.OpenFile(authFilePath+".lock", os.O_CREATE|os.O_RDWR, 0600)
 +	if err != nil {
@@ -333,152 +333,115 @@ index 0000000..f06cf63
 +	require.NoError(t, <-secondDone)
 +}
 diff --git a/cli/mcp.go b/cli/mcp.go
-index 1ff19d3..93614f2 100644
 --- a/cli/mcp.go
 +++ b/cli/mcp.go
-@@ -7,0 +8 @@ import (
-+	"errors"
-@@ -20,0 +22 @@ import (
-+	xurlErrors "github.com/xdevplatform/xurl/errors"
-@@ -125 +127,2 @@ func (b *mcpBridge) bootstrap() error {
+@@ -63,5 +62,0 @@
+-	// oauth2Flow obtains a token via the interactive browser login when none is
+-	// cached. It is a field rather than a direct call so tests can substitute a
+-	// stub for the real browser flow.
+-	oauth2Flow func(username string) (string, error)
+-
+@@ -90,4 +85,3 @@
+-		url:        url,
+-		auth:       a,
+-		username:   username,
+-		oauth2Flow: a.OAuth2Flow,
++		url:      url,
++		auth:     a,
++		username: username,
+@@ -119,5 +113 @@
+-// bootstrap ensures a usable token exists before bridging. It refreshes an
+-// expired token; if none is cached it runs the interactive browser login and
+-// blocks until that completes, so the bridge never starts serving without
+-// credentials. The login writes only to stderr, keeping the stdout JSON-RPC
+-// channel clean.
++// background startup may refresh a saved token but must never open a browser.
+@@ -125,5 +115 @@
 -	if _, err := b.accessToken(); err == nil {
-+	_, err := b.accessToken()
-+	if err == nil {
-@@ -128,4 +131,33 @@ func (b *mcpBridge) bootstrap() error {
+-		return nil
+-	}
 -	b.logf("no valid OAuth2 token; opening the browser to sign in -- complete the login to start the bridge...")
 -	if _, err := b.oauth2Flow(b.username); err != nil {
--		hint := appFlagHint(b.auth.AppName())
++	if _, err := b.accessToken(); err != nil {
+@@ -131,3 +117,2 @@
 -		return fmt.Errorf("authentication failed: %w\n(on a headless machine, run `xurl auth oauth2%s --headless` first)", err, hint)
-+	if !isMissingOAuth2Token(err) {
-+		return b.oauth2UnavailableError(err)
-+	}
-+
-+	resolveAfterUnlock := false
-+	err = auth.WithOAuth2TokenStoreLock(b.auth.TokenStore.FilePath, func() error {
-+		if _, statErr := os.Stat(b.auth.TokenStore.FilePath); statErr == nil {
-+			if reloadErr := b.auth.TokenStore.Reload(); reloadErr != nil {
-+				return b.oauth2UnavailableError(reloadErr)
-+			}
-+			if b.hasStoredOAuth2Token() {
-+				resolveAfterUnlock = true
-+				return nil
-+			}
-+		} else if !os.IsNotExist(statErr) {
-+			return b.oauth2UnavailableError(statErr)
-+		}
-+
-+		b.logf("no valid OAuth2 token; opening the browser to sign in -- complete the login to start the bridge...")
-+		if _, loginErr := b.oauth2Flow(b.username); loginErr != nil {
-+			hint := appFlagHint(b.auth.AppName())
-+			return fmt.Errorf("authentication failed: %w\n(on a headless machine, run `xurl-mcp auth oauth2%s --headless` first)", loginErr, hint)
-+		}
-+		b.logf("authentication complete; starting bridge")
-+		return nil
-+	})
-+	if err != nil {
-+		return err
-+	}
-+	if resolveAfterUnlock {
-+		if _, err := b.accessToken(); err != nil {
-+			return b.oauth2UnavailableError(err)
-+		}
-@@ -133 +164,0 @@ func (b *mcpBridge) bootstrap() error {
+-	}
 -	b.logf("authentication complete; starting bridge")
-@@ -136,0 +168,19 @@ func (b *mcpBridge) bootstrap() error {
-+func isMissingOAuth2Token(err error) bool {
-+	var authErr *xurlErrors.Error
-+	return errors.As(err, &authErr) && authErr.Type == xurlErrors.ErrTypeAuth && authErr.Message == "TokenNotFound"
-+}
-+
-+func (b *mcpBridge) oauth2UnavailableError(err error) error {
-+	hint := appFlagHint(b.auth.AppName())
-+	return fmt.Errorf("oauth2 token unavailable: %w\nrun `xurl-mcp auth oauth2%s` to reauthenticate", err, hint)
-+}
-+
-+func (b *mcpBridge) hasStoredOAuth2Token() bool {
-+	if b.username != "" {
-+		token := b.auth.TokenStore.GetOAuth2TokenForApp(b.auth.AppName(), b.username)
-+		return token != nil && token.OAuth2 != nil
++		return fmt.Errorf("oauth2 token unavailable: %w\nrun `xurl-mcp auth oauth2%s` to reauthenticate", err, hint)
 +	}
-+	_, token := b.auth.TokenStore.GetFirstOAuth2TokenRecordForApp(b.auth.AppName())
-+	return token != nil && token.OAuth2 != nil
-+}
-+
-@@ -731 +781 @@ func CreateMCPCommand(a *auth.Auth) *cobra.Command {
+@@ -731 +716 @@
 -xurl reads newline-delimited JSON-RPC from stdin, forwards each message to the
 +xurl-mcp reads newline-delimited JSON-RPC from stdin, forwards each message to the
-@@ -737 +787 @@ session id is maintained across requests.
+@@ -737 +722 @@
 -The access token is resolved exactly like 'xurl token': an existing token is
 +The access token is resolved exactly like 'xurl-mcp token': an existing token is
-@@ -741,2 +791,2 @@ login on startup and blocks until it completes, so a first run needs no separate
+@@ -739,5 +724,5 @@
+-If no token is cached, the bridge opens the browser for an interactive OAuth2
+-login on startup and blocks until it completes, so a first run needs no separate
 -'xurl auth oauth2' step. On a remote/headless machine without a browser,
 -authenticate first with 'xurl auth oauth2 [--app NAME] --headless'. All
-+'xurl-mcp auth oauth2' step. On a remote/headless machine without a browser,
-+authenticate first with 'xurl-mcp auth oauth2 [--app NAME] --headless'. All
-@@ -751,3 +801,2 @@ Example MCP client config:
+-diagnostics go to stderr so stdout stays a clean JSON-RPC channel.
++background startup never opens a browser. if no usable token is available,
++the bridge exits with an authentication error. run 'xurl-mcp auth oauth2'
++explicitly to sign in. on a remote/headless machine, run
++'xurl-mcp auth oauth2 [--app NAME] --headless'. diagnostics go to stderr so
++stdout stays a clean JSON-RPC channel.
+@@ -751,3 +736,2 @@
 -        "command": "npx",
 -        "args": ["-y", "@xdevplatform/xurl", "mcp", "https://api.x.com/mcp"],
 -        "env": { "CLIENT_ID": "...", "CLIENT_SECRET": "..." }
 +        "command": "xurl-mcp",
 +        "args": ["mcp", "https://api.x.com/mcp"]
 diff --git a/cli/mcp_test.go b/cli/mcp_test.go
-index eed662d..da29634 100644
 --- a/cli/mcp_test.go
 +++ b/cli/mcp_test.go
-@@ -14,0 +15 @@ import (
-+	"sync/atomic"
-@@ -605,0 +607,93 @@ func TestMCPBridgeBootstrapRunsLoginWithoutToken(t *testing.T) {
-+func TestMCPBridgeBootstrapCoordinatesLoginAcrossTokenStores(t *testing.T) {
-+	tempDir := t.TempDir()
-+	tokenPath := filepath.Join(tempDir, "auth.yml")
-+	firstStore := &store.TokenStore{
-+		Apps:       map[string]*store.App{"default": {OAuth2Tokens: map[string]store.Token{}}},
-+		DefaultApp: "default",
-+		FilePath:   tokenPath,
-+	}
-+	require.NoError(t, firstStore.SaveBearerToken("app-token"))
-+	secondStore := &store.TokenStore{FilePath: tokenPath}
-+	require.NoError(t, secondStore.Reload())
+@@ -571,4 +571,7 @@
+-// newTokenlessBridge builds a bridge whose store holds no OAuth2 token, with the
+-// browser login stubbed so bootstrap never opens a real browser.
+-func newTokenlessBridge(t *testing.T, flow func(string) (string, error)) *mcpBridge {
+-	t.Helper()
++func TestMCPBridgeBootstrapWithSavedToken(t *testing.T) {
++	a := mcpTestAuth(t, "tok")
++	b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "", strings.NewReader(""), &bytes.Buffer{})
++	require.NoError(t, b.bootstrap())
++}
 +
-+	var loginCalls atomic.Int32
-+	loginStarted := make(chan struct{})
-+	secondLoginStarted := make(chan struct{})
-+	releaseLogin := make(chan struct{})
-+	newBridge := func(tokenStore *store.TokenStore) *mcpBridge {
-+		a := auth.NewAuth(&config.Config{}).WithTokenStore(tokenStore)
-+		b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "alice", strings.NewReader(""), &bytes.Buffer{})
-+		b.oauth2Flow = func(string) (string, error) {
-+			if loginCalls.Add(1) == 1 {
-+				close(loginStarted)
-+				<-releaseLogin
-+			} else {
-+				close(secondLoginStarted)
-+			}
-+			expiresAt := uint64(time.Now().Add(time.Hour).Unix())
-+			return "new-token", tokenStore.SaveOAuth2Token("alice", "new-token", "new-refresh", expiresAt)
-+		}
-+		return b
-+	}
-+
-+	firstBridge := newBridge(firstStore)
-+	secondBridge := newBridge(secondStore)
-+	results := make(chan error, 2)
-+	go func() { results <- firstBridge.bootstrap() }()
-+	<-loginStarted
-+	go func() { results <- secondBridge.bootstrap() }()
-+
-+	secondLoginRan := false
-+	select {
-+	case <-time.After(100 * time.Millisecond):
-+	case <-secondLoginStarted:
-+		secondLoginRan = true
-+	}
-+	close(releaseLogin)
-+
-+	require.NoError(t, <-results)
-+	require.NoError(t, <-results)
-+	assert.False(t, secondLoginRan)
-+	assert.Equal(t, int32(1), loginCalls.Load())
++func TestMCPBridgeBootstrapRequiresExplicitLoginWithoutToken(t *testing.T) {
+@@ -578 +581 @@
+-		FilePath:   filepath.Join(t.TempDir(), ".xurl"),
++		FilePath:   filepath.Join(t.TempDir(), "auth.yml"),
+@@ -582,28 +584,0 @@
+-	b.oauth2Flow = flow
+-	return b
+-}
+-
+-// TestMCPBridgeBootstrapSkipsLoginWithToken verifies a cached token short-circuits
+-// bootstrap without invoking the browser login.
+-func TestMCPBridgeBootstrapSkipsLoginWithToken(t *testing.T) {
+-	a := mcpTestAuth(t, "tok")
+-	b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "", strings.NewReader(""), &bytes.Buffer{})
+-	called := false
+-	b.oauth2Flow = func(string) (string, error) { called = true; return "", nil }
+-	require.NoError(t, b.bootstrap())
+-	assert.False(t, called)
+-}
+-
+-// TestMCPBridgeBootstrapRunsLoginWithoutToken verifies bootstrap runs the browser
+-// login when no token is cached and proceeds once it succeeds.
+-func TestMCPBridgeBootstrapRunsLoginWithoutToken(t *testing.T) {
+-	called := false
+-	b := newTokenlessBridge(t, func(string) (string, error) { called = true; return "new-token", nil })
+-	require.NoError(t, b.bootstrap())
+-	assert.True(t, called)
+-}
+-
+-// TestMCPBridgeBootstrapSurfacesLoginFailure verifies a failed login is reported
+-// with guidance to authenticate out-of-band.
+-func TestMCPBridgeBootstrapSurfacesLoginFailure(t *testing.T) {
+-	b := newTokenlessBridge(t, func(string) (string, error) { return "", io.ErrUnexpectedEOF })
+@@ -612 +587,38 @@
+-	assert.Contains(t, err.Error(), "--headless")
++	assert.Contains(t, err.Error(), "xurl-mcp auth oauth2")
 +}
 +
 +func TestMCPBridgeBootstrapDoesNotLoginAfterRefreshFailure(t *testing.T) {
@@ -512,15 +475,10 @@ index eed662d..da29634 100644
 +		TokenURL:     tokenServer.URL,
 +	}).WithTokenStore(tokenStore)
 +	b := newMCPBridgeWithIO("http://127.0.0.1:0", a, "alice", strings.NewReader(""), &bytes.Buffer{})
-+	loginCalled := false
-+	b.oauth2Flow = func(string) (string, error) { loginCalled = true; return "", nil }
 +
 +	err := b.bootstrap()
 +	require.Error(t, err)
-+	assert.False(t, loginCalled)
 +	assert.Contains(t, err.Error(), "oauth2 token unavailable")
-+}
-+
 diff --git a/store/tokens.go b/store/tokens.go
 index 5eb2be4..0f58b44 100644
 --- a/store/tokens.go
