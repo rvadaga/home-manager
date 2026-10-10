@@ -134,7 +134,7 @@ when a change is large enough to warrant multiple prs:
 ## key rules
 
 * CLAUDE.md is a read-only symlink — edit source files in `~/.config/home-manager/dotfiles/claude/` and rebuild
-* settings.json uses additive merge on rebuild — live values win on scalar conflicts, arrays are union-merged
+* settings.json merges on rebuild; see `home-manager-reference.md` for live-value precedence and nix-owned settings
 * settings.local.json is not managed by nix — claude code owns it
 * use `/sync-claude-settings` to export live settings back to nix source files
 * use `/diff-claude-settings` for read-only comparison
@@ -206,7 +206,7 @@ each vault has its own schema (CLAUDE.md or similar) that the LLM and user co-ev
 
 # x api mcp
 
-the `xapi` mcp server uses the nix-managed `xurl-mcp mcp https://api.x.com/mcp` bridge. its patch coordinates oauth2 refresh across concurrent claude and codex processes, reloads the shared token after taking the lock, replaces the auth file atomically, and opens a browser only when no token exists. the token is cached in `~/.xurl` and authorized as @rahul_vadaga.
+the `xapi` mcp server uses the nix-managed `xurl-mcp mcp https://api.x.com/mcp` bridge. its patch coordinates oauth2 refresh across concurrent claude and codex processes, reloads the shared token after taking the lock, replaces the auth file atomically, and never opens a browser from background mcp startup. run `xurl-mcp auth oauth2` explicitly to sign in. the token is cached in `~/.xurl` and authorized as @rahul_vadaga.
 
 * app credentials (client id + secret + app-only bearer token) are cached at `~/.config/secrets/x-mcp-oauth-client.env` (export lines, perms 600; never committed). the bearer token is also registered in xurl's local store through `xurl-mcp auth app-only -`, which reads the token from stdin.
 * if the user-context token is ever revoked, re-auth with:

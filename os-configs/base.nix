@@ -29,6 +29,7 @@ let
       ++ [ (builtins.readFile bodyPath) ]
     );
   baseInstructions = readInstructions ../dotfiles/claude/CLAUDE-personal-scope.md ../dotfiles/claude/CLAUDE-base.md;
+  claudeBaseSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
   codexBaseSettings = builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml);
   # preserve app-owned entries such as .system by managing only shared children.
   codexSkillFiles =
@@ -61,11 +62,17 @@ in
 
   # claude and codex configuration
   claude.settingsPieces = [
-    (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json))
+    claudeBaseSettings
   ];
   codex.settingsPieces = [ codexBaseSettings ];
   codex.forcedSettings.model = codexBaseSettings.model;
   codex.forcedSettings.model_reasoning_effort = codexBaseSettings.model_reasoning_effort;
+  codex.forcedSettings.mcp_servers.xapi = {
+    inherit (codexBaseSettings.mcp_servers.xapi) command args;
+  };
+  claude.forcedSettings.mcpServers.xapi = {
+    inherit (claudeBaseSettings.mcpServers.xapi) command args;
+  };
   home = {
     file = {
       ".codex/AGENTS.md".text = baseInstructions;
