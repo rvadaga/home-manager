@@ -1,13 +1,13 @@
 ---
 name: ship-config
-description: use when shipping, landing, or squash-merging a config change from a worktree to main. covers the draft pr, closure testing, merge, downstream cascade, activation authorization, verification, and cleanup.
+description: use when finishing authorized config work already in a worktree. covers draft pr publication, validation, merge, downstream updates, activation, verification, and cleanup under nix-rebuild authorization rules.
 ---
 
 # /ship-config
 
-ship a config change from a worktree to main: draft pr → pre-merge closure test → squash merge → cascade → activate → verify → cleanup. a passing test authorizes the merge. it does not authorize an agent to satisfy or bypass sudo authentication for a macos system activation.
+finish a config change already in a worktree: draft pr → validation → squash merge → downstream updates → activate → verify → cleanup.
 
-use this when asked to "ship", "land", or "merge" config work, or when finishing any worktree-based change in this repo. without explicit shipping approval, use `/nix-rebuild`; it opens a reviewable draft pull request and waits for approval before merging.
+use [config task authorization](../nix-rebuild/SKILL.md#config-task-authorization) for scope, merge and readiness authorization, and genuine reasons to stop. that rule lives in `/nix-rebuild` so these workflows cannot introduce different approval requirements. use `/nix-rebuild` when starting config work.
 
 ## workflow
 
@@ -24,7 +24,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - `gpsup` (git push --set-upstream origin <branch>)
    - `gh pr create --draft` using the repo's pr template (fallback: `~/development/.github/pull_request_template.md`); no ai-generated footer
 
-4. **pre-merge test** — classify the evaluated outputs, then build through the flake this machine uses. a known home-only change builds home-manager. a known system-only change builds nix-darwin. a shared input or unclear change builds both; do not encode a manual filename list.
+4. **pre-merge test** — apply `/nix-rebuild` step 4 for instruction-only review and skill validation. for nix or behavior changes, classify the evaluated outputs, then build through the flake this machine uses. a known home-only change builds home-manager. a known system-only change builds nix-darwin. a shared input or unclear change builds both; do not encode a manual filename list.
    - machine rebuilds from a downstream flake:
      ```bash
      home-manager build --flake <downstream-repo>#$HM_CONFIG_NAME \
@@ -34,8 +34,8 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
      ```
    - machine rebuilds directly from this flake:
      ```bash
-     darwin-rebuild build --flake <worktree>#$HM_CONFIG_NAME       # macos
-     home-manager build --flake <worktree>#$HM_CONFIG_NAME         # linux
+     home-manager build --flake <worktree>#$HM_CONFIG_NAME         # home graph on macos or linux
+     darwin-rebuild build --flake <worktree>#$HM_CONFIG_NAME       # macos system graph
      ```
    - **verify the artifact, not just the exit code.** locate the changed artifact in `./result`'s closure and assert the changed value, e.g. for claude settings:
      ```bash
@@ -45,9 +45,9 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - **settings precedence check**: settings pieces merge base → os piece → downstream piece; later pieces win scalar conflicts. when changing a scalar in `settings-base.json` or an os piece, grep later pieces for the same key — if present, bump them in the same ship or the change is silently overridden
    - test fails → fix and re-test. never merge a failing branch.
 
-5. **merge** (no confirmation gate after a passing test)
+5. **merge** — share the pr link and passing validation results, then apply the linked config task authorization rule
    - github-managed stack → invoke `github-stacked-prs`; preserve every live layer state and select only a live ready bottom layer. do not run the ordinary commands below.
-   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, this explicit shipping request authorizes `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. then run `gh pr merge <n> --squash --subject "<commit msg>" --body ""`
+   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply the linked config task authorization rule before `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. verify its expected ready state, then run `gh pr merge <n> --squash --match-head-commit <validated-head> --subject "<commit msg>" --body ""` for the validated head
    - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
      ```bash
      gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'
@@ -57,7 +57,7 @@ use this when asked to "ship", "land", or "merge" config work, or when finishing
    - fast-forward local main without `cd`: `git -C <main-repo> fetch origin main && git -C <main-repo> merge --ff-only origin/main`
    - keep that `gh pr view` output — deleting the branch retires the remote-ref form of the data-loss gate, so step 9 has to run on the merged-pr form.
 
-6. **cascade** — if machine-specific instructions define a downstream config consuming this flake as `personal-config`: bump its lock, commit, push (/nix-rebuild steps 4–5). fold any downstream-side edits identified in step 4 into the same commit.
+6. **cascade** — if machine-specific instructions define a downstream config consuming this flake as `personal-config`: complete its lock update through `/nix-rebuild`, including its own draft pr, validation, and merge before activation. fold any downstream-side edits identified in step 4 into that pr.
 
 7. **activate** — a known home-only change uses sudo-free `home-manager switch` from the merged flake. for a macos system or shared change, run a final non-activating nix-darwin build, then stop and give rahul the exact `sudo darwin-rebuild switch` command. continue only after rahul runs it or explicitly authorizes that authenticated step.
 
