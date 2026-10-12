@@ -6,6 +6,7 @@
 }:
 let
   codex = pkgs.callPackage ../packages/codex.nix { };
+  herdr = pkgs.callPackage ../packages/herdr.nix { };
   patchedBash = pkgs.callPackage ../packages/bash-darwin-pipe-fallback.nix { };
 in
 {
@@ -54,6 +55,7 @@ in
       # the base module also installs bash; this one must win profile selection.
       (lib.hiPrio patchedBash)
       codex
+      herdr
       pkgs.unstable.coreutils-prefixed # g-prefixed gnu coreutils (gpaste, gstat, etc.)
       pkgs.pinentry_mac
     ];
