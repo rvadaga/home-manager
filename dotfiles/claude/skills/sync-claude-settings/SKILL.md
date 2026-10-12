@@ -10,8 +10,8 @@ export live `~/.claude/settings.json` back to nix source files in `dotfiles/clau
 ## steps
 
 1. read `~/.claude/settings.json` (live file)
-2. read all source files from `~/.config/home-manager/dotfiles/claude/`: `settings-{base,linux,nixos,mac}.json`
-3. read `~/.config/home-manager/dotfiles/claude/desired-plugins.json`
+2. start or reuse the isolated `/nix-rebuild` worktree and read its source files from `<worktree>/dotfiles/claude/`: `settings-{base,linux,nixos,mac}.json`
+3. read `<worktree>/dotfiles/claude/desired-plugins.json`
 4. check CLAUDE.md for any downstream config instructions that specify additional settings files to include and their routing rules
 5. classify each `permissions.allow`, `permissions.deny`, and `permissions.ask` entry by keyword:
    - **linux:** spectacle, dbus-send, pgrep, fc-list, xdg, kde, xclip, xsel, wmctrl, xdotool, grep inet, ip route, man.archlinux.org
@@ -24,9 +24,9 @@ export live `~/.claude/settings.json` back to nix source files in `dotfiles/clau
    - route per downstream config instructions for keys that belong to a downstream settings file
    - **base:** `mcpServers` and all other top-level keys go to base by default
    - when a key exists in multiple files with different values, ask the user where it should go
-7. write to dotfiles, lexicographically sorted
-8. show diff, write on confirmation
-9. remind user to commit/push — if downstream configs are in separate repos, note that each needs its own commit
+7. prepare the requested source changes in the isolated `/nix-rebuild` worktree, lexicographically sorted
+8. show the diff and write within the authorized scope, using [config task authorization](../nix-rebuild/SKILL.md#config-task-authorization); an inspection-only request does not authorize a write
+9. complete publication, validation, merge, and activation through `/nix-rebuild`, including a separate pr for each downstream repo changed
 
 ## important notes
 
