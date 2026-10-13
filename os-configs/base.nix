@@ -20,6 +20,7 @@ let
   selfNarHash = self.narHash or "unknown";
   selfLastModified = self.lastModifiedDate or "unknown";
   selfStorePath = self.outPath;
+  homeActivationMode = if osConfig == null then "standalone" else "embedded";
   readInstructions =
     bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
@@ -240,10 +241,6 @@ in
         provenance_dir="${config.xdg.stateHome}/home-manager"
         provenance_file="$provenance_dir/provenance"
         provenance_tmp="$provenance_file.tmp.$$"
-        activation_mode=standalone
-        if (( hmDriverVersion >= 1 )); then
-          activation_mode=embedded
-        fi
 
         mkdir -p "$provenance_dir"
         {
@@ -253,7 +250,7 @@ in
             "lastModified=${selfLastModified}" \
             "storePath=${selfStorePath}" \
             "generation=$newGenPath" \
-            "activation=$activation_mode"
+            "activation=${homeActivationMode}"
         } > "$provenance_tmp"
         chmod 0644 "$provenance_tmp"
         mv -f "$provenance_tmp" "$provenance_file"
