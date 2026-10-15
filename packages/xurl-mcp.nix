@@ -3,6 +3,7 @@
   buildGoModule,
   fetchFromGitHub,
   gitMinimal,
+  python3,
 }:
 
 buildGoModule rec {
@@ -36,11 +37,13 @@ buildGoModule rec {
   '';
 
   doInstallCheck = true;
+  nativeInstallCheckInputs = [ python3 ];
   installCheckPhase = ''
     versionOutput="$("$out/bin/xurl-mcp" --version)"
     [[ "$versionOutput" == *"xurl version ${version}"* ]]
     helpOutput="$("$out/bin/xurl-mcp" mcp --help)"
     [[ "$helpOutput" == *"Bridge a stdio MCP client"* ]]
+    python3 ${../scripts/test-xurl-mcp.py} "$out/bin/xurl-mcp"
   '';
 
   meta = {

@@ -332,6 +332,7 @@
       # exported darwin modules for downstream nix-darwin configs
       # example: inputs.personal-config.darwinModules.base
       darwinModules = {
+        bash = ./darwin/bash.nix;
         common = ./darwin/common.nix;
         # compatibility name retained for downstream configurations.
         base = ./darwin/nix.nix;

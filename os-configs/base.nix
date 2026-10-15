@@ -20,6 +20,7 @@ let
   selfNarHash = self.narHash or "unknown";
   selfLastModified = self.lastModifiedDate or "unknown";
   selfStorePath = self.outPath;
+  homeActivationMode = if osConfig == null then "standalone" else "embedded";
   readInstructions =
     bannerPath: bodyPath:
     lib.concatStringsSep "\n\n" (
@@ -29,6 +30,8 @@ let
       ++ [ (builtins.readFile bodyPath) ]
     );
   baseInstructions = readInstructions ../dotfiles/claude/CLAUDE-personal-scope.md ../dotfiles/claude/CLAUDE-base.md;
+  claudeBaseSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
+  codexBaseSettings = builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml);
   # preserve app-owned entries such as .system by managing only shared children.
   codexSkillFiles =
     lib.mapAttrs'
@@ -60,14 +63,25 @@ in
 
   # claude and codex configuration
   claude.settingsPieces = [
-    (builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json))
+    claudeBaseSettings
   ];
-  codex.settingsPieces = [
-    (builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml))
-  ];
+  codex.settingsPieces = [ codexBaseSettings ];
+  codex.forcedSettings.model = codexBaseSettings.model;
+  codex.forcedSettings.model_reasoning_effort = codexBaseSettings.model_reasoning_effort;
+  codex.forcedSettings.plan_mode_reasoning_effort = codexBaseSettings.plan_mode_reasoning_effort;
+  codex.forcedSettings.agents = {
+    inherit (codexBaseSettings.agents) default_subagent_model default_subagent_reasoning_effort;
+  };
+  codex.forcedSettings.mcp_servers.xapi = {
+    inherit (codexBaseSettings.mcp_servers.xapi) command args;
+  };
+  claude.forcedSettings.mcpServers.xapi = {
+    inherit (claudeBaseSettings.mcpServers.xapi) command args;
+  };
   home = {
     file = {
-      ".codex/AGENTS.md".text = baseInstructions;
+      ".codex/AGENTS.md".text =
+        builtins.readFile ../dotfiles/codex/AGENTS-base.md + "\n\n" + baseInstructions;
       ".claude/CLAUDE.md".text = baseInstructions;
       ".claude/skills/sync-claude-settings/SKILL.md".source =
         ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;
@@ -82,10 +96,16 @@ in
         ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/github-stacked-prs/references/preparation-and-publication.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/preparation-and-publication.md;
+      ".claude/skills/github-stacked-prs/references/source-handoffs.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/references/source-handoffs.md;
+      ".claude/skills/github-stacked-prs/references/complete-restack.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/references/complete-restack.md;
       ".claude/skills/github-stacked-prs/references/selective-publication.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/selective-publication.md;
       ".claude/skills/github-stacked-prs/references/partial-stack-recovery.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/partial-stack-recovery.md;
+      ".claude/skills/github-stacked-prs/scripts/test-gh-stack-command.py".source =
+        ../dotfiles/claude/skills/github-stacked-prs/scripts/test-gh-stack-command.py;
       ".claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py".source =
         ../dotfiles/claude/skills/github-stacked-prs/scripts/check-selective-publication-contract.py;
       ".claude/skills/github-stacked-prs/scripts/test-selective-publication-contract.py".source =
@@ -226,10 +246,6 @@ in
         provenance_dir="${config.xdg.stateHome}/home-manager"
         provenance_file="$provenance_dir/provenance"
         provenance_tmp="$provenance_file.tmp.$$"
-        activation_mode=standalone
-        if (( hmDriverVersion >= 1 )); then
-          activation_mode=embedded
-        fi
 
         mkdir -p "$provenance_dir"
         {
@@ -239,7 +255,7 @@ in
             "lastModified=${selfLastModified}" \
             "storePath=${selfStorePath}" \
             "generation=$newGenPath" \
-            "activation=$activation_mode"
+            "activation=${homeActivationMode}"
         } > "$provenance_tmp"
         chmod 0644 "$provenance_tmp"
         mv -f "$provenance_tmp" "$provenance_file"

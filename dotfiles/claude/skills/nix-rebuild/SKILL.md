@@ -1,15 +1,23 @@
 ---
 name: nix-rebuild
-description: Use when making any change to nix config files (home-manager, nix-darwin, CLAUDE.md, settings, dotfiles, skills, commands). Covers the worktree → draft PR → approval → merge → rebuild workflow and downstream flake updates. A config change NEVER lands directly on main.
+description: use when changing nix config, managed instructions, settings, dotfiles, skills, or commands. carries authorized work through an isolated worktree, draft pr, validation, merge, activation, and downstream flake updates.
 ---
 
 # /nix-rebuild
 
-ship a nix config change the reviewable way: ALWAYS in a worktree, ALWAYS through a draft PR, merged to main ONLY after rahul says it looks ok — then rebuild. handles this config and downstream configs that consume it as a flake input (`personal-config`).
+complete a nix config change in an isolated worktree and through a reviewable draft pr. handles this config and downstream configs that consume it as a flake input (`personal-config`).
 
-**the invariant (non-negotiable): a config change NEVER lands directly on main.** no `git push origin HEAD:main`, no committing on the primary checkout's `main`, no "it's small so I'll skip the pr." every change goes worktree → branch → draft PR → rahul's ok → merge. the pr is what makes the change reviewable BEFORE it's live; the direct-to-main shortcut is exactly the mistake this skill exists to prevent.
+## config task authorization
 
-**/nix-rebuild vs /ship-config:** both go worktree → draft pr → merge. /nix-rebuild is the DEFAULT and STOPS for rahul's "looks ok" before merging (human gate). /ship-config is for an explicit "ship it / land this / squash merge" and proceeds autonomously once the pre-merge test passes (the explicit command IS the approval). when in doubt, use /nix-rebuild and wait.
+a request to install, update, or change config authorizes completing that task: isolated worktree → reviewable draft pr → passing validation → merge → activation → verification → cleanup. publish the pr link and validation results before merging, then continue without asking for another routine confirmation. a separate "looks ok" or shipping command is not required. keep the work within the requested scope, including any downstream lock update needed to use the change.
+
+a request only to inspect, plan, prepare a draft, or wait for review does not authorize merge or activation. ask only for genuinely missing authorization or a decision needed to complete the task. stop for unexplained pr state or remote movement, unresolved ownership, or validation failures that cannot be fixed within scope. passing checks alone do not grant authorization.
+
+every change must land through a pr. never edit or commit on the primary checkout's `main`, push directly to `main` or `master`, or bypass one-writer ownership or personal/work separation. preserve live draft/ready state and provenance under the shared `CLAUDE.md` rule. for an authorized ordinary config merge, mark only that pr ready immediately before merging; keep drafts outside that merge scope draft. an existing ready pr stays ready. github-managed stacks still use `github-stacked-prs` for readiness, publication, and merge selection.
+
+activation follows the home/system rules below. a macos system activation still requires rahul to run or explicitly authorize the exact authenticated sudo command; task authorization does not bypass authentication.
+
+`/nix-rebuild` starts config work; `/ship-config` finishes work already in a worktree. both use this authorization rule. keep the rule here so their approval requirements cannot drift apart.
 
 ## 1. worktree — ALWAYS (never edit the primary checkout)
 
@@ -44,10 +52,10 @@ gh pr create --repo <owner>/<repo> --draft --base main --head rahul/nix-rebuild-
 
 no AI-attribution trailer/footer. read the template from the repo (or the fallback) and actually fill it.
 
-## 4. validate before asking (pre-merge)
+## 4. validate before merging
 
-- docs / skills / CLAUDE.md / settings-markdown change → the PR DIFF is the reviewable artifact; no rebuild needed to review it.
-- change under `dotfiles/claude/skills/**` → ALSO validate the skill locally before surfacing the pr — the diff shows wording, not frontmatter schema, and a `skills-ref` ci gate is landing that turns invalid frontmatter into a red ci:
+- docs / skills / CLAUDE.md / settings-markdown change → review the full pr diff. a rebuild is still needed to activate managed instructions after merge.
+- change under `dotfiles/claude/skills/**` → also validate the skill locally before publishing. the required `skills-ref` ci check validates frontmatter:
   ```bash
   npx -y skills-ref@0.1.5 validate dotfiles/claude/skills/<skill-name>/
   ```
@@ -61,20 +69,23 @@ no AI-attribution trailer/footer. read the template from the repo (or the fallba
     --override-input personal-config path:<worktree>
   ```
 
-## 5. STOP — surface the pr, wait for rahul's "looks ok"
+## 5. publish the result and continue
 
-give him the pr link + a one-line what-changed + the validation result. do NOT merge until he says it looks ok. this human gate is the whole point of the skill — never auto-merge here (that's /ship-config's job, on an explicit ship command).
+share the pr link, what changed, and the validation results. proceed under [config task authorization](#config-task-authorization).
 
-## 6. on approval — merge, activate, verify, clean up
+## 6. merge, activate, verify, clean up
 
-1. **merge through the branch's workflow.** a github-managed stack uses `github-stacked-prs`; preserve its live states and select only a live ready bottom layer. for an ordinary pull request, rederive its live state under the shared `CLAUDE.md` rule. if it is draft, the approval for this merge authorizes `gh pr ready`; if it is already ready, preserve that state without a duplicate confirmation or ready command. then merge it (squash is the default):
+1. **merge through the branch's workflow.** a github-managed stack uses `github-stacked-prs`; preserve its live states and select only a live ready bottom layer. for an ordinary pull request, rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply [config task authorization](#config-task-authorization) before `gh pr ready`; if it is already ready, preserve that state without a duplicate confirmation or ready command. verify the expected ready state, then squash-merge the validated head after required checks pass:
    ```bash
+   # only when the pr is draft and this merge is authorized
    gh pr ready <n> --repo <owner>/<repo>
-   gh pr merge <n> --repo <owner>/<repo> --squash
+   gh pr view <n> --repo <owner>/<repo> --json isDraft,headRefOid
+   # require ready state and the validated head before merging
+   gh pr merge <n> --repo <owner>/<repo> --squash --match-head-commit <validated-head>
    ```
    then confirm it actually landed — a refused merge leaves the pr open and is easy to skim past:
    ```bash
-   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt   # want state=MERGED + non-null mergedAt
+   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt,headRefOid   # want MERGED, non-null mergedAt, and the validated head
    ```
 2. **activate** from the now-updated main, using the flake this machine actually uses (`$HM_CONFIG_NAME` selects the config):
    ```bash
@@ -82,12 +93,12 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
    ```
    this sudo-free command is the activation path for a known home-only change on macos or linux.
 
-   for a macos system or shared change, build the merged nix-darwin graph first. then stop and give rahul the exact authenticated command. rahul must run it or explicitly authorize it; merge approval does not authorize an agent to satisfy or bypass sudo authentication.
+   for a macos system or shared change, build the merged nix-darwin graph first. then stop and give rahul the exact authenticated command. rahul must run it or explicitly authorize it; task authorization does not authorize an agent to satisfy or bypass sudo authentication.
    ```bash
    darwin-rebuild build --flake ~/.config/home-manager#$HM_CONFIG_NAME
    sudo darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
    ```
-   downstream machine → after the base pr merges, bump the downstream lock (`nix flake update personal-config`) and use the downstream flake for every build and activation. that lock bump is itself a config change → its own worktree → draft pr → ok → merge, or part of the already-reviewed downstream pull request.
+   downstream machine → after the base pr merges, bump the downstream lock (`nix flake update personal-config`) and use the downstream flake for every build and activation. that lock bump is itself a config change → the same workflow under [config task authorization](#config-task-authorization), or part of the downstream pull request already within the task scope.
 3. **verify — artifact-level** (§verify).
 4. **clean up** — only after a green rebuild + verify (rebuild failed → leave the worktree for debugging). remove ONLY the worktree this invocation created:
    ```bash
@@ -105,7 +116,7 @@ give him the pr link + a one-line what-changed + the validation result. do NOT m
   python3 -c "import json; print(json.load(open('$M')).get('<key>'))"
   ```
 - tools / scripts / skills: `which <tool>`, `ls ~/.claude/skills/`.
-- live `~/.claude/settings.json` is an additive merge (live wins scalar conflicts, arrays union-merge) — a nix-side scalar change can be invisible live; the closure artifact is the truth about what nix ships.
+- settings precedence is defined in `home-manager-reference.md`; this pointer keeps that rule in one place. a nix-side default can be invisible live unless declared as a forced value; inspect the generated artifact and the resulting live value.
 
 ## settings precedence (scalar bumps)
 

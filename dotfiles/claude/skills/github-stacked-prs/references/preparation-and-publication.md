@@ -70,6 +70,8 @@ record the proof with the carried result. a missing proof, changed layer patch, 
 
 ## publish and time the attempt
 
+before an actual push, apply the pinned cli lease limitation in [selective publication](selective-publication.md#pinned-cli-limitation) to both publication modes. that reference owns the limitation so its stop condition stays consistent.
+
 hold the exact stack-history resource only while adopting accepted handoffs, resolving conflicts, restacking, making the lease/state check, and publishing. start the preparation timer when this attempt starts preparing its integrator checkout. stop it immediately before `gh stack push`. time `gh stack push` separately, from command start through command completion.
 
 invoke only `gh stack rebase`, `gh stack rebase --continue` after a stopped official rebase, and `gh stack push` for stack history and publication. retain hooks and git lfs safeguards. never direct-push, disable hooks, skip lfs, weaken live readback, or reduce the post-push equality check. after the push, require every local layer, remote layer, pull request head, base chain, and pull request state to match the recorded expected result.
