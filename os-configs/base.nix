@@ -68,6 +68,10 @@ in
   codex.settingsPieces = [ codexBaseSettings ];
   codex.forcedSettings.model = codexBaseSettings.model;
   codex.forcedSettings.model_reasoning_effort = codexBaseSettings.model_reasoning_effort;
+  codex.forcedSettings.plan_mode_reasoning_effort = codexBaseSettings.plan_mode_reasoning_effort;
+  codex.forcedSettings.agents = {
+    inherit (codexBaseSettings.agents) default_subagent_model default_subagent_reasoning_effort;
+  };
   codex.forcedSettings.mcp_servers.xapi = {
     inherit (codexBaseSettings.mcp_servers.xapi) command args;
   };
@@ -76,7 +80,8 @@ in
   };
   home = {
     file = {
-      ".codex/AGENTS.md".text = baseInstructions;
+      ".codex/AGENTS.md".text =
+        builtins.readFile ../dotfiles/codex/AGENTS-base.md + "\n\n" + baseInstructions;
       ".claude/CLAUDE.md".text = baseInstructions;
       ".claude/skills/sync-claude-settings/SKILL.md".source =
         ../dotfiles/claude/skills/sync-claude-settings/SKILL.md;

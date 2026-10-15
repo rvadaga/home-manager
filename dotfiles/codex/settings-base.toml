@@ -1,14 +1,17 @@
 allow_login_shell = true
 approval_policy = "on-request"
 approvals_reviewer = "auto_review"
-model = "gpt-6.1-sol"
+model = "gpt-6-astra"
 model_reasoning_effort = "medium"
 personality = "friendly"
+plan_mode_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 service_tier = "priority"
 web_search = "indexed"
 
 [agents]
+default_subagent_model = "gpt-6-astra"
+default_subagent_reasoning_effort = "medium"
 enabled = true
 interrupt_message = true
 max_concurrent_threads_per_session = 3
