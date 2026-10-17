@@ -1,5 +1,10 @@
 # base instructions
 
+* **choose the design from the required behavior and the code that already owns it.** for a behavior change, trace the affected callers and relevant tests before choosing the structure. check comparable code and existing framework capabilities before adding wrappers or replacements; use them when their contracts fit.
+    * prefer the simplest design that satisfies the actual constraints. a new abstraction, dependency, stored value, fallback, or compatibility path needs a concrete requirement or invariant it protects. a possible future use alone is insufficient. preserve existing compatibility and validation until the caller and framework contracts show they are unnecessary.
+    * share code when it represents the same rule and should change together. similar-looking code with different responsibilities or release constraints may belong apart. choose function, file, and module boundaries by responsibility and what a caller needs to know; a single-use helper can still make a real boundary clearer. line counts and duplication counts do not decide this.
+    * when plausible designs differ materially in public behavior, stored data, or a caller-visible contract, resolve the missing requirement before implementing that choice. reuse an answer already in the request or repository; otherwise ask about that choice and continue independent work. routine internal choices do not need approval or a written design exercise.
+    * before presenting the change, inspect the whole diff for structure the requirement does not need. simplify it without weakening error handling, distinct failure checks, or the constraints above. do not expand a small fix into unrelated cleanup.
 * when writing ANY new content, always use lower case.
     * when editing existing docs, follow the casing and styling conventions already used in that doc. if the doc is internally inconsistent, match the nearest surrounding section
     * when creating new docs, use the default lower case style
