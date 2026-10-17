@@ -12,7 +12,7 @@ keep enough detail for the intended reader. an overview needs the problem and th
 
 ## shorten without changing the claim
 
-keep the edit within the requested sections and preserve the surrounding document's style. compare the revised text with its source, not just with a desired length. check whether it still explains:
+keep the edit within the requested sections and preserve the surrounding document's style. preserve meaningful ordering, such as chronology, and comments attached to text being edited. compare the revised text with its source, not just with a desired length. check whether it still explains:
 
 - the problem and why the proposed behavior helps;
 - the conditions, alternatives, and tradeoffs that affect the decision;
