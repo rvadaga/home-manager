@@ -38,6 +38,8 @@ each vault's schema file is the source of truth for its conventions — **always
 2. read the vault's schema file for conventions — filename style, frontmatter template, directory layout, log direction
 3. skim the vault's `index.md` to see what's already catalogued
 
+when explaining a mechanism or shortening existing content, read [references/explain-and-preserve.md](references/explain-and-preserve.md). it covers the reasoning and evidence a reader must still be able to recover after the edit.
+
 ## read mode
 
 4. find notes matching the topic:
@@ -101,7 +103,7 @@ when q&a accumulates and the page stops reading as an article, refactor — neve
 - **spin peripheral-but-durable depth into new atomic pages** (one concept each) and link each from the concept's **first mention** in the body. this fixes placement incoherence structurally: where the user happened to ask no longer matters, because the pointer lives at the concept's introduction
 - the q&a dialogue format disappears from the page afterwards — the wiki stores knowledge, not transcripts
 - new pages cross-link each other and back to the source page; update `index.md` (new entries) and `log.md` (refactor entry)
-- verify nothing was lost: every answered question's content must survive somewhere (body or atomic page)
+- account for every answered question using the meaning-preservation check in [references/explain-and-preserve.md](references/explain-and-preserve.md); keep each still-valid answer in the body or a linked atomic page
 
 ## lint mode
 
