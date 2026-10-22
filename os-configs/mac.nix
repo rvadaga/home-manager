@@ -22,6 +22,11 @@ in
     sessionVariables.SUDO_ASKPASS = "${config.home.homeDirectory}/.local/libexec/sudo-askpass";
 
     file = {
+      ".local/bin/sudo-ask" = {
+        source = ../scripts/sudo-ask.sh;
+        executable = true;
+      };
+
       ".local/libexec/sudo-askpass" = {
         source = ../scripts/sudo-askpass.applescript;
         executable = true;

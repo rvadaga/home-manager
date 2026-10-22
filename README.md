@@ -249,16 +249,25 @@ ssh config and gpg-agent are set up in `os-configs/mac.nix` since `services.gpg-
 
 ### sudo without a terminal on macos
 
-the macos home module installs `~/.local/libexec/sudo-askpass` and exports
-`SUDO_ASKPASS`. use `sudo -A <command>` in a shell runner to authenticate in a
-dialog with a hidden password field. cancel or the two-minute timeout aborts
-authentication. the helper sends the password directly to sudo; it does not
-store it. do not run the helper directly, because its stdout is the password.
+the macos home module installs `sudo-ask`, `~/.local/libexec/sudo-askpass`, and
+exports `SUDO_ASKPASS`. run a command with the current session name:
 
-open a new shell after activation to load the environment. an already-running
-shell can use `SUDO_ASKPASS="$HOME/.local/libexec/sudo-askpass" sudo -A <command>`.
-this changes how the password is entered; sudo permissions and command approval
-requirements still apply. ordinary terminal commands can continue using `sudo`.
+```sh
+SUDO_ASKPASS_SESSION='current session name' sudo-ask /usr/bin/id -u
+```
+
+the launcher supplies the helper path even in an existing shell. it displays the
+session name and the exact sudo invocation, with shell quoting that preserves
+argument boundaries, above a hidden password field. it passes the same arguments
+to `/usr/bin/sudo -A` without evaluating the displayed text. the session name is
+supplied by the caller; it is context, not proof of authorization.
+
+cancel or the two-minute timeout aborts authentication. the helper sends the
+password directly to sudo without storing it. do not run the helper directly:
+its stdout is the password. direct helper calls without command and session
+context fail before opening a dialog. sudo permissions and command approval
+requirements still apply. ordinary human-operated terminal commands can continue
+using `sudo`.
 
 ## available configurations
 

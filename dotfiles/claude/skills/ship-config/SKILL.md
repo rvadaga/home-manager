@@ -5,6 +5,8 @@ description: use when finishing authorized config work already in a worktree. co
 
 # /ship-config
 
+for agent-run sudo commands, follow the shared `sudo authentication` rule in `CLAUDE-base.md`. this pointer keeps password handling in one place.
+
 finish a config change already in a worktree: draft pr → validation → squash merge → downstream updates → activate → verify → cleanup.
 
 use [config task authorization](../nix-rebuild/SKILL.md#config-task-authorization) for scope, merge and readiness authorization, and genuine reasons to stop. that rule lives in `/nix-rebuild` so these workflows cannot introduce different approval requirements. use `/nix-rebuild` when starting config work.

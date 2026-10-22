@@ -1,5 +1,7 @@
 # macos-specific instructions
 
+for agent-run sudo commands, follow the shared `sudo authentication` rule in `CLAUDE-base.md`. this pointer keeps password handling in one place.
+
 * when using coreutils commands, prefer g-prefixed gnu versions (e.g., gls, gstat)
 * use macos-native tools where appropriate (e.g., pbcopy, pbpaste)
 * **strong preference for nix; homebrew is a last resort.** add packages to the nix config and rebuild — nixpkgs `home.packages`/`systemPackages` for cli tools, or the declarative `homebrew.brews`/`homebrew.casks` list for brew-only formulae/casks. never install or remove packages imperatively with brew unless nix genuinely cannot do it. (`brew update` during a nix-darwin rebuild is expected and fine.) **enforced by a PreToolUse Bash hook in settings-mac.json — imperative `brew install`/`reinstall`/`tap`/`upgrade`/`uninstall` (and the `remove`/`rm` aliases) triggers an `ask` gate with this reminder.**

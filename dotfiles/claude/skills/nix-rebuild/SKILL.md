@@ -5,6 +5,8 @@ description: use when changing nix config, managed instructions, settings, dotfi
 
 # /nix-rebuild
 
+for agent-run sudo commands, follow the shared `sudo authentication` rule in `CLAUDE-base.md`. this pointer keeps password handling in one place.
+
 complete a nix config change in an isolated worktree and through a reviewable draft pr. handles this config and downstream configs that consume it as a flake input (`personal-config`).
 
 ## config task authorization
