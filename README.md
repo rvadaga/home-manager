@@ -247,6 +247,19 @@ ssh config and gpg-agent are set up in `os-configs/mac.nix` since `services.gpg-
 - `gpg-agent.conf` is written directly via `home.file` with `pinentry-mac`
 - `programs.ssh.enableDefaultConfig = false` suppresses the home-manager deprecation warning about `~/.ssh/config` management
 
+### sudo without a terminal on macos
+
+the macos home module installs `~/.local/libexec/sudo-askpass` and exports
+`SUDO_ASKPASS`. use `sudo -A <command>` in a shell runner to authenticate in a
+dialog with a hidden password field. cancel or the two-minute timeout aborts
+authentication. the helper sends the password directly to sudo; it does not
+store it. do not run the helper directly, because its stdout is the password.
+
+open a new shell after activation to load the environment. an already-running
+shell can use `SUDO_ASKPASS="$HOME/.local/libexec/sudo-askpass" sudo -A <command>`.
+this changes how the password is entered; sudo permissions and command approval
+requirements still apply. ordinary terminal commands can continue using `sudo`.
+
 ## available configurations
 
 | name | system | type | description |

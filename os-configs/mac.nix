@@ -19,7 +19,14 @@ in
   };
 
   home = {
+    sessionVariables.SUDO_ASKPASS = "${config.home.homeDirectory}/.local/libexec/sudo-askpass";
+
     file = {
+      ".local/libexec/sudo-askpass" = {
+        source = ../scripts/sudo-askpass.applescript;
+        executable = true;
+      };
+
       # claude and codex capture path through marked login-shell probes, then
       # direct-spawn git from their gui processes. macos 26 intermittently
       # blocks the ad-hoc-signed nix git at that boundary with eacces. expose
