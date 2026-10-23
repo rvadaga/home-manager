@@ -526,14 +526,6 @@ in
       enable = true;
       homedir = "${config.home.homeDirectory}/.gnupg";
     };
-
-    # shell
-    zsh = {
-      shellAliases = {
-        dph = "cd $HOME/development/paneherd";
-        dvsp = "cd $HOME/development/vespa";
-      };
-    };
   };
 
   # nix settings only in standalone home-manager (nix-darwin owns these at system level)

@@ -30,9 +30,25 @@ in
       # home-manager
       hmc = "cd $HOME/.config/home-manager";
 
-      # dev repos
+      # personal and public repos
       dev = "cd $HOME/development";
+      dbzl = "cd $HOME/development/bazel";
+      ddkr = "cd $HOME/development/docker-image-dev";
+      dgcpy = "cd $HOME/development/google-cloud-python";
+      dlg = "cd $HOME/development/langgraph-101";
       dln = "cd $HOME/development/llm-notes";
+      dph = "cd $HOME/development/paneherd";
+      dpyv = "cd $HOME/development/pyvespa";
+      drcc = "cd $HOME/development/rules_cc";
+      dslack = "cd $HOME/development/slack-mcp-plugin";
+      dslr = "cd $HOME/development/solr";
+      dtm = "cd $HOME/development/temporal";
+      dtsdk = "cd $HOME/development/temporal-sdk-python";
+      dtsp = "cd $HOME/development/temporal-samples-python";
+      dty = "cd $HOME/development/tantivy";
+      dvmm = "cd $HOME/development/vscode-markdown-mermaid";
+      dvoss = "cd $HOME/development/vespa-oss";
+      dvsp = "cd $HOME/development/vespa";
 
       # bat
       b = "bat -P";
