@@ -20,7 +20,7 @@ use [config task authorization](../nix-rebuild/SKILL.md#config-task-authorizatio
    - syncing at all is usually unnecessary: the main ruleset here does not require a branch to be up to date before merging (`strict_required_status_checks_policy: false`), so sync only when the branch genuinely needs main's changes.
    - if the branch matches the auto-name pattern `^(rahul/)?[a-z]+-[a-z]+(-[a-f0-9]{6})?$`, run `/wt-name` before anything else — pushes from auto-named branches are hook-rejected
 
-2. **commit** — repo commit style, lower case, no ai-attribution trailers
+2. **commit** — repo commit style and casing rules, no ai-attribution trailers
 
 3. **draft pr**
    - `gpsup` (git push --set-upstream origin <branch>)

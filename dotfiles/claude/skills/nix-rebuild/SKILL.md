@@ -17,7 +17,7 @@ a request only to inspect, plan, prepare a draft, or wait for review does not au
 
 every change must land through a pr. never edit or commit on the primary checkout's `main`, push directly to `main` or `master`, or bypass one-writer ownership or personal/work separation. preserve live draft/ready state and provenance under the shared `CLAUDE.md` rule. for an authorized ordinary config merge, mark only that pr ready immediately before merging; keep drafts outside that merge scope draft. an existing ready pr stays ready. github-managed stacks still use `github-stacked-prs` for readiness, publication, and merge selection.
 
-activation follows the home/system rules below. a macos system activation still requires rahul to run or explicitly authorize the exact authenticated sudo command; task authorization does not bypass authentication.
+activation follows the home/system rules below. personal repository activation follows the standing authorization in `CLAUDE-base.md`; outside that scope, obtain explicit authorization for the system activation command. always use the configured authentication helper.
 
 `/nix-rebuild` starts config work; `/ship-config` finishes work already in a worktree. both use this authorization rule. keep the rule here so their approval requirements cannot drift apart.
 
@@ -49,7 +49,7 @@ before any source push or pull request metadata or body edit, rederive and prese
 
 ```bash
 gh pr create --repo <owner>/<repo> --draft --base main --head rahul/nix-rebuild-<topic> \
-  --title "<terse lowercase title>" --body "<fill the repo's PR template; if none, ~/development/.github/pull_request_template.md>"
+  --title "<title following repository casing rules>" --body "<fill the repo's PR template; if none, ~/development/.github/pull_request_template.md>"
 ```
 
 no AI-attribution trailer/footer. read the template from the repo (or the fallback) and actually fill it.
@@ -95,7 +95,7 @@ share the pr link, what changed, and the validation results. proceed under [conf
    ```
    this sudo-free command is the activation path for a known home-only change on macos or linux.
 
-   for a macos system or shared change, build the merged nix-darwin graph first. then stop and give rahul the exact authenticated command. rahul must run it or explicitly authorize it; task authorization does not authorize an agent to satisfy or bypass sudo authentication.
+   for a macos system or shared change, build the merged nix-darwin graph first. then apply the standing personal repository authorization in `CLAUDE-base.md`, or obtain explicit authorization outside that scope. use the configured authentication helper; never satisfy or bypass authentication yourself.
    ```bash
    darwin-rebuild build --flake ~/.config/home-manager#$HM_CONFIG_NAME
    sudo darwin-rebuild switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
@@ -129,4 +129,4 @@ settings pieces merge in order: `settings-base.json` → os piece (`settings-mac
 - check `$HM_CONFIG_NAME` to determine which flake this machine rebuilds from.
 - use omz git aliases with the full command in the bash tool's `description` field.
 - skip `exec $SHELL` — claude code's shell snapshot won't update mid-conversation; changes land in the next conversation.
-- once merged, a known home-only activation proceeds without sudo. a macos system activation always stops for rahul's authentication or explicit authorization.
+- once merged, a known home-only activation proceeds without sudo. system activation follows the authorization and authentication rules in `CLAUDE-base.md`.
