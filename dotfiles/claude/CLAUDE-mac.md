@@ -22,13 +22,13 @@ for a system change, or a change whose ownership is unclear, build without activ
 darwin-rebuild build --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
-the actual system activation requires rahul to authenticate and run or explicitly authorize the exact command:
+system activation follows the personal repository authorization in `CLAUDE-base.md`. outside that scope, obtain explicit authorization for the command. authentication is still required:
 
 ```bash
 sudo darwin-rebuild switch --flake <flake-path>#$HM_CONFIG_NAME
 ```
 
-an agent stops before that authenticated command. machines built from a downstream flake use the downstream flake path for both graphs.
+agents use the configured sudo authentication helper for an authorized activation. machines built from a downstream flake use the downstream flake path for both graphs.
 
 ## system.defaults gotchas
 
