@@ -17,6 +17,7 @@ let
   );
   forcedSettings = tomlFormat.generate "codex-settings-forced.toml" config.codex.forcedSettings;
   python = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.tomli-w ]);
+  skillPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
 
   mergeCodexSettings = pkgs.writeShellScript "merge-codex-settings" ''
     exec ${python}/bin/python ${../scripts/merge-codex-settings.py} "$@"
@@ -38,6 +39,12 @@ in
   config = mkIf (config.codex.settingsPieces != [ ] || config.codex.forcedSettings != { }) {
     home.activation.mergeCodexSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       ${mergeCodexSettings} "$HOME/.codex/config.toml" "${nixMergedSettings}" "${forcedSettings}"
+    '';
+    # Local skill folders use the same display names as generated skills.
+    # Plugin caches, bundled skills and linked directories keep their own metadata.
+    home.activation.normalizeCodexSkillNames = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${skillPython}/bin/python ${../scripts/normalize-codex-skill-names.py} \
+        local-root "$HOME/.agents/skills"
     '';
   };
 }
