@@ -1,0 +1,4 @@
+interface:
+  display_name: "todo"
+  short_description: "Capture and review durable follow-ups"
+  default_prompt: "Use $todo to capture this follow-up for later."

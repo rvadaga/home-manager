@@ -53,7 +53,7 @@ each vault's schema file is the source of truth for its conventions — **always
 4. check for an existing page on this topic:
    - search `index.md` for related entries
    - read the first 15 lines of likely candidates
-   - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one. the narrow exception is a **generated snapshot page** (below), which is overwritten in place with no prompt
+   - if a page already covers the same topic, ask the user whether to **update** the existing page or **create a new** one. generated snapshot pages (below) and user-requested `todo` captures update their canonical page without this prompt
 5. write the page per the vault's schema:
    - location: follow the schema's directory structure (topical subdirs for personal-software, `pages/` for oss-vespa)
    - filename: lowercase, hyphenated, descriptive — and **name = scope**: the filename must match what the page actually covers, never claim broader scope than the content delivers (a page about one system's tracing setup is `<system>-otel-tracing`, not `opentelemetry-tracing`). vault schemas may add anchor rules on top
@@ -61,10 +61,14 @@ each vault's schema file is the source of truth for its conventions — **always
    - content: lead with a one-line summary, then durable knowledge (findings, architecture, code traces, takeaways)
    - cross-link to related pages using obsidian `[[wikilinks]]`
    - mark uncertain or inferred claims with `[inferred]`
-   - do NOT include session-specific details (timestamps in prose, conversation ids, task progress). the narrow exception is a **generated snapshot page** (below), which is session-specific by design
+   - do NOT include session-specific details (timestamps in prose, conversation ids, task progress) in ordinary research prose. generated snapshot pages (below) and the canonical `todo` checklist retain the source and disposition information their contracts require
 6. **update `index.md` and `log.md` in the same pass — never skip this.** drift (pages the index doesn't know about) is the wiki pattern's primary failure mode. index: one-liner under the fitting section (project sub-wikis catalogue their own pages in their own index). log: `## [YYYY-MM-DD] action | description` — check the schema for direction (append-at-bottom vs prepend-at-top varies by vault)
 7. if updating an existing page and the scope has changed significantly, suggest a new filename and ask the user before renaming
 8. if the finding supersedes a claim on another page, update that page too (or mark it) — don't leave two pages disagreeing
+
+### requested todo captures
+
+use [todo](../todo/SKILL.md) for the complete capture, view, and disposition contract. a requested capture or disposition authorizes updating its existing checklist without another update/create question or an accompanying research note. this exception permits exact source-chat provenance and item history; it does not turn ordinary session progress into research prose. preserve vault routing and schema, verify the existing index entry (add or correct it when needed), log each actual change, validate, and commit. unchanged retries make no new log entry or commit. personal captures use `scripts/vault-transaction.py`; work captures use the work reference's same transaction contract. keep the todo behavior in that skill rather than duplicating it here.
 
 ### generated snapshot pages — a narrow exception to steps 4 and 5
 

@@ -1,0 +1,9 @@
+{
+  "scope": "personal",
+  "vault": "~/development/obsidian/personal-software",
+  "schema": "CLAUDE.md",
+  "checklist": "meta/personal-todos.md",
+  "title": "personal todos",
+  "tags": ["todos", "agent-workflows"],
+  "log_order": "append"
+}
