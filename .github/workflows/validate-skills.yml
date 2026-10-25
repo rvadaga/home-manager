@@ -18,6 +18,12 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install PyYAML==6.0.3
+      - name: verify picker names and metadata preservation
+        run: python3 scripts/test-normalize-codex-skill-names.py
 
       # pinned: an unpinned spec bump would break CI on an unrelated pr
       - run: npm install -g skills-ref@0.1.5

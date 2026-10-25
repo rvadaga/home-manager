@@ -32,13 +32,14 @@ let
   baseInstructions = readInstructions ../dotfiles/claude/CLAUDE-personal-scope.md ../dotfiles/claude/CLAUDE-base.md;
   claudeBaseSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
   codexBaseSettings = builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml);
+  codexSkill = import ../shared/codex-skill.nix { inherit pkgs; };
   # preserve app-owned entries such as .system by managing only shared children.
   codexSkillFiles =
     lib.mapAttrs'
       (
         skillName: _:
         lib.nameValuePair ".codex/skills/${skillName}" {
-          source = ../dotfiles/claude/skills + "/${skillName}";
+          source = codexSkill skillName (../dotfiles/claude/skills + "/${skillName}");
         }
       )
       (
