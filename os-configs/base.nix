@@ -33,13 +33,19 @@ let
   claudeBaseSettings = builtins.fromJSON (builtins.readFile ../dotfiles/claude/settings-base.json);
   codexBaseSettings = builtins.fromTOML (builtins.readFile ../dotfiles/codex/settings-base.toml);
   codexSkill = import ../shared/codex-skill.nix { inherit pkgs; };
+  todoSkill = pkgs.runCommand "todo-skill-with-transaction" { } ''
+    mkdir -p "$out"
+    cp -R ${../dotfiles/claude/skills/todo}/. "$out/"
+    chmod -R u+w "$out"
+    ln -s ${../dotfiles/claude/skills/notes/scripts/vault-transaction.py} "$out/scripts/vault-transaction.py"
+  '';
   # preserve app-owned entries such as .system by managing only shared children.
   codexSkillFiles =
     lib.mapAttrs'
       (
         skillName: _:
         lib.nameValuePair ".codex/skills/${skillName}" {
-          source = codexSkill skillName (../dotfiles/claude/skills + "/${skillName}");
+          source = codexSkill skillName (if skillName == "todo" then todoSkill else ../dotfiles/claude/skills + "/${skillName}");
         }
       )
       (
@@ -129,6 +135,15 @@ in
       # oss-vespa); a downstream config can compose into the same skill dir by
       # adding references/work-vault.md (registry entry for its work vault).
       ".claude/skills/notes/SKILL.md".source = ../dotfiles/claude/skills/notes/SKILL.md;
+      ".claude/skills/notes/scripts/vault-transaction.py".source = ../dotfiles/claude/skills/notes/scripts/vault-transaction.py;
+      ".claude/skills/notes/scripts/test-vault-transaction.py".source = ../dotfiles/claude/skills/notes/scripts/test-vault-transaction.py;
+      ".claude/skills/todo/SKILL.md".source = ../dotfiles/claude/skills/todo/SKILL.md;
+      ".claude/skills/todo/agents/openai.yaml".source = ../dotfiles/claude/skills/todo/agents/openai.yaml;
+      ".claude/skills/todo/references/storage.json".source = ../dotfiles/claude/skills/todo/references/storage.json;
+      ".claude/skills/todo/references/requests.md".source = ../dotfiles/claude/skills/todo/references/requests.md;
+      ".claude/skills/todo/scripts/todo.py".source = ../dotfiles/claude/skills/todo/scripts/todo.py;
+      ".claude/skills/todo/scripts/vault-transaction.py".source = ../dotfiles/claude/skills/notes/scripts/vault-transaction.py;
+      ".claude/skills/todo/scripts/test-todo.py".source = ../dotfiles/claude/skills/todo/scripts/test-todo.py;
       ".claude/skills/notes/scripts/validate-mermaid.py" = {
         source = ../dotfiles/claude/skills/notes/scripts/validate-mermaid.py;
         executable = true;
