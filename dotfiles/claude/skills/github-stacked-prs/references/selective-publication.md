@@ -24,7 +24,7 @@ run the structural checker against the saved live-read manifest:
 python3 scripts/check-selective-publication-contract.py preflight.json
 ```
 
-the checker verifies manifest consistency, not live state, test quality or the command's effective leases. immediately before the command, independently read every remote head, pull request head, base and readiness and compare them with the snapshot. stop on any movement.
+the checker verifies manifest consistency, not live state, test quality or the command's effective leases. follow the shared [publication procedure](preparation-and-publication.md#publish-and-time-the-attempt) for recovery heads, the final ownership and state checks, and readback after every command outcome.
 
 ## pinned cli limitation
 
@@ -32,17 +32,21 @@ use only `gh stack push`. official version 0.1.1 has no per-layer push flag: it 
 
 the [pinned push implementation](https://github.com/github/gh-stack/blob/2bd699a544a09cb5c45a013d03416e0894b0454e/cmd/push.go) fetches active branches before [constructing leases from tracking refs](https://github.com/github/gh-stack/blob/2bd699a544a09cb5c45a013d03416e0894b0454e/internal/git/gitops.go). these files are unchanged from 0.1.0. a disposable local-remote fixture reproduces an intervening remote commit being overwritten after that refresh. neither more preflight reads nor a successful post-push readback protects the recorded lease during that interval. reproduce both the unchanged-child case and this limitation with `python3 scripts/test-gh-stack-command.py <official-binary>`; it uses disposable local remotes and no github access.
 
-retain the requirement that publication enforces the saved leases at the write. stock 0.1.1 alone does not meet it. when no separately verified enforcement exists, stop the actual push and report the cli blocker; continue selected implementation, validation and the deferred-work record. do not substitute a direct push, suppress the fetch, bypass hooks, or claim the package bump fixes the race. this limitation also affects complete-restack pushes.
+stock 0.1.1 does not enforce immutable saved leases at the write. this known limitation alone does not block an otherwise authorized publication or require another approval. use the shared [publication procedure](preparation-and-publication.md#publish-and-time-the-attempt) for both selective and complete-restack pushes. explain that an intervening writer's commit could be overwritten, then proceed when its checks pass. observed unexpected movement or a writer conflict stops the operation for reconciliation.
+
+the before/after checks reduce exposure and detect some unexpected results; they do not close the race. even matching final heads cannot prove that no intervening commit was overwritten. do not substitute a direct push, suppress the fetch, bypass hooks, or claim that this procedure or the package bump fixes the cli. retain the disposable command fixture as evidence of actual behavior; policy-manifest tests separately check when the procedure permits or stops an attempt.
 
 ## read back the complete result
 
-retain the preflight file unchanged. after any permitted command attempt, including an error or partial update, obtain fresh local, remote and pull request state for the complete stack:
+retain the preflight file unchanged. after every command attempt, including an error or partial update, independently obtain fresh local, remote and pull request state for the complete stack before retrying or reporting completion:
 
 ```sh
 python3 scripts/check-selective-publication-contract.py post-push.json --preflight preflight.json
 ```
 
 require selected remote and pull request heads to equal the saved selected local heads. require every unselected local, remote and pull request head to equal the saved lease. preserve every base and readiness. compare the post-push snapshot id, leases and deferred record with the original file; a newly rewritten expectation cannot prove preservation.
+
+a mismatch or unavailable readback leaves publication incomplete. preserve the evidence and recovery refs, reconcile the affected layers under the assigned publisher, and revalidate before a new attempt. do not automatically retry or restore old remote heads over possible new work.
 
 report the exact changed heads and the named deferred work. for example: `the selected layer's compilation and interface tests passed at <head>. child <branch> still needs its caller migration and rebase; its integration tests have not run against this parent.` adapt the checks to the actual evidence. measure preparation and the official command separately.
 
@@ -52,6 +56,8 @@ when deferred work is integrated or restacked, apply the complete per-layer and 
 
 both phases contain `phase`, `preflight_snapshot_id`, the complete ordered `layers`, and `changed_indices`. each layer contains `branch`, `local_head`, `remote_head`, `pr_head`, `lease_head`, `base_ref`, `expected_base_ref`, `state`, and `expected_state`.
 
-preflight requires true `pre_push_readback` and `integrator_clean`; false `restack_ran`, `default_branch_sync`, `conflict`, `handoffs_adopted`, and `unexpected_remote_movement`; boolean `semantic_propagation` and `pending_handoffs`; `publication_command: "gh stack push"`; and the six true checks named by the checker. these assertions must have retained evidence.
+preflight requires true `pre_push_readback` and `integrator_clean`; false `restack_ran`, `default_branch_sync`, `conflict`, `handoffs_adopted`, `unexpected_remote_movement`, `writer_conflict`, `explicit_hold`, and `runtime_denied`; boolean `semantic_propagation` and `pending_handoffs`; `publication_command: "gh stack push"`; and every true check named by the checker. these assertions must have retained evidence.
+
+record matching nonempty `publisher_id` and `expected_publisher_id`, the repository's `default_branch`, and matching `base_head` and `expected_base_head`. `recovery_heads` lists the local, remote and base commits retained by the verified recovery refs or bundle. the checker checks that this list covers the recorded heads; it cannot read the refs, authenticate ownership, grant scope, clear a runtime denial, or prove lease enforcement. post-push preserves these fields, records `command_outcome` as `success`, `error`, or `partial`, and requires `post_push_readback: true`. an exit status never replaces head comparison.
 
 when descendants remain, `deferred_restack` names `first_descendant`, `reason`, `validation_status: "not_validated_against_selected_heads"`, and a `work` array. each work item contains `kind` (`migration`, `handoff`, or `validation`), `layer_indices`, `remaining_work`, `required_checks`, and `required_for_selected: false`. a handoff also has `commit` and `base`. semantic propagation requires a migration item; pending handoffs require a handoff item. post-push retains this record verbatim and requires the original preflight file.

@@ -17,6 +17,10 @@ required_preflight_checks = {
     "markers",
     "linear_topology",
     "leases_and_states",
+    "publisher",
+    "recovery_heads",
+    "scope_and_holds",
+    "hooks_and_lfs",
 }
 
 
@@ -62,6 +66,18 @@ def preflight_errors(manifest: dict[str, Any], layers: list[dict[str, Any]], ind
         errors.append("selective publication requires restack_ran to be false")
     if manifest.get("unexpected_remote_movement") is not False:
         errors.append("selective publication requires no unexpected remote movement")
+    for field in ("writer_conflict", "explicit_hold", "runtime_denied"):
+        if manifest.get(field) is not False:
+            errors.append(f"publication requires {field} to be false")
+    recovery = manifest.get("recovery_heads")
+    if not isinstance(recovery, list) or not all(isinstance(head, str) and head for head in recovery):
+        errors.append("publication requires recovery_heads as a list of saved commit ids")
+    else:
+        required_heads = {manifest["base_head"]}
+        for layer in layers:
+            required_heads.update((layer["local_head"], layer["remote_head"]))
+        if not required_heads.issubset(set(recovery)):
+            errors.append("recovery_heads must cover every saved local, remote and base head")
     for field in ("default_branch_sync", "conflict", "handoffs_adopted"):
         if manifest.get(field) is not False:
             errors.append(f"selective publication requires {field} to be false")
@@ -140,7 +156,15 @@ def deferred_errors(manifest: dict[str, Any], layer_count: int, indexes: list[in
 
 def post_push_errors(manifest: dict[str, Any], snapshot: dict[str, Any]) -> list[str]:
     errors = []
-    for key in ("preflight_snapshot_id", "changed_indices", "deferred_restack"):
+    if manifest.get("post_push_readback") is not True:
+        errors.append("post-push requires independent readback after every command outcome")
+    if manifest.get("command_outcome") not in ("success", "error", "partial"):
+        errors.append("post-push requires the observed command_outcome")
+    if manifest.get("writer_conflict") is not False:
+        errors.append("post-push requires no observed writer conflict")
+    for key in ("preflight_snapshot_id", "changed_indices", "deferred_restack",
+                "publisher_id", "expected_publisher_id", "default_branch",
+                "base_head", "expected_base_head", "recovery_heads"):
         if manifest.get(key) != snapshot.get(key):
             errors.append(f"post-push changed saved {key}")
     layers, before = manifest["layers"], snapshot["layers"]
@@ -165,8 +189,18 @@ def validate(manifest: dict[str, Any], snapshot: dict[str, Any] | None = None) -
     if not isinstance(layers, list) or not layers or not all(isinstance(layer, dict) for layer in layers):
         return ["layers must be a nonempty object list"]
     errors = []
+    for key in ("publisher_id", "expected_publisher_id", "default_branch", "base_head", "expected_base_head"):
+        if value(manifest, key) is None:
+            errors.append(f"publication is missing {key}")
+    if value(manifest, "publisher_id") != value(manifest, "expected_publisher_id"):
+        errors.append("publication changed publisher ownership")
+    if value(manifest, "base_head") != value(manifest, "expected_base_head"):
+        errors.append("publication changed the saved base head")
     for index, layer in enumerate(layers):
         errors.extend(layer_errors(layer, index))
+        branch = value(layer, "branch")
+        if branch and branch.removeprefix("refs/heads/") in {"main", "master", value(manifest, "default_branch")}:
+            errors.append(f"layer {index} must not publish the default branch")
     branches = [value(layer, "branch") for layer in layers]
     if len(set(branches)) != len(branches):
         errors.append("layers must name unique branches")
@@ -203,7 +237,7 @@ def main(argv: list[str]) -> int:
         for error in errors:
             print(error, file=sys.stderr)
         return 1
-    print(f"selective publication {manifest['phase']} manifest is consistent; retain independent command and lease evidence")
+    print(f"selective publication {manifest['phase']} manifest is consistent; this does not prove live state or immutable lease enforcement")
     return 0
 
 

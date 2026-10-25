@@ -54,7 +54,7 @@ after the final restack and before its publication, record one complete snapshot
 - for every new layer, the expected absent remote branch and its pull request state; and
 - the clean integrator state, accepted handoff ids, and the exact check results being carried or rerun.
 
-capture every remote and pull request field in this one snapshot. do not assemble a publication decision from separately timed layer reads. immediately before `gh stack push`, re-read every recorded remote head, pull request head, base, and state. they must exactly match the snapshot. any movement, missing record, or changed base ends the publication attempt; refresh the stack and preflight instead of overwriting it.
+keep these observations together as one saved attempt record; the remote and pull request reads are not atomic. use the final checks below to detect movement across those reads. any unexpected movement or missing record stops the attempt for reconciliation; do not accept a new lease merely to make the push pass.
 
 run the required per-layer diff, marker, range-diff or patch-identity, linear-history, and review checks against the final layer tips. they may finish concurrently only when each report identifies that final immutable tip. the integrator records their results before the final live readback.
 
@@ -70,8 +70,17 @@ record the proof with the carried result. a missing proof, changed layer patch, 
 
 ## publish and time the attempt
 
-before an actual push, apply the pinned cli lease limitation in [selective publication](selective-publication.md#pinned-cli-limitation) to both publication modes. that reference owns the limitation so its stop condition stays consistent.
+this procedure applies to selective and complete-restack pushes. the [pinned cli limitation](selective-publication.md#pinned-cli-limitation) owns the cli behavior and remaining overwrite race; this link keeps that explanation in one place. an otherwise authorized operation may proceed with that known risk. it does not require an unconditional approval or a fixed cli first.
+
+1. establish one known integrator and publisher for every affected branch. confirm the task's scope, explicit holds, normal hooks and git lfs, and runtime permission. stop for an observed writer conflict, unresolved ownership, missing authority, concrete conflict, explicit hold or genuine runtime denial. preserve the default branch; it must never be in the push ref set.
+2. before changing history or publishing, preserve the recorded local and remote heads and the base commit in named local recovery refs or a verified git bundle, with all required commit objects available. record how to recover them. a written oid alone is not a recovery copy. retain these copies through verified completion and any reconciliation.
+3. immediately before `gh stack push`, recheck the complete stack's local heads, exact live remote and pull request heads, base refs and base commit, draft/ready states, clean checkout and publisher ownership against the saved validated snapshot. stop on unexpected movement or a writer conflict and reconcile it before a new attempt. keep the original observations; never silently replace the saved lease with a later fetch. perform no unrelated work between this check and the command.
+4. run only the official `gh stack push` with normal hooks and git lfs. the pinned cli includes every active branch, including unchanged descendants. keep the saved snapshot and command result.
+5. after success, error, interruption or partial update, independently read every affected local head, remote head, pull request head, base and readiness. compare them with the exact intended result and recheck ownership. when a read is unavailable, report the result as unverified and stop further publication. a command's status or output never replaces these reads.
+6. on any mismatch, retain recovery copies and observed state, stop further mutation, and reconcile under the assigned publisher. do not retry blindly or roll back remote heads over possible new work. after reconciliation, establish a new explicit attempt and rerun invalidated validation.
+
+report which heads changed and any incomplete layers or deferred checks. state the remaining race: these observations reduce exposure but cannot prove that no commit appeared and was overwritten between them, or that the cli enforced the saved leases at the write.
 
 hold the exact stack-history resource only while adopting accepted handoffs, resolving conflicts, restacking, making the lease/state check, and publishing. start the preparation timer when this attempt starts preparing its integrator checkout. stop it immediately before `gh stack push`. time `gh stack push` separately, from command start through command completion.
 
-invoke only `gh stack rebase`, `gh stack rebase --continue` after a stopped official rebase, and `gh stack push` for stack history and publication. retain hooks and git lfs safeguards. never direct-push, disable hooks, skip lfs, weaken live readback, or reduce the post-push equality check. after the push, require every local layer, remote layer, pull request head, base chain, and pull request state to match the recorded expected result.
+invoke only `gh stack rebase`, `gh stack rebase --continue` after a stopped official rebase, and `gh stack push` for stack history and publication. never direct-push, suppress the cli fetch, disable hooks, skip lfs, weaken live readback, or reduce the post-push equality check.

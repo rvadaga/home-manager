@@ -29,6 +29,10 @@ def preflight() -> dict:
         "default_branch_sync": False, "conflict": False, "handoffs_adopted": False,
         "unexpected_remote_movement": False, "semantic_propagation": False,
         "pending_handoffs": False, "integrator_clean": True,
+        "publisher_id": "owner-one", "expected_publisher_id": "owner-one",
+        "writer_conflict": False, "explicit_hold": False, "runtime_denied": False,
+        "default_branch": "trunk", "base_head": "base", "expected_base_head": "base",
+        "recovery_heads": ["base", "a", "b", "b-local", "c"],
         "publication_command": "gh stack push",
         "checks": {key: True for key in contract.required_preflight_checks},
         "changed_indices": [1],
@@ -43,6 +47,8 @@ def preflight() -> dict:
 def post_push(before: dict) -> dict:
     result = copy.deepcopy(before)
     result["phase"] = "post-push"
+    result["command_outcome"] = "success"
+    result["post_push_readback"] = True
     for index in before["changed_indices"]:
         item = result["layers"][index]
         item["remote_head"] = item["pr_head"] = item["local_head"]
@@ -69,6 +75,7 @@ class selective_publication_test(unittest.TestCase):
         before = preflight()
         before["changed_indices"] = [0, 1]
         before["layers"][0]["local_head"] = "a-local"
+        before["recovery_heads"].append("a-local")
         self.accepted(before)
 
     def test_explicit_migration_and_handoff_deferral(self):
@@ -90,6 +97,7 @@ class selective_publication_test(unittest.TestCase):
         before["changed_indices"] = [2]
         before["layers"][1]["local_head"] = "b"
         before["layers"][2]["local_head"] = "c-local"
+        before["recovery_heads"].append("c-local")
         before.pop("deferred_restack")
         self.accepted(before)
 
@@ -127,6 +135,30 @@ class selective_publication_test(unittest.TestCase):
             self.rejected(before, "requires")
         before = preflight(); before["publication_command"] = "git push origin two"
         self.rejected(before, "only gh stack push")
+
+    def test_observed_writer_conflict_holds_and_runtime_denial(self):
+        for field in ("writer_conflict", "explicit_hold", "runtime_denied"):
+            for state in (True, None):
+                before = preflight(); before[field] = state
+                self.rejected(before, field)
+        before = preflight(); before["publisher_id"] = "owner-two"
+        self.rejected(before, "publisher ownership")
+        before = preflight(); before.pop("expected_publisher_id")
+        self.rejected(before, "expected_publisher_id")
+
+    def test_recovery_covers_local_remote_and_base_heads(self):
+        for head in preflight()["recovery_heads"]:
+            before = preflight(); before["recovery_heads"].remove(head)
+            self.rejected(before, "recovery_heads")
+
+    def test_default_branch_protection_and_base_movement(self):
+        for branch in ("trunk", "main", "master", "refs/heads/trunk"):
+            before = preflight(); before["layers"][1]["branch"] = branch
+            self.rejected(before, "default branch")
+        before = preflight(); before["base_head"] = "moved"
+        self.rejected(before, "saved base head")
+        before = preflight(); before["default_branch"] = {}
+        self.rejected(before, "missing default_branch")
 
     def test_noncontiguous_or_invalid_selection(self):
         for indexes in ([0, 2], [True], [1, 1], [], [-1], [3]):
@@ -167,6 +199,36 @@ class selective_publication_test(unittest.TestCase):
         self.rejected(after, "every saved layer", before)
         after = post_push(before); after["deferred_restack"]["work"] = [deferred("migration")]
         self.rejected(after, "saved deferred_restack", before)
+
+    def test_readback_after_success_error_or_partial_update(self):
+        before = preflight()
+        for outcome in ("success", "error", "partial"):
+            after = post_push(before); after["command_outcome"] = outcome
+            self.assertEqual([], contract.validate(after, before))
+            after["post_push_readback"] = False
+            self.rejected(after, "independent readback", before)
+            after["post_push_readback"] = True
+            after["layers"][1]["pr_head"] = "b"
+            self.rejected(after, "expected published head", before)
+
+    def test_partial_update_does_not_rewrite_expected_result(self):
+        before = preflight()
+        before["changed_indices"] = [0, 1]
+        before["layers"][0]["local_head"] = "a-local"
+        before["recovery_heads"].append("a-local")
+        after = post_push(before); after["command_outcome"] = "partial"
+        after["layers"][1].update(remote_head="b", pr_head="b")
+        self.rejected(after, "expected published head", before)
+
+    def test_post_preserves_publisher_base_and_recovery_evidence(self):
+        before = preflight()
+        for key in ("publisher_id", "expected_publisher_id", "base_head", "expected_base_head", "default_branch"):
+            after = post_push(before); after[key] = "changed"
+            self.assertTrue(contract.validate(after, before), key)
+        after = post_push(before); after["recovery_heads"] = []
+        self.rejected(after, "saved recovery_heads", before)
+        after = post_push(before); after["writer_conflict"] = True
+        self.rejected(after, "writer conflict", before)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ read [preparation and publication](preparation-and-publication.md) for checkout 
 ## inspect and restack
 
 - use `gh stack view` for the current stack and pull request status. use `gh stack view --short` for compact output or `gh stack view --json` for machine-readable output.
-- immediately before a restack, record the default-branch oid, the ordered local parent and layer oids, each published layer's live remote head as its old push lease, and each pull request's live base and draft or ready state. rederive this snapshot instead of reusing an earlier one.
+- immediately before a restack, record the default-branch oid, the ordered local parent and layer oids, each published layer's live remote head as its old push lease, and each pull request's live base and draft or ready state. rederive this snapshot instead of reusing an earlier one, and preserve its heads using the recovery-copy step in [preparation and publication](preparation-and-publication.md#publish-and-time-the-attempt).
 - treat every request to sync `main` or the default branch as a full-stack operation, even when the request names one layer. run only `gh stack rebase` so the official cli restacks the complete stack.
 - if it stops for conflicts, resolve the files, stage them, and resume only with `gh stack rebase --continue`.
 - never merge the default branch into one layer, run per-layer `git rebase` or `git rebase --continue`, or use `gh pr update-branch` on a stack layer.
@@ -15,7 +15,7 @@ read [preparation and publication](preparation-and-publication.md) for checkout 
 after every complete restack and before its push, run all of these checks even when prior test results may carry:
 
 1. enumerate the complete stack with `gh stack view --json` and keep its parent-to-child order. confirm the integrator checkout has clean `git status --porcelain` output, and confirm that every accepted handoff reported clean porcelain at its exact commit.
-2. capture every post-restack local parent and layer oid, every published layer's live remote head as its old push lease, and every pull request's live head, base, and draft or ready state in one preflight snapshot. require each live head to equal its recorded lease, confirm the bases form the expected chain, and apply the shared `CLAUDE.md` state rule. immediately before the official publication command, re-read the same remote and pull request fields and require exact equality with that one snapshot. stop on any movement. an absent remote is valid only for a new unpublished layer.
+2. capture every validated post-restack local parent and layer oid. re-read each published layer's live remote and pull request head, base, and draft or ready state against the saved pre-restack observations; do not replace the old push lease with this later read. confirm the expected base chain and apply the shared `CLAUDE.md` state rule. retain both the original observations and intended result in the publication snapshot, then apply the shared final checks immediately before the command. stop on unexpected movement. an absent remote is valid only for a new unpublished layer.
 3. compare every old parent-to-layer patch range with its post-restack range. use `git range-diff <old-parent>..<old-layer> <new-parent>..<new-layer>` and require the same ordered patch set with no added, dropped, or changed patch, or use an equally strong per-layer patch-identity proof. review both per-layer diffs when the proof is ambiguous. treat an unproved layer as changed.
 4. run `git diff --check`, then run `git diff --check <parent>..<layer>` for every layer.
 5. scan every tracked file in every layer with `git grep -n -E '^(<<<<<<< |=======|>>>>>>> )' <layer> --` and review every marker match.
@@ -50,17 +50,17 @@ for initial publication, compare the cumulative top tree with the accepted combi
 
 ## publish a complete restack without changing pull request states
 
-subject to the recorded-lease requirement and pinned cli limitation in [preparation and publication](preparation-and-publication.md), complete-restack advancement through the official cli is standing-authorized when every new pull request will be draft and every published layer will keep the state recorded under the shared `CLAUDE.md` rule:
+follow the cautious procedure in [preparation and publication](preparation-and-publication.md#publish-and-time-the-attempt), which owns the final checks, concrete stop conditions and readback after every outcome. complete-restack advancement through the official cli is standing-authorized when every new pull request will be draft and every published layer will keep the state recorded under the shared `CLAUDE.md` rule:
 
 - use `gh stack rebase` to restack.
 - use `gh stack rebase --continue` to resume after resolving and staging conflicts.
 - use `gh stack push` to publish the validated stack.
 
-after a complete-restack push, enumerate the complete stack again. require every local layer head, live remote head, and pull request head to be exactly equal, then rederive every live base and draft or ready state and require the expected chain and state to remain unchanged.
+after every complete-restack push attempt, enumerate the complete stack again. compare every local layer head, live remote head, and pull request head to the saved intended heads, then rederive every live base and draft or ready state and require the expected chain and state to remain unchanged. preserve the saved observations if the result is partial or unverified and follow the shared reconciliation procedure.
 
 measure and report preparation time separately from the actual `gh stack push` time. preparation starts when this publication attempt starts preparing its selected integrator checkout and ends immediately before the official command begins. push time is only the elapsed time of that one official command. neither measurement changes the validation or readback requirements.
 
-`gh stack push` may update descendant remote heads with force-with-lease after a restack. those official, lease-checked updates are part of the standing authorization and do not need separate force-push permission.
+`gh stack push` may update descendant remote heads with force-with-lease after a restack. those official updates are part of the standing authorization and do not need separate force-push permission. this describes authorization, not immutable enforcement of the saved leases; the pinned cli limitation still applies.
 
 this authorization covers carrying a recorded ready layer through a validated restack and publication of its descendants. it does not authorize changing any layer's draft or ready state. after the push, rederive every layer and require its state to equal the state recorded immediately before publication.
 
