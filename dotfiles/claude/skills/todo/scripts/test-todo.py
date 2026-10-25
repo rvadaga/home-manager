@@ -98,6 +98,21 @@ class TodoTest(unittest.TestCase):
         self.assertEqual(item["artifact"], "https://example.invalid/pull/7")
         self.assertEqual(item["project"], "example")
 
+    def test_log_frontmatter_is_preserved_for_both_orders(self):
+        header = '---\ntags: [log]\n---\n\n# log\n'
+        for order in ('append', 'prepend'):
+            self.cfg['log_order'] = order
+            self.configure()
+            (self.vault / 'log.md').write_text(header + '\n## older entry\n\nExisting history.\n')
+            self.git('add', 'log.md')
+            self.git('commit', '--allow-empty', '-m', 'fixture log')
+            item = self.apply(self.request(key=order))
+            text = (self.vault / 'log.md').read_text()
+            self.assertTrue(text.startswith(header))
+            self.assertEqual(text.count('# log\n'), 1)
+            self.assertIn('Existing history.', text)
+            self.assertEqual(text.index('## older entry') < text.index('capture ' + item['id']), order == 'append')
+
     def test_retry_deduplicates_without_log_or_commit(self):
         request = self.request()
         self.apply(request)

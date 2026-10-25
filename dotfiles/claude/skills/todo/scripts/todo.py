@@ -270,6 +270,13 @@ def indexed(cfg):
                for link in re.findall(r"\[\[([^\]]+)\]\]", text))
 
 
+def log_parts(text):
+    match = re.match(r"\A(?:(---\n.*?\n---\n\s*))?# log\n", text, re.S)
+    if not match:
+        raise ValueError("log needs its existing frontmatter, if any, followed by # log")
+    return text[:match.end()], text[match.end():]
+
+
 def validate_vault(cfg):
     vault = cfg["root"]
     if not contained(vault, cfg["schema"]).is_file():
@@ -286,8 +293,7 @@ def validate_vault(cfg):
     read_items(text)
     if not indexed(cfg):
         raise ValueError("checklist is missing from the vault index")
-    if not contained(vault, "log.md").read_text().startswith("# log\n"):
-        raise ValueError("log heading does not match the vault contract")
+    log_parts(contained(vault, "log.md").read_text())
 
 
 def writer(cfg, request):
@@ -311,10 +317,9 @@ def writer(cfg, request):
         raise ValueError("index changed before lock acquisition; retry from the current vault")
     log = contained(vault, "log.md")
     log_text = log.read_text()
-    if not log_text.startswith("# log\n"):
-        raise ValueError("unexpected log heading")
+    log_header, log_body = log_parts(log_text)
     entry = f"## [{now[:10]}] update | [[{index_target(cfg)}]]\n\n{request['operation']} {ident}.\n\n"
-    log_result = ("# log\n\n" + entry + log_text[len("# log\n"):].lstrip()) if cfg["log_order"] == "prepend" else log_text.rstrip() + "\n\n" + entry
+    log_result = (log_header + "\n" + entry + log_body.lstrip()) if cfg["log_order"] == "prepend" else log_text.rstrip() + "\n\n" + entry
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(result)
     log.write_text(log_result.rstrip() + "\n")
