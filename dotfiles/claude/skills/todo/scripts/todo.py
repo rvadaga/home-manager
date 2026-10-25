@@ -336,7 +336,7 @@ def apply(cfg, request_path, owner):
     engine = SKILL / "scripts/vault-transaction.py"
     if not engine.is_file():
         engine = SKILL.parent / "notes/scripts/vault-transaction.py"
-    deadline = time.monotonic() + 10
+    deadline = time.monotonic() + 30
     while True:
         paths = [cfg["checklist"], "log.md"] + ([] if indexed(cfg) else ["index.md"])
         command = [sys.executable, str(engine), "--vault", str(cfg["root"]), "--owner", owner,
