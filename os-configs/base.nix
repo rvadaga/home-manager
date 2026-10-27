@@ -9,6 +9,7 @@
 let
   ghStack = pkgs.callPackage ../packages/gh-stack.nix { };
   xurlMcp = pkgs.callPackage ../packages/xurl-mcp.nix { };
+  slackCli = pkgs.callPackage ../packages/slack-cli.nix { };
   self = inputs.self;
   selfRev =
     if self ? rev then
@@ -282,6 +283,7 @@ in
 
     packages = [
       xurlMcp
+      slackCli
 
       # shell and terminal
       pkgs.bash
