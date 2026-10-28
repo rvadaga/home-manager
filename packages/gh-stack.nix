@@ -4,23 +4,23 @@
   fetchurl,
 }:
 let
-  version = "0.1.1";
+  version = "0.3.0";
   sources = {
     aarch64-darwin = {
       asset = "darwin-arm64";
-      hash = "sha256-8Jqssu5y/bHUAe5PW5DgYpGahS/Dx7Zr8bGoUxBGF9g=";
+      hash = "sha256-cMDLETRq1dT5egKlz1JCBSJU0XddNW3AdZ8DVFeHOFA=";
     };
     x86_64-darwin = {
       asset = "darwin-amd64";
-      hash = "sha256-QHQPgmRcKMTh2kfGvQKmrEl9OCpFfBCTaUozaxdQr3E=";
+      hash = "sha256-7eodXz7ID+ZZb0TUOGBLBYRvy8rD//Bwfb5wcXlL1qk=";
     };
     aarch64-linux = {
       asset = "linux-arm64";
-      hash = "sha256-LaE/jEbydwI3x0SzQatr6fB1CFhaZ2JjTEqIqjVUYLw=";
+      hash = "sha256-gD7JHuupsqw4gn4pmnmDD+dcpyhPDCjWDmonBLs07RM=";
     };
     x86_64-linux = {
       asset = "linux-amd64";
-      hash = "sha256-ntEDk0+rD5DTNB/fxKNCeFOW059WIfxzE6YmAs4rVGI=";
+      hash = "sha256-lX6CLPp+Q1zYSil82WxBm1jlHjrFi+JJdiwkvZ5FCZs=";
     };
   };
   source =

@@ -18,7 +18,8 @@ def exercise(binary: Path) -> None:
         repo.mkdir()
         env = {key: val for key, val in os.environ.items() if not key.startswith(("GIT_", "GH_"))}
         env.update(GIT_CONFIG_GLOBAL="/dev/null", GIT_CONFIG_NOSYSTEM="1",
-                   GH_CONFIG_DIR=str(root / "gh"), GH_PROMPT_DISABLED="1")
+                   GH_CONFIG_DIR=str(root / "gh"), GH_PROMPT_DISABLED="1",
+                   GH_STACK_NO_UPDATE_NOTIFIER="1")
 
         def run(*args: str, cwd: Path = repo, success: bool = True) -> str:
             result = subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True)
@@ -40,9 +41,9 @@ def exercise(binary: Path) -> None:
             git("commit", "-m", name)
             return git("rev-parse", "HEAD")
 
-        assert stack("--version") == "gh stack version 0.1.1"
+        assert stack("--version") == "gh stack version 0.3.0"
         help_text = stack("push", "--help")
-        assert "--remote" in help_text
+        assert "--remote" in help_text and "--no-atomic" in help_text
         assert "--upstack" not in help_text and "--branch" not in help_text
         git("init", "-b", "trunk")
         git("config", "user.name", "fixture")
@@ -89,8 +90,23 @@ def exercise(binary: Path) -> None:
         assert moved != selected2
         print("known limitation reproduced: refreshed lease allowed intervening remote commit to be overwritten")
 
+        parent_next = commit("atomic-parent")
+        git("switch", "child")
+        child_next = commit("atomic-child")
+        update_hook = remote / "hooks/update"
+        update_hook.write_text('#!/bin/sh\ntest "$1" != refs/heads/child\n')
+        update_hook.chmod(0o755)
+        stack("push", success=False)
+        assert git("rev-parse", "parent", cwd=remote) == selected2
+        assert git("rev-parse", "child", cwd=remote) == child
+        update_hook.unlink()
+        stack("push")
+        assert git("rev-parse", "parent", cwd=remote) == parent_next
+        assert git("rev-parse", "child", cwd=remote) == child_next
+        print("remote rejection kept both branches unchanged; successful retry advanced both")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("binary", type=Path, help="path to the official 0.1.1 binary")
+    parser.add_argument("binary", type=Path, help="path to the official 0.3.0 binary")
     exercise(parser.parse_args().binary.resolve())
