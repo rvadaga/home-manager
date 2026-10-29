@@ -24,6 +24,10 @@ jobs:
       - run: pip install PyYAML==6.0.3
       - name: verify picker names and metadata preservation
         run: python3 scripts/test-normalize-codex-skill-names.py
+      - name: verify squash message controls
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 scripts/test-squash-message.py
       - name: verify todo storage and vault transactions
         env:
           PYTHONDONTWRITEBYTECODE: "1"
