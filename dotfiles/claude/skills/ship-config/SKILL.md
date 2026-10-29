@@ -48,14 +48,16 @@ use [config task authorization](../nix-rebuild/SKILL.md#config-task-authorizatio
    - test fails → fix and re-test. never merge a failing branch.
 
 5. **merge** — share the pr link and passing validation results, then apply the linked config task authorization rule
+   - first apply assembled `CLAUDE.md`'s squash commit message rule, including its capability check. this pointer keeps message requirements in one place.
    - github-managed stack → invoke `github-stacked-prs`; preserve every live layer state and select only a live ready bottom layer. do not run the ordinary commands below.
-   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply the linked config task authorization rule before `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. verify its expected ready state, then run `gh pr merge <n> --squash --match-head-commit <validated-head> --subject "<commit msg>" --body ""` for the validated head
+   - ordinary pull request → rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply the linked config task authorization rule before `gh pr ready <n>`; if it is already ready, preserve that state without another confirmation or ready command. verify its expected ready state, then run `gh pr merge <n> --squash --match-head-commit <validated-head> --subject "<intended title> (#<n>)" --body ""` for the validated head and default message
    - **read the merge back in a separate call before doing anything destructive.** `gh pr merge` prints nothing when it succeeds, so its output alone cannot tell you whether it merged or was refused. the usual refusal here is a required check still running (currently `skills-ref validate`).
      ```bash
-     gh pr view <n> --json state,mergedAt,headRefOid --jq '[.state,.mergedAt,.headRefOid]'
+     gh pr view <n> --json state,mergedAt,headRefOid,mergeCommit
      ```
      want `MERGED`, a non-null `mergedAt`, and the sha you pushed. still-running check → wait for it and re-run the merge. auto-merge is not an option on this repo (`allow_auto_merge` is false, so `gh pr merge --auto` errors).
-   - **only once that read says `MERGED`:** `gpod <branch>` (git push origin --delete). gate the delete on that read and nothing else — not on the merge command's silence, not on its exit status, and never by chaining the delete onto the merge. a refused merge with the delete running anyway leaves the branch deleted and the pr closed, recoverable only by re-pushing the identical sha and reopening.
+   - independently read `gh api repos/<owner>/<repo>/commits/<merge-sha> --jq .commit.message` and verify the landed subject and body under the shared rule before cascade or cleanup.
+   - **only after merged-state and landed-message verification:** `gpod <branch>` (git push origin --delete). never infer success from the merge command's silence or exit status, or chain deletion onto the merge. a refused merge with the delete running anyway leaves the branch deleted and the pr closed, recoverable only by re-pushing the identical sha and reopening.
    - fast-forward local main without `cd`: `git -C <main-repo> fetch origin main && git -C <main-repo> merge --ff-only origin/main`
    - keep that `gh pr view` output — deleting the branch retires the remote-ref form of the data-loss gate, so step 9 has to run on the merged-pr form.
 

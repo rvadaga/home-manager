@@ -77,18 +77,19 @@ share the pr link, what changed, and the validation results. proceed under [conf
 
 ## 6. merge, activate, verify, clean up
 
-1. **merge through the branch's workflow.** a github-managed stack uses `github-stacked-prs`; preserve its live states and select only a live ready bottom layer. for an ordinary pull request, rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply [config task authorization](#config-task-authorization) before `gh pr ready`; if it is already ready, preserve that state without a duplicate confirmation or ready command. verify the expected ready state, then squash-merge the validated head after required checks pass:
+1. **merge through the branch's workflow.** first apply assembled `CLAUDE.md`'s squash commit message rule, including its capability check; this pointer avoids a second message policy. a github-managed stack uses `github-stacked-prs`; preserve its live states and select only a live ready bottom layer. for an ordinary pull request, rederive its live state under the shared `CLAUDE.md` rule. if it is draft, apply [config task authorization](#config-task-authorization) before `gh pr ready`; if it is already ready, preserve that state without a duplicate confirmation or ready command. verify the expected ready state, then squash-merge the validated head after required checks pass. for the default message:
    ```bash
    # only when the pr is draft and this merge is authorized
    gh pr ready <n> --repo <owner>/<repo>
    gh pr view <n> --repo <owner>/<repo> --json isDraft,headRefOid
    # require ready state and the validated head before merging
-   gh pr merge <n> --repo <owner>/<repo> --squash --match-head-commit <validated-head>
+   gh pr merge <n> --repo <owner>/<repo> --squash --match-head-commit <validated-head> --subject "<intended title> (#<n>)" --body ""
    ```
    then confirm it actually landed — a refused merge leaves the pr open and is easy to skim past:
    ```bash
-   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt,headRefOid   # want MERGED, non-null mergedAt, and the validated head
+   gh pr view <n> --repo <owner>/<repo> --json state,mergedAt,headRefOid,mergeCommit   # want MERGED, non-null mergedAt, and the validated head
    ```
+   read `gh api repos/<owner>/<repo>/commits/<merge-sha> --jq .commit.message` separately and verify the landed subject and body under the shared rule before activation or cleanup.
 2. **activate** from the now-updated main, using the flake this machine actually uses (`$HM_CONFIG_NAME` selects the config):
    ```bash
    home-manager switch --flake ~/.config/home-manager#$HM_CONFIG_NAME
