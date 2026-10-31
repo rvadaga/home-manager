@@ -250,8 +250,8 @@ class TodoTest(unittest.TestCase):
         # Model the previous format, with details on the checkbox line and no managed section.
         lines = text.splitlines()
         meta = json.loads(next(line[len("  <!-- todo: "):-4] for line in lines if line.startswith("  <!-- todo: ")))
-        meta.pop("action")
-        meta.pop("context")
+        meta.pop("action", None)
+        meta.pop("context", None)
         meta["schema"] = 1
         original_events = meta["events"]
         path.write_text('---\ntags: [reference, todos]\ncreated: 2026-01-01\n---\n\n# todos\n\n## earlier timing label\n\n'
@@ -279,6 +279,58 @@ class TodoTest(unittest.TestCase):
         self.apply(request)
         self.assertEqual(self.git("rev-parse", "HEAD"), head)
         self.assertEqual((self.vault / "log.md").read_bytes(), log)
+
+    def test_hidden_descriptions_migrate_to_readable_details_without_duplication(self):
+        self.apply(self.request(summary="Discuss navigation"))
+        path = self.vault / "pages/todos.md"
+        lines = path.read_text().splitlines()
+        pos = next(i for i, line in enumerate(lines) if line.startswith("  <!-- todo:"))
+        meta = json.loads(lines[pos][len("  <!-- todo: "):-4])
+        meta.update(schema=2, action="Discuss `send` and [feedback](https://example.invalid).",
+                    context="Retain ordering.\n\nKeep the recovery constraint.")
+        end = pos + 1
+        while end < len(lines) and (not lines[end] or lines[end].startswith("  >")):
+            end += 1
+        lines[pos:end] = ["  <!-- todo: " + json.dumps(meta) + " -->", ""]
+        path.write_text("\n".join(lines) + "\n")
+        self.git("add", ".")
+        self.git("commit", "-m", "hidden description fixture")
+        before = self.show()[0]
+        self.apply({"operation": "maintain", "scope": "personal"})
+        after = self.show()[0]
+        for field in before:
+            if field != "file_link":
+                self.assertEqual(before[field], after[field], field)
+        text = path.read_text()
+        self.assertIn("  > [!info]- Details\n  > " + meta["action"], text)
+        self.assertIn("  > Retain ordering.\n  >\n  > Keep the recovery constraint.", text)
+        current = json.loads(next(line[len("  <!-- todo: "):-4] for line in text.splitlines() if line.startswith("  <!-- todo:")))
+        self.assertEqual(current["schema"], 3)
+        self.assertNotIn("action", current)
+        self.assertNotIn("context", current)
+        head = self.git("rev-parse", "HEAD")
+        self.apply({"operation": "maintain", "scope": "personal"})
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+
+    def test_readable_details_survive_edits_and_dispositions(self):
+        self.apply(self.request(summary="Discuss navigation", context="Retain both choices."))
+        path = self.vault / "pages/todos.md"
+        text = path.read_text().replace("  > Retain both choices.", "  > Retain both choices and their ordering.")
+        path.write_text(text)
+        self.git("add", ".")
+        self.git("commit", "-m", "edit readable context")
+        self.assertEqual(self.show()[0]["context"], "Retain both choices and their ordering.")
+        self.apply({"operation": "complete", "scope": "personal", "id": "T001", "key": "done", "reason": "User confirmed completion"})
+        self.assertEqual(self.show()[0]["context"], "Retain both choices and their ordering.")
+        self.assertEqual(path.read_text().count("  > [!info]- Details"), 1)
+
+    def test_missing_details_fail_before_maintenance_can_drop_text(self):
+        self.apply(self.request(summary="Discuss navigation"))
+        path = self.vault / "pages/todos.md"
+        path.write_text(path.read_text().replace("  > [!info]- Details", "  > [!info]- Renamed"))
+        result = self.run_cli("lint")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing readable Details", result.stderr)
 
     def test_capture_and_transfer_maintain_session_groups_and_estate(self):
         first = "12345678-1234-1234-1234-123456789abc"
@@ -338,7 +390,8 @@ class TodoTest(unittest.TestCase):
         self.assertIn(f"[Title \\[with\\] markup](codex://threads/{chat})", result.stdout)
         self.assertIn("T001 — Compact label", result.stdout)
         self.assertNotIn("todo:", result.stdout)
-        self.assertNotIn("Full details", result.stdout)
+        self.assertIn("  > [!info]- Details", result.stdout)
+        self.assertIn("  > Full details with an artifact reference.", result.stdout)
         self.assertIn("Full details", self.show()[0]["context"])
         result = self.run_cli("lint")
         self.assertEqual(json.loads(result.stdout)["issues"], [])

@@ -22,6 +22,7 @@ META = re.compile(r"^  <!-- todo: (.*) -->$")
 SESSIONS = re.compile(r"^<!-- todo-sessions: (.*) -->$", re.M)
 START = "<!-- todo-items:start -->"
 END = "<!-- todo-items:end -->"
+DETAILS = "  > [!info]- Details"
 STATES = {"open", "deferred", "done", "dropped"}
 INTENTS = {"discuss", "implement", "investigate", "consider"}
 BUCKETS = {"outstanding", "someday"}
@@ -87,12 +88,14 @@ def source_handle(source):
 
 
 def validate_metadata(meta):
-    if not isinstance(meta, dict) or meta.get("schema") not in {1, 2}:
+    if not isinstance(meta, dict) or meta.get("schema") not in {1, 2, 3}:
         raise ValueError("unsupported todo metadata schema")
     if meta["schema"] == 2:
         nonempty(meta.get("action"), "retained action")
         if not isinstance(meta.get("context"), str):
             raise ValueError("item must retain its context")
+    if meta["schema"] == 3 and {"action", "context"} & meta.keys():
+        raise ValueError("schema 3 descriptions belong in the readable Details block")
     source_handle(meta.get("source"))
     if meta.get("intent") not in INTENTS or meta.get("bucket") not in BUCKETS or meta.get("status") not in STATES:
         raise ValueError("invalid intent, bucket or disposition")
@@ -135,9 +138,34 @@ def read_items(text):
                 if event["key"] in keys:
                     raise ValueError("duplicate operation key")
                 keys.add(event["key"])
-        items.append({"id": ident, "number": int(number), "summary": action,
-                      "action": meta["action"] if meta and meta["schema"] == 2 else action,
-                      "context": meta["context"] if meta and meta["schema"] == 2 else context.strip(),
+        summary = action
+        end = pos + (2 if meta else 1)
+        if meta and meta["schema"] == 2:
+            action, context = meta["action"], meta["context"]
+        elif meta and meta["schema"] == 3:
+            if lines[end:end + 2] != ["", DETAILS] or end + 2 >= len(lines):
+                raise ValueError(f"{ident}: missing readable Details block")
+            detail = lines[end + 2]
+            if not detail.startswith("  > "):
+                raise ValueError(f"{ident}: missing full description")
+            action = nonempty(detail[4:], "full description")
+            end += 3
+            context = ""
+            if end < len(lines) and lines[end] == "  >":
+                end += 1
+                parts = []
+                while end < len(lines) and (lines[end] == "  >" or lines[end].startswith("  > ")):
+                    parts.append(lines[end][4:])
+                    end += 1
+                if not parts:
+                    raise ValueError(f"{ident}: missing context after separator")
+                context = "\n".join(parts)
+            if end < len(lines) and lines[end].startswith("  >"):
+                raise ValueError(f"{ident}: malformed Details block")
+        else:
+            context = context.strip()
+        items.append({"id": ident, "number": int(number), "summary": summary,
+                      "action": action, "context": context, "end_line": end,
                       "section": section, "anchor": anchor, "line": pos + 1, "meta": meta,
                       "legacy_bucket": "someday" if section == "someday" else "outstanding"})
     return items
@@ -203,6 +231,13 @@ def item_row(item):
     return f"- [{mark}] **{item['id']} — {item['summary']}** · {escaped(' · '.join(labels))} ^{item['anchor']}"
 
 
+def item_details(item):
+    lines = ["", DETAILS, "  > " + item["action"]]
+    if item["context"]:
+        lines += ["  >", *("  > " + line if line else "  >" for line in item["context"].split("\n"))]
+    return lines
+
+
 def grouped_rows(items, sessions, *, metadata):
     groups = {}
     for item in sorted(items, key=lambda i: i["number"]):
@@ -225,6 +260,7 @@ def grouped_rows(items, sessions, *, metadata):
             lines.append(item_row(item))
             if metadata:
                 lines.append(encoded_metadata(meta))
+            lines.extend(item_details(item))
             lines.append("")
     return "\n".join(lines)
 
@@ -245,9 +281,12 @@ def format_page(text, *, summaries=None, sessions=None):
     for item in items:
         if item["meta"] is None:
             raise ValueError("verify and annotate legacy sources before reorganizing")
-        skipped.update([item["line"] - 1, item["line"]])
+        skipped.update(range(item["line"] - 1, item["end_line"]))
         if item["meta"]["schema"] == 1:
-            item["meta"].update(schema=2, action=item["action"], context=item["context"], original_section=item["section"])
+            item["meta"]["original_section"] = item["section"]
+        item["meta"]["schema"] = 3
+        item["meta"].pop("action", None)
+        item["meta"].pop("context", None)
         if item["id"] in summaries:
             item["summary"] = escaped(summaries[item["id"]])
     if text.count(START) != text.count(END) or text.count(START) > 1 or (START in text and text.index(END) < text.index(START)):
@@ -383,8 +422,9 @@ def update(text, request, now):
     if operation == "capture":
         number = max((x["number"] for x in items), default=0) + 1
         ident = f"T{number:03d}"
-        meta.update(schema=2, action=escaped(request["action"]), context=escaped(request["context"]) if request.get("context") else "")
-        block = f"- [ ] **{ident} — {escaped(request.get('summary', request['action']))}** ^todo-{number:03d}\n{encoded_metadata(meta)}\n"
+        meta["schema"] = 3
+        details = item_details({"action": escaped(request["action"]), "context": escaped(request["context"]) if request.get("context") else ""})
+        block = "\n".join([f"- [ ] **{ident} — {escaped(request.get('summary', request['action']))}** ^todo-{number:03d}", encoded_metadata(meta), *details, ""])
         result = text.rstrip() + "\n\n" + block
     else:
         ident = item["id"]
