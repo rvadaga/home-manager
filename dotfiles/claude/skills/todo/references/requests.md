@@ -65,7 +65,7 @@ both mappings are optional; empty mappings normalize the current layout. mainten
 
 ## checklist schema and display
 
-the checklist identified by `storage.json` is the only item store. its Markdown is directly readable; structured comments preserve details and history in that same file. `todo` owns this schema. vault-wide naming, frontmatter, confidentiality and transaction rules remain with `notes`.
+the checklist identified by `storage.json` is the only item store. its Markdown contains the readable descriptions; structured comments preserve provenance and disposition history in that same file. `todo` owns this schema. vault-wide naming, frontmatter, confidentiality and transaction rules remain with `notes`.
 
 ### session groups
 
@@ -77,26 +77,31 @@ use `codex://threads/<exact-thread-id>` for local Codex chat navigation, as docu
 
 ### item records
 
-each item has one visible checkbox line, immediately followed by its metadata comment:
+each item has one visible checkbox summary, its metadata comment, and an expandable Details callout:
 
 ```markdown
 - [ ] **T001 — Discuss simpler navigation** · discuss · before wind-down ^todo-001
   <!-- todo: {complete JSON record} -->
+
+  > [!info]- Details
+  > Discuss simplifying the two navigation choices.
+  >
+  > Keep both current entry points available during the discussion.
 ```
 
-the JSON placeholder above is illustrative, not a valid record. the helper emits the actual record. aim for a short label, normally under 120 characters; narrow windows may still wrap it. retain full wording in the record instead of shortening by omission. the visible line includes intent, non-open disposition, someday when applicable, and requested timing when specified. an absent timing label means unspecified; it is not an inferred deadline.
+the JSON placeholder above is illustrative, not a valid record. the helper emits the actual record. aim for a short summary, normally under 120 characters; narrow windows may still wrap it. the [Obsidian callout](https://help.obsidian.md/callouts) is collapsed by default and expands on click. its first body line is the complete action; an optional blank quoted separator introduces the context. keep Markdown links and code formatting readable there. the summary includes intent, non-open disposition, someday when applicable, and requested timing when specified. an absent timing label means unspecified; it is not an inferred deadline.
 
-schema 2 retains the schema 1 source, intent, bucket, timing, status, current_chat, optional project/artifact and events. it adds `action` and `context` for the complete original wording. the visible bold text after the ID is the compact summary. a legacy migration also retains `original_section`, so an old section's implication can be inspected without silently changing recorded timing.
+schema 3 retains source, intent, bucket, timing, status, current_chat, optional project/artifact and events in the metadata comment. the complete action and context live only in the readable Details block; the parser reads them from there. the visible bold text after the ID is the compact summary. a legacy migration also retains `original_section`, so an old section's implication can be inspected without silently changing recorded timing. do not store a second hidden copy of the description. a missing or malformed Details block fails validation rather than silently losing its contents.
 
 `source` holds the exact original chat or retrieval handle, optional title, message and annotation offsets. `current_chat` identifies the relevant carrying chat. `events` preserves capture keys/fingerprints, operations, times, dispositions, requested timing and transfer reasons. a source is not rewritten when a title changes. the helper exposes these fields through `show --view all --id <id>`.
 
-schema 1 remains readable. `annotate` supplies verified provenance to an unannotated legacy record without changing its readable text. explicit `maintain` upgrades fully annotated legacy records while preserving their full action/context and all history. never use a live checklist as a migration test.
+schemas 1 and 2 remain readable. `annotate` supplies verified provenance to an unannotated legacy record without changing its readable text. explicit `maintain` upgrades fully annotated legacy records, moving schema 2's hidden action/context into the readable block while preserving the exact wording and all history. never use a live checklist as a migration test.
 
 ### ordering and maintenance
 
 the `todo-items:start` and `todo-items:end` comments delimit the session-group display. the helper rebuilds that display from the same canonical records after capture, transfer and dispositions. it keeps other prose, links and user questions outside the managed section. migrating the old layout removes only empty section headings; their names remain on the migrated records.
 
-groups use the smallest item ID as a stable display order. each group shows outstanding unresolved records, then unresolved someday records, then a foldable `completed and dropped` subsection. IDs break ties. this order is for scanning and conveys no priority or suggested execution sequence. ask for an ordering recommendation in chat when needed.
+groups use the smallest item ID as a stable display order. each group shows outstanding unresolved records, then unresolved someday records, then a `completed and dropped` subsection. IDs break ties. this order is for scanning and conveys no priority or suggested execution sequence. ask for an ordering recommendation in chat when needed.
 
 maintenance may revise compact summaries and verified title/estate metadata. it cannot alter the original action/context, source, current_chat, intent, timing, bucket, status or events. IDs and anchors never change or get reused. original context and artifact URLs remain retrievable even when omitted from the compact line. completed and dropped records remain available to `all`; open and deferred records remain available regardless of chat archival.
 

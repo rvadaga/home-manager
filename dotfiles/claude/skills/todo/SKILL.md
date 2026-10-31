@@ -5,7 +5,7 @@ description: capture, review, order, or maintain durable follow-ups. use for tod
 
 # todo
 
-`todo` refers to this skill's capture, review, format and maintenance contract. keep one canonical checklist, with compact single-line items grouped under the current relevant Codex chat's linked title. full details, sources and disposition history stay with each item. read [the schema](references/requests.md#checklist-schema-and-display) for representation and preservation rules; read [requests](references/requests.md) before a write.
+`todo` refers to this skill's capture, review, format and maintenance contract. keep one canonical checklist, with single-line summaries grouped under the current relevant Codex chat's linked title and expandable descriptions beneath each item. full details stay readable in the note; comments hold provenance and disposition metadata. read [the schema](references/requests.md#checklist-schema-and-display) for representation and preservation rules; read [requests](references/requests.md) before a write.
 
 ## capture
 
@@ -40,7 +40,7 @@ add `--format markdown` for compact groups with linked chat titles. JSON include
 
 for estate queries, resolve missing membership from authoritative project or estate records where possible. disclose unclassified items rather than claiming a filtered result is complete. all-estate views keep them visible. coverage means captured items in this checklist, not every unfinished thought in every transcript; a historical backfill is a separate requested task.
 
-render one line per item with its ID/link, short label and useful timing/disposition. group by the relevant chat and use verified titles as navigation links. preserve someday and deferral labels. avoid copying state into another tracker; existing status and catch-up views link to these canonical IDs.
+render one summary line per item with its ID/link, short label and useful timing/disposition, followed by a collapsed Details callout containing the full description and context. group by the relevant chat and use verified titles as navigation links. preserve someday and deferral labels. avoid copying state into another tracker; existing status and catch-up views link to these canonical IDs.
 
 ## suggested order within a chat
 
