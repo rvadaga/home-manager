@@ -1,4 +1,4 @@
 interface:
   display_name: "todo"
-  short_description: "Capture and review durable follow-ups"
-  default_prompt: "Use $todo to capture this follow-up for later."
+  short_description: "Capture, review and organize follow-ups by chat"
+  default_prompt: "Use $todo to review outstanding follow-ups across my chats."

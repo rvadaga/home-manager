@@ -184,7 +184,8 @@ class TodoTest(unittest.TestCase):
             del request["action"]
             self.apply(request)
         after = path.read_text()
-        self.assertEqual("\n".join(line for line in after.splitlines() if not line.startswith("  <!-- todo:")) + "\n", seed)
+        readable = "\n".join(line for line in after.splitlines() if not line.startswith("  <!-- todo:"))
+        self.assertEqual(readable.split("\n<!-- todo-sessions:")[0].rstrip(), seed.rstrip())
         self.assertEqual(self.apply(self.request())["id"], "T003")
 
     def test_content_is_never_executed(self):
@@ -241,6 +242,108 @@ class TodoTest(unittest.TestCase):
         (self.vault / "unrelated.md").unlink()
         result = self.apply(self.request(artifact="javascript:alert(1)"), success=False)
         self.assertIn("HTTPS", result.stderr)
+
+    def test_maintenance_preserves_legacy_meaning_and_is_idempotent(self):
+        self.apply(self.request(action="Discuss every input mode and retain its full behavior", context="Keep ordering and recovery constraints."))
+        path = self.vault / "pages/todos.md"
+        text = path.read_text()
+        # Model the previous format, with details on the checkbox line and no managed section.
+        lines = text.splitlines()
+        meta = json.loads(next(line[len("  <!-- todo: "):-4] for line in lines if line.startswith("  <!-- todo: ")))
+        meta.pop("action")
+        meta.pop("context")
+        meta["schema"] = 1
+        original_events = meta["events"]
+        path.write_text('---\ntags: [reference, todos]\ncreated: 2026-01-01\n---\n\n# todos\n\n## earlier timing label\n\n'
+                        '- [ ] **T001 — Discuss every input mode and retain its full behavior** Keep ordering and recovery constraints. ^todo-001\n'
+                        '  <!-- todo: ' + json.dumps(meta) + ' -->\n\n## source and context\n\nRetain [the artifact](https://example.invalid/context).\n\n> q: Is the timing settled?\n')
+        self.git("add", ".")
+        self.git("commit", "-m", "legacy layout")
+        before = self.show()[0]
+        request = {"operation": "maintain", "scope": "personal", "summaries": {"T001": "Discuss one input method"},
+                   "sessions": {"source-chat": {"title": "Current verified title", "estate": "example-estate", "estate_title": "Example", "evidence": "fixture registry"}}}
+        self.apply(request)
+        after = self.show()[0]
+        for field in ("id", "action", "context", "source", "current_chat", "timing", "intent", "status", "bucket", "block", "artifact", "history"):
+            self.assertEqual(before[field], after[field], field)
+        self.assertEqual(after["history"], original_events)
+        self.assertEqual(after["original_section"], "earlier timing label")
+        self.assertEqual(after["summary"], "Discuss one input method")
+        text = path.read_text()
+        self.assertIn("> q: Is the timing settled?", text)
+        self.assertIn("[the artifact](https://example.invalid/context)", text)
+        self.assertNotIn("## earlier timing label", text)
+        self.assertLess(text.index("## source and context"), text.index("## Current verified title"))
+        self.assertEqual(sum(line.startswith("- [") for line in text.splitlines()), 1)
+        head, log = self.git("rev-parse", "HEAD"), (self.vault / "log.md").read_bytes()
+        self.apply(request)
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+        self.assertEqual((self.vault / "log.md").read_bytes(), log)
+
+    def test_capture_and_transfer_maintain_session_groups_and_estate(self):
+        first = "12345678-1234-1234-1234-123456789abc"
+        second = "12345678-1234-1234-1234-123456789def"
+        self.apply(self.request(source={"chat": first, "title": "First title"}, session={"title": "First title", "estate": "one", "evidence": "verified registry"}))
+        self.apply(self.request(key="second", source={"chat": second, "title": "Second title"}))
+        self.apply(self.request(key="third", source={"chat": first, "title": "Renamed first title"}))
+        text = (self.vault / "pages/todos.md").read_text()
+        self.assertEqual(text.count(f"## [Renamed first title](codex://threads/{first})"), 1)
+        self.assertLess(text.index("T003 —"), text.index("## [Second title]"))
+        self.assertEqual(self.show()[0]["session"]["estate"], "one")
+        source = self.show()[0]["source"]
+        self.apply({"operation": "transfer", "scope": "personal", "key": "carry", "id": "T001", "reason": "User chose the relevant chat", "successor": second})
+        item = next(i for i in self.show() if i["id"] == "T001")
+        self.assertEqual(item["source"], source)
+        self.assertEqual(item["session"]["title"], "Second title")
+        self.assertNotIn("estate", item["session"])
+        text = (self.vault / "pages/todos.md").read_text()
+        self.assertEqual(text.count("^todo-001"), 1)
+        self.assertEqual(text.count("## [Second title]"), 1)
+        self.apply({"operation": "complete", "scope": "personal", "key": "done", "id": "T001", "reason": "User confirmed completion"})
+        text = (self.vault / "pages/todos.md").read_text()
+        self.assertLess(text.index("T002 —"), text.index("### completed and dropped"))
+        self.assertLess(text.index("### completed and dropped"), text.index("T001 —"))
+
+    def test_ideas_and_estate_views_keep_parked_and_unclassified_records(self):
+        self.apply(self.request(session={"title": "Known session", "estate": "one", "estate_title": "Example", "evidence": "fixture registry"}))
+        self.apply(self.request(key="parked", intent="consider", bucket="someday", timing="someday"))
+        self.apply(self.request(key="implementation", intent="implement", source={"chat": "unclassified"}))
+        self.apply(self.request(key="investigation", intent="investigate", source={"chat": "other"}, session={"title": "Other estate", "estate": "two", "evidence": "fixture registry"}))
+        self.assertEqual({i["id"] for i in self.show("unresolved")}, {"T001", "T002", "T003", "T004"})
+        self.assertEqual({i["id"] for i in self.show("ideas")}, {"T001", "T002", "T004"})
+        result = self.run_cli("show", "--view", "unresolved", "--estate", "Example")
+        self.assertEqual({i["id"] for i in json.loads(result.stdout)}, {"T001", "T002"})
+        self.assertIn("Unclassified estate membership: T003", result.stderr)
+        result = self.run_cli("show", "--view", "all", "--id", "T003")
+        self.assertEqual([i["id"] for i in json.loads(result.stdout)], ["T003"])
+        self.apply({"operation": "drop", "scope": "personal", "id": "T001", "key": "drop", "reason": "User dropped it"})
+        self.assertEqual({i["id"] for i in self.show("ideas")}, {"T002", "T004"})
+
+    def test_maintenance_cannot_change_disposition_or_guess_estate(self):
+        self.apply(self.request())
+        head = self.git("rev-parse", "HEAD")
+        for changes in ({"status": "done"}, {"current_chat": "another"}, {"action": "Different meaning"},
+                        {"summaries": {"T999": "Unknown"}}, {"sessions": {"unknown": {"title": "No matching chat"}}},
+                        {"sessions": {"source-chat": {"title": "Known", "estate": "unverified"}}}):
+            self.apply({"operation": "maintain", "scope": "personal", **changes}, success=False)
+            self.assertEqual(self.git("rev-parse", "HEAD"), head)
+            self.assertEqual(self.git("status", "--porcelain"), "")
+
+    def test_lint_and_markdown_views_are_read_only_and_escape_titles(self):
+        chat = "12345678-1234-1234-1234-123456789abc"
+        self.apply(self.request(source={"chat": chat, "title": "Title [with] markup"}, summary="Compact label", context="Full details with an artifact reference."))
+        head = self.git("rev-parse", "HEAD")
+        result = self.run_cli("show", "--view", "unresolved", "--format", "markdown")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"[Title \\[with\\] markup](codex://threads/{chat})", result.stdout)
+        self.assertIn("T001 — Compact label", result.stdout)
+        self.assertNotIn("todo:", result.stdout)
+        self.assertNotIn("Full details", result.stdout)
+        self.assertIn("Full details", self.show()[0]["context"])
+        result = self.run_cli("lint")
+        self.assertEqual(json.loads(result.stdout)["issues"], [])
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+        self.assertEqual(self.git("status", "--porcelain"), "")
 
 
 if __name__ == "__main__":
