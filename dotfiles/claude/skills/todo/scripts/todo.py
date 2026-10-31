@@ -19,6 +19,9 @@ from urllib.parse import quote, urlparse
 SKILL = Path(__file__).absolute().parents[1]
 ITEM = re.compile(r"^- \[([ x-])\] \*\*(T(\d{3,})) — (.*?)\*\*(.*?) \^(todo-\d{3,})$")
 META = re.compile(r"^  <!-- todo: (.*) -->$")
+SESSIONS = re.compile(r"^<!-- todo-sessions: (.*) -->$", re.M)
+START = "<!-- todo-items:start -->"
+END = "<!-- todo-items:end -->"
 STATES = {"open", "deferred", "done", "dropped"}
 INTENTS = {"discuss", "implement", "investigate", "consider"}
 BUCKETS = {"outstanding", "someday"}
@@ -84,8 +87,12 @@ def source_handle(source):
 
 
 def validate_metadata(meta):
-    if not isinstance(meta, dict) or meta.get("schema") != 1:
+    if not isinstance(meta, dict) or meta.get("schema") not in {1, 2}:
         raise ValueError("unsupported todo metadata schema")
+    if meta["schema"] == 2:
+        nonempty(meta.get("action"), "retained action")
+        if not isinstance(meta.get("context"), str):
+            raise ValueError("item must retain its context")
     source_handle(meta.get("source"))
     if meta.get("intent") not in INTENTS or meta.get("bucket") not in BUCKETS or meta.get("status") not in STATES:
         raise ValueError("invalid intent, bucket or disposition")
@@ -128,8 +135,11 @@ def read_items(text):
                 if event["key"] in keys:
                     raise ValueError("duplicate operation key")
                 keys.add(event["key"])
-        items.append({"id": ident, "number": int(number), "action": action, "context": context.strip(),
-                      "anchor": anchor, "line": pos + 1, "meta": meta, "legacy_bucket": "someday" if section == "someday" else "outstanding"})
+        items.append({"id": ident, "number": int(number), "summary": action,
+                      "action": meta["action"] if meta and meta["schema"] == 2 else action,
+                      "context": meta["context"] if meta and meta["schema"] == 2 else context.strip(),
+                      "section": section, "anchor": anchor, "line": pos + 1, "meta": meta,
+                      "legacy_bucket": "someday" if section == "someday" else "outstanding"})
     return items
 
 
@@ -143,23 +153,156 @@ def encoded_metadata(meta):
     return "  <!-- todo: " + json.dumps(meta, ensure_ascii=True, sort_keys=True).replace("<", "\\u003c").replace(">", "\\u003e") + " -->"
 
 
+def validate_sessions(sessions):
+    if not isinstance(sessions, dict):
+        raise ValueError("sessions must map exact chat IDs or retrieval handles to metadata")
+    for chat, info in sessions.items():
+        nonempty(chat, "session handle")
+        if not isinstance(info, dict) or not set(info) <= {"title", "estate", "estate_title", "evidence"}:
+            raise ValueError("unsupported session fields")
+        nonempty(info.get("title"), "session title")
+        for key, value in info.items():
+            nonempty(value, key)
+        if "estate" in info and "evidence" not in info:
+            raise ValueError("estate membership needs a verified source")
+        if "estate_title" in info and "estate" not in info:
+            raise ValueError("estate title needs its stable estate ID")
+    return sessions
+
+
+def read_sessions(text):
+    matches = SESSIONS.findall(text)
+    if len(matches) > 1:
+        raise ValueError("duplicate session catalog")
+    return validate_sessions(json_load(matches[0])) if matches else {}
+
+
+def session_info(item, sessions):
+    meta = item["meta"] or {}
+    chat = meta.get("current_chat")
+    info = dict(sessions.get(chat, {}))
+    source = meta.get("source", {})
+    if source and not info.get("title") and chat == source_handle(source):
+        info["title"] = source.get("title")
+    info["title"] = info.get("title") or f"Session {chat or 'unverified'}"
+    info["chat"] = chat
+    info["link"] = f"codex://threads/{chat}" if chat and re.fullmatch(r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}", chat) else None
+    return info
+
+
+def item_row(item):
+    meta = item["meta"]
+    mark = "x" if meta["status"] == "done" else "-" if meta["status"] == "dropped" else " "
+    labels = [meta["intent"]]
+    if meta["status"] != "open":
+        labels.append(meta["status"])
+    if meta["bucket"] == "someday":
+        labels.append("someday")
+    if meta["timing"] not in {"unspecified", "someday"}:
+        labels.append(meta["timing"])
+    return f"- [{mark}] **{item['id']} — {item['summary']}** · {escaped(' · '.join(labels))} ^{item['anchor']}"
+
+
+def grouped_rows(items, sessions, *, metadata):
+    groups = {}
+    for item in sorted(items, key=lambda i: i["number"]):
+        groups.setdefault((item["meta"] or {}).get("current_chat"), []).append(item)
+    lines = []
+    for group in groups.values():
+        info = session_info(group[0], sessions)
+        title = escaped(info["title"])
+        heading = f"[{title}]({info['link']})" if info["link"] else title
+        lines.extend([f"## {heading}", ""])
+        closed = False
+        for item in sorted(group, key=lambda i: ((i["meta"] or {}).get("status") in {"done", "dropped"}, (i["meta"] or {}).get("bucket") == "someday", i["number"])):
+            meta = item["meta"]
+            if meta is None:
+                lines.extend([f"- {item['id']} — {item['summary']} (verify source and disposition)", ""])
+                continue
+            if meta["status"] in {"done", "dropped"} and not closed:
+                lines.extend(["### completed and dropped", ""])
+                closed = True
+            lines.append(item_row(item))
+            if metadata:
+                lines.append(encoded_metadata(meta))
+            lines.append("")
+    return "\n".join(lines)
+
+
+def format_page(text, *, summaries=None, sessions=None):
+    items = read_items(text)
+    catalog = read_sessions(text)
+    summaries = summaries or {}
+    if set(summaries) - {i["id"] for i in items}:
+        raise ValueError("summary refers to an unknown item")
+    if sessions:
+        validate_sessions(sessions)
+        if set(sessions) - {(i["meta"] or {}).get("current_chat") for i in items}:
+            raise ValueError("session metadata must refer to an existing carrying chat")
+        for chat, info in sessions.items():
+            catalog[chat] = {**catalog.get(chat, {}), **info}
+    skipped = set()
+    for item in items:
+        if item["meta"] is None:
+            raise ValueError("verify and annotate legacy sources before reorganizing")
+        skipped.update([item["line"] - 1, item["line"]])
+        if item["meta"]["schema"] == 1:
+            item["meta"].update(schema=2, action=item["action"], context=item["context"], original_section=item["section"])
+        if item["id"] in summaries:
+            item["summary"] = escaped(summaries[item["id"]])
+    if text.count(START) != text.count(END) or text.count(START) > 1 or (START in text and text.index(END) < text.index(START)):
+        raise ValueError("invalid managed item boundaries")
+    retained, inside = [], False
+    for pos, line in enumerate(text.splitlines()):
+        if line == START:
+            inside = True
+        elif line == END:
+            inside = False
+        elif pos in skipped or SESSIONS.fullmatch(line):
+            continue
+        elif inside and (line.startswith("## ") or line == "### completed and dropped"):
+            continue
+        elif not inside or line.strip():
+            retained.append(line)
+    # Empty former section headings carry no prose; their original names remain on migrated items.
+    parts = re.split(r"(?m)(?=^## )", "\n".join(retained))
+    retained_text = "".join(p for p in parts if not p.startswith("## ") or "\n" in p and p.split("\n", 1)[1].strip()).rstrip()
+    encoded = json.dumps(catalog, ensure_ascii=True, sort_keys=True).replace("<", "\\u003c").replace(">", "\\u003e")
+    result = f"{retained_text}\n\n<!-- todo-sessions: {encoded} -->\n\n{START}\n\n{grouped_rows(items, catalog, metadata=True)}{END}\n"
+    read_items(result)
+    return result
+
+
 def request_data(path):
     request = json_load(path.read_text())
     if not isinstance(request, dict):
         raise ValueError("request must be an object")
     common = {"operation", "key", "scope"}
-    capture = {"action", "source", "intent", "bucket", "timing", "project", "artifact"}
+    capture = {"action", "summary", "context", "source", "intent", "bucket", "timing", "project", "artifact", "session"}
     fields = {
-        "capture": capture, "annotate": (capture - {"action"}) | {"id"},
+        "capture": capture, "annotate": (capture - {"action", "summary", "context"}) | {"id"},
         "complete": {"id", "reason"}, "drop": {"id", "reason"},
-        "defer": {"id", "reason", "timing", "bucket"}, "transfer": {"id", "successor", "reason"},
+        "defer": {"id", "reason", "timing", "bucket"}, "transfer": {"id", "successor", "reason", "session"},
+        "maintain": {"summaries", "sessions"},
     }
     operation = request.get("operation")
     if operation not in fields or not set(request) <= common | fields[operation]:
         raise ValueError("unsupported operation or fields")
-    nonempty(request.get("key"), "stable operation key")
     if request.get("scope") not in {"personal", "work"}:
         raise ValueError("request needs its personal or work scope")
+    if operation == "maintain":
+        if "key" in request:
+            raise ValueError("maintenance is content-idempotent and has no capture key")
+        summaries = request.get("summaries", {})
+        if not isinstance(summaries, dict):
+            raise ValueError("summaries must map item IDs to short labels")
+        for ident, summary in summaries.items():
+            if not re.fullmatch(r"T\d{3,}", ident):
+                raise ValueError("invalid summary item ID")
+            nonempty(summary, "summary")
+        validate_sessions(request.get("sessions", {}))
+        return request
+    nonempty(request.get("key"), "stable operation key")
     if operation in {"capture", "annotate"}:
         source_handle(request.get("source"))
         if request.get("intent") not in INTENTS:
@@ -168,7 +311,7 @@ def request_data(path):
             raise ValueError("invalid bucket")
         if operation == "capture":
             nonempty(request.get("action"), "action")
-        for key in ("timing", "project"):
+        for key in ("timing", "project", "summary", "context"):
             if key in request:
                 nonempty(request[key], key)
         if "artifact" in request:
@@ -181,6 +324,9 @@ def request_data(path):
         raise ValueError("operation needs an existing stable item ID")
     if operation == "transfer":
         nonempty(request.get("successor"), "successor retrieval handle")
+    if "session" in request:
+        chat = request.get("successor") or source_handle(request["source"])
+        validate_sessions({chat: request["session"]})
     if operation == "defer":
         if "timing" not in request and "bucket" not in request:
             raise ValueError("deferral needs the user's timing or bucket")
@@ -196,6 +342,8 @@ def fingerprint(request):
 
 
 def update(text, request, now):
+    if request["operation"] == "maintain":
+        return format_page(text, summaries=request.get("summaries"), sessions=request.get("sessions")), "layout"
     items = read_items(text)
     digest = fingerprint(request)
     for item in items:
@@ -235,7 +383,8 @@ def update(text, request, now):
     if operation == "capture":
         number = max((x["number"] for x in items), default=0) + 1
         ident = f"T{number:03d}"
-        block = f"- [ ] **{ident} — {escaped(request['action'])}** ^todo-{number:03d}\n{encoded_metadata(meta)}\n"
+        meta.update(schema=2, action=escaped(request["action"]), context=escaped(request["context"]) if request.get("context") else "")
+        block = f"- [ ] **{ident} — {escaped(request.get('summary', request['action']))}** ^todo-{number:03d}\n{encoded_metadata(meta)}\n"
         result = text.rstrip() + "\n\n" + block
     else:
         ident = item["id"]
@@ -250,13 +399,25 @@ def update(text, request, now):
             lines[pos] = f"- [{mark}]" + lines[pos][5:]
             lines[pos + 1] = encoded_metadata(meta)
         result = "\n".join(lines) + "\n"
+    session = request.get("session")
+    if session is None and request.get("source", {}).get("title"):
+        session = {"title": request["source"]["title"]}
+    chat = request.get("successor") or source_handle(request.get("source", meta["source"]))
+    if START in text:
+        result = format_page(result, sessions={chat: session} if session else None)
+    elif session:
+        catalog = read_sessions(result)
+        catalog[chat] = {**catalog.get(chat, {}), **session}
+        encoded = json.dumps(catalog, ensure_ascii=True, sort_keys=True).replace("<", "\\u003c").replace(">", "\\u003e")
+        catalog_line = f"<!-- todo-sessions: {encoded} -->"
+        result = SESSIONS.sub(lambda _: catalog_line, result) if SESSIONS.search(result) else result.rstrip() + "\n\n" + catalog_line + "\n"
     read_items(result)
     return result, ident
 
 
 def initial_page(cfg):
     return (f"---\ntags: {json.dumps(cfg['tags'])}\ncreated: {dt.date.today().isoformat()}\n---\n\n"
-            f"# {cfg['title']}\n\nCaptured follow-ups. Recording an item does not start its work.\n")
+            f"# {cfg['title']}\n\nCaptured follow-ups. Recording an item does not start its work.\n\n{START}\n{END}\n")
 
 
 def index_target(cfg):
@@ -291,6 +452,7 @@ def validate_vault(cfg):
         raise ValueError("checklist needs a created date")
     dt.date.fromisoformat(created[1])
     read_items(text)
+    read_sessions(text)
     if not indexed(cfg):
         raise ValueError("checklist is missing from the vault index")
     log_parts(contained(vault, "log.md").read_text())
@@ -367,14 +529,19 @@ def apply(cfg, request_path, owner):
         time.sleep(0.1)
     request = request_data(request_path)
     items = read_items(contained(cfg["root"], cfg["checklist"]).read_text())
-    matched = next(i for i in items if any(e["key"] == request["key"] for e in (i["meta"] or {}).get("events", [])))
-    print(json.dumps(public_item(cfg, matched), ensure_ascii=False))
+    if request["operation"] == "maintain":
+        print(json.dumps({"operation": "maintain", "items": len(items), "checklist": str(contained(cfg["root"], cfg["checklist"]))}))
+    else:
+        matched = next(i for i in items if any(e["key"] == request["key"] for e in (i["meta"] or {}).get("events", [])))
+        print(json.dumps(public_item(cfg, matched, read_sessions(contained(cfg["root"], cfg["checklist"]).read_text())), ensure_ascii=False))
 
 
-def public_item(cfg, item):
+def public_item(cfg, item, sessions=None):
     path = contained(cfg["root"], cfg["checklist"])
     meta = item["meta"]
-    return {"id": item["id"], "action": item["action"], "context": item["context"],
+    return {"id": item["id"], "summary": item["summary"], "action": item["action"], "context": item["context"],
+            "session": session_info(item, sessions or {}),
+            "history": meta["events"] if meta else [], "original_section": meta.get("original_section") if meta else item["section"],
             "status": meta["status"] if meta else "legacy: verify disposition", "intent": meta["intent"] if meta else None,
             "timing": meta["timing"] if meta else None, "bucket": meta["bucket"] if meta else item["legacy_bucket"],
             "source": meta["source"] if meta else None, "current_chat": meta["current_chat"] if meta else None,
@@ -385,11 +552,14 @@ def public_item(cfg, item):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["show", "apply", "write", "validate"])
+    parser.add_argument("command", choices=["show", "apply", "write", "validate", "lint"])
     parser.add_argument("--request", type=Path)
     parser.add_argument("--owner")
-    parser.add_argument("--view", choices=["session", "outstanding", "someday", "all"], default="outstanding")
+    parser.add_argument("--view", choices=["session", "outstanding", "someday", "unresolved", "ideas", "all"], default="outstanding")
     parser.add_argument("--chat")
+    parser.add_argument("--estate", help="verified stable estate ID or title")
+    parser.add_argument("--id", help="one exact item ID; use --view all to include closed history")
+    parser.add_argument("--format", choices=["json", "markdown"], default="json")
     args = parser.parse_args()
     try:
         cfg = storage()
@@ -405,22 +575,53 @@ def main():
                 writer(cfg, request_data(request_path))
         elif args.command == "validate":
             validate_vault(cfg)
+        elif args.command == "lint":
+            validate_vault(cfg)
+            text = contained(cfg["root"], cfg["checklist"]).read_text()
+            items = read_items(text)
+            sessions = read_sessions(text)
+            issues = []
+            if format_page(text) != text:
+                issues.append("session layout needs maintenance")
+            for item in items:
+                if len(item["summary"]) > 120:
+                    issues.append(f"{item['id']}: shorten the display label while retaining its full action and context")
+                chat = item["meta"]["current_chat"]
+                if chat not in sessions:
+                    issues.append(f"{item['id']}: verify the current title for {chat}")
+            print(json.dumps({"items": len(items), "issues": issues}, indent=2))
         else:
             if args.view == "session" and not args.chat:
                 raise ValueError("session view needs an exact chat or retrieval handle")
             path = contained(cfg["root"], cfg["checklist"])
-            items = read_items(path.read_text()) if path.exists() else []
-            result = []
+            text = path.read_text() if path.exists() else ""
+            items, sessions = read_items(text), read_sessions(text)
+            result, selected, unclassified = [], [], []
             for item in items:
-                public = public_item(cfg, item)
+                public = public_item(cfg, item, sessions)
                 if args.view != "all" and public["status"] in {"done", "dropped"}:
                     continue
                 if args.view in BUCKETS and public["bucket"] != args.view:
                     continue
                 if args.view == "session" and public["current_chat"] != args.chat:
                     continue
+                if args.chat and public["current_chat"] != args.chat:
+                    continue
+                if args.id and public["id"] != args.id:
+                    continue
+                if args.view == "ideas" and public["intent"] not in {"discuss", "investigate", "consider", None}:
+                    continue
+                if args.estate:
+                    info = public["session"]
+                    if not info.get("estate"):
+                        unclassified.append(public["id"])
+                    if args.estate not in {info.get("estate"), info.get("estate_title")}:
+                        continue
                 result.append(public)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+                selected.append(item)
+            if unclassified:
+                print("Unclassified estate membership: " + ", ".join(unclassified), file=sys.stderr)
+            print(grouped_rows(selected, sessions, metadata=False) if args.format == "markdown" else json.dumps(result, ensure_ascii=False, indent=2))
     except (ValueError, KeyError, OSError, StopIteration, subprocess.CalledProcessError) as error:
         parser.exit(1, f"todo: {error}\n")
 
