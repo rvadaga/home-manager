@@ -325,6 +325,10 @@ in
       pkgs.hyperfine
 
       # network tools
+      pkgs.bmon
+      pkgs.iperf3
+      pkgs.mtr
+      pkgs.nmap
       pkgs.cloudflare-speed-cli
 
       # fun stuff
