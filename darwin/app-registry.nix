@@ -351,6 +351,11 @@
     bootstrap.signIn = [ "sign in if a docker hub account is needed" ];
   };
 
+  tailscale = {
+    cask = "tailscale-app";
+    bootstrap.signIn = [ "sign in and approve the vpn configuration" ];
+  };
+
   google-drive = {
     name = "google drive";
     cask = "google-drive";
