@@ -352,8 +352,7 @@
   };
 
   tailscale = {
-    cask = "tailscale-app";
-    bootstrap.signIn = [ "sign in and approve the vpn configuration" ];
+    bootstrap.signIn = [ "run tailscale up and open the sign-in link" ];
   };
 
   google-drive = {
