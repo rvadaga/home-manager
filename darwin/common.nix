@@ -1,4 +1,4 @@
-{ ... }:
+{ pkgs, ... }:
 {
   imports = [
     ./nix.nix
@@ -12,6 +12,11 @@
   system.stateVersion = 6;
 
   security.pam.services.sudo_local.touchIdAuth = true;
+
+  services.tailscale = {
+    enable = true;
+    package = pkgs.tailscale;
+  };
 
   launchd.daemons.stay-awake.serviceConfig = {
     ProgramArguments = [
