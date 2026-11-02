@@ -329,6 +329,7 @@ in
       pkgs.iperf3
       pkgs.mtr
       pkgs.nmap
+      pkgs.tailscale
       pkgs.cloudflare-speed-cli
 
       # fun stuff
