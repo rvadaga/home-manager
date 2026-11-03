@@ -115,6 +115,7 @@ in
     # install manually: Monosnap (App Store ID 540348655)
   };
 
+  environment.systemPath = [ "/opt/homebrew/bin" ];
   environment.systemPackages = [ brewHealth ];
 
   # report broken casks at the end of every switch, and NEVER fail.
