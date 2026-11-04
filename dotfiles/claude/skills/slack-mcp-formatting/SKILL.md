@@ -1,13 +1,25 @@
 ---
 name: slack-mcp-formatting
-description: Reference for formatting slack messages sent via the slack mcp tool -- links, bullets, quotes, mentions, code blocks, threading, and known gotchas.
+description: Format Slack messages with readable links, lists, quotes, mentions and code; verify the intended recipient and thread before posting.
 ---
 
-# slack mcp formatting
+# Slack message formatting
 
-reference for sending well-formatted slack messages via `slack_send_message`.
+follow **Slack access** in `CLAUDE-base.md` for route selection. this reference describes formatting, not permission to send or choose a different route.
 
-## links
+## browser composer
+
+use the composer’s formatting controls for links, lists, quotes and code. inspect the rendered draft before sending; do not assume API payload markup renders in the browser composer.
+
+select a real mention from the composer’s suggestions and verify the intended person. plain `@name` text alone is not proof of a mention. for a deactivated account, inspect its profile or historical messages rather than guessing an identity.
+
+open the intended conversation and verify its recipients before composing a DM. for a thread reply, open the actual parent message and use its reply composer. after an authorized send, read the posted message in that conversation or thread and verify its content and formatting.
+
+## API-format reference
+
+the syntax below applies only to a supported route that accepts Slack `mrkdwn`. it does not select that route or describe the browser’s rich-text composer.
+
+### links
 
 use slack's angle-bracket syntax -- NOT markdown `[text](url)`:
 
@@ -19,7 +31,7 @@ use slack's angle-bracket syntax -- NOT markdown `[text](url)`:
 
 plain urls in `<>` auto-link. markdown links do not render as clickable in slack.
 
-## bullets
+### bullets
 
 use `-` with 2-space indent for sub-bullets. slack renders them as native list blocks with proper hanging indent.
 
@@ -33,7 +45,7 @@ use `-` with 2-space indent for sub-bullets. slack renders them as native list b
 
 never use literal `•` or `◦` characters -- they bypass the list renderer and sub-bullets go flush-left on wrapped lines.
 
-## quotes / blockquotes
+### quotes / blockquotes
 
 prefix lines with `>`. renders as a grey indented block.
 
@@ -42,17 +54,17 @@ prefix lines with `>`. renders as a grey indented block.
 > second line of the quote
 ```
 
-## mentions
+### mentions
 
 use `<@USERID>` -- plain text `@handle` renders as plain text, not a tag:
 
 ```
-<@U022Q39MUKY>
+<@USER_ID>
 ```
 
-for deactivated users: their user id still works and renders a greyed-out tag. `slack_search_users` won't return deactivated accounts -- find the id from message history (e.g. search `from:username` in dms via `slack_search_public_and_private`).
+use a verified Slack user ID. deactivated accounts may be absent from search; inspect historical messages or their profile rather than guessing.
 
-## inline code
+### inline code
 
 wrap in single backticks:
 
@@ -60,7 +72,7 @@ wrap in single backticks:
 `foo = bar`
 ```
 
-## plain code block
+### plain code block
 
 triple backticks, no language tag:
 
@@ -71,7 +83,7 @@ another line
 ```
 ````
 
-## syntax-highlighted code block
+### syntax-highlighted code block
 
 add a language tag after the opening backticks:
 
@@ -84,25 +96,7 @@ def hello():
 
 common tags: `python`, `bash`, `go`, `java`, `scala`, `json`.
 
-## dms
+### known gotchas
 
-to send a dm to a user, use their user id as `channel_id`. to dm yourself, use your own user id.
-
-## threading
-
-pass the parent message's `message_ts` as `thread_ts` to reply in a thread:
-
-```json
-{
-  "channel_id": "CHANNEL_OR_USERID",
-  "thread_ts": "1782506284.812219",
-  "message": "threaded reply"
-}
-```
-
-## known gotchas
-
-- **"sent using @claude" footer** -- appended by the slack app integration, not controllable from the tool
 - **`<>` between terms** (e.g. `a <> b`) -- slack parses this as a malformed link; escape as `&lt;&gt;` in the payload, which renders as `<>` visibly
 - **double dash** -- `--` stays as `--` in slack (not auto-converted to an em dash)
-- **deactivated users** -- invisible to `slack_search_users`; must find id from message history
