@@ -99,6 +99,7 @@ in
 
       # source some helper functions
       source ~/.config/home-manager/scripts/functions.sh;
+      source ${../scripts/copyrun.zsh}
 
     '';
   };
