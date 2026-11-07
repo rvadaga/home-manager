@@ -392,6 +392,10 @@ in
       # programming languages: rust
       pkgs.rustup
 
+      # programming languages: verification
+      pkgs.unstable.lean4
+      pkgs.unstable.bend2
+
       # programming languages: zig
       pkgs.zig
     ]
