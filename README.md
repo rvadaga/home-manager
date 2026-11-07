@@ -88,6 +88,24 @@ nix run home-manager/release-25.11 -- switch --flake ".#personal-laptop"
 
 ## usage
 
+### copy a command and its output
+
+in zsh, `copyrun command [args...]` displays the expanded invocation and combined
+stdout/stderr, then copies that transcript using oh-my-zsh's clipboard support.
+ordinary command aliases and shell functions work too:
+
+```zsh
+copyrun ls -l "directory with spaces"
+copyrun g status --short
+```
+
+the command's exit status is preserved even if copying fails. clipboard warnings
+are printed separately. output streams through stdout, so no terminal device is
+required. use this for text output, not interactive full-screen programs; the
+command runs in a subshell, so changes such as `cd` do not affect your shell.
+for pipelines or other shell syntax, wrap the complete operation in a function
+and pass its name. only simple command aliases are supported directly.
+
 ### apply configuration
 
 for a known home-only change on any home-manager target:
