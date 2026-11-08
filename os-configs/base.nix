@@ -61,6 +61,7 @@ in
     ../programs/fzf.nix
     ../programs/ghostty.nix
     ../programs/kitty.nix
+    ../programs/lean-editor.nix
     ../programs/neovim.nix
     ../programs/npm.nix
     ../programs/starship.nix
@@ -395,6 +396,7 @@ in
       # programming languages: verification
       pkgs.unstable.lean4
       pkgs.unstable.bend2
+      pkgs.unstable.dafny
 
       # programming languages: zig
       pkgs.zig
