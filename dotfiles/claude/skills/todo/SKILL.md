@@ -19,7 +19,7 @@ verify the carrying chat's current title through the chat tools, including archi
 
 use the capture message ID plus annotation index as the stable operation key. a retry keeps that key; separate human requests keep separate keys. attach verified project and artifact context when available. do not merge similar requests automatically.
 
-write the request JSON outside the vault and run `python3 <todo-skill>/scripts/todo.py apply --request <absolute-json-file> --owner <current-chat-id>`. the helper allocates IDs, updates session groups and commits through the notes transaction. read back the result and confirm the ID, concise label and exact `file_link`. use the stable `block` link in notes; recalculate line links on every read. a failed write is unsaved.
+write the request JSON outside the vault and run `python3 <todo-skill>/scripts/todo.py apply --request <absolute-json-file> --owner <current-chat-id>`. the helper allocates IDs and updates session groups through the notes transaction. it selects save-only mode for work storage and commit mode for personal storage, following [notes save ownership](../notes/SKILL.md#save-ownership). read back the result and confirm the ID, concise label and exact `file_link`. use the stable `block` link in notes; recalculate line links on every read. a failed write is unsaved.
 
 ## review across chats and estates
 

@@ -38,6 +38,12 @@ each vault's schema file is the source of truth for its conventions — **always
 2. read the vault's schema file for conventions — filename style, frontmatter template, directory layout, log direction
 3. skim the vault's `index.md` to see what's already catalogued
 
+### save ownership
+
+follow the destination vault's save contract for every write, including todo captures, generated pages and lint fixes. personal vaults keep writer-owned local commits. a vault with a dedicated integrator uses save-only transactions: writers preserve existing edits and staging, validate and read back their files, and leave staging and commits to that integrator. the work reference owns work-vault routing and the detailed procedure; do not apply personal commit instructions there.
+
+`scripts/vault-transaction.py` supports `--mode commit` and `--mode save`. commit mode requires a clean vault and `--commit-message`; save mode permits existing changes and never stages or commits. an installed `references/transaction-policy.json` containing `{"mode":"save"}` makes save mode the default and rejects commit mode. without that policy, personal commit behavior remains the default. provide exact `--path` values plus writer and validator argument arrays; callbacks run only after lock acquisition. the writer rereads current content under that lock. validation must check the intended saved content and remain read-only. an unchanged retry requires `--allow-noop` and still runs validation.
+
 ## read mode
 
 4. find notes matching the topic:
@@ -68,7 +74,7 @@ each vault's schema file is the source of truth for its conventions — **always
 
 ### requested todo captures
 
-use [todo](../todo/SKILL.md) for the complete capture, view, and disposition contract. a requested capture or disposition authorizes updating its existing checklist without another update/create question or an accompanying research note. this exception permits exact source-chat provenance and item history; it does not turn ordinary session progress into research prose. preserve vault routing and schema, verify the existing index entry (add or correct it when needed), log each actual change, validate, and commit. unchanged retries make no new log entry or commit. personal captures use `scripts/vault-transaction.py`; work captures use the work reference's same transaction contract. keep the todo behavior in that skill rather than duplicating it here.
+use [todo](../todo/SKILL.md) for the complete capture, view, and disposition contract. a requested capture or disposition authorizes updating its existing checklist without another update/create question or an accompanying research note. this exception permits exact source-chat provenance and item history; it does not turn ordinary session progress into research prose. preserve vault routing and schema, verify the existing index entry (add or correct it when needed), log each actual change, and complete the destination's [save contract](#save-ownership). unchanged retries make no new log entry or commit. keep the todo behavior in that skill rather than duplicating it here.
 
 ### generated snapshot pages — a narrow exception to steps 4 and 5
 
@@ -81,7 +87,7 @@ a page is one only if all four hold:
 - **re-derivable by someone other than whoever wrote it** — a named command anyone can run, or a named source they can re-read. this is what keeps the exemption narrow, and it is what a session's own progress notes fail: there is nothing to re-derive them from, they *are* the record, so they stay ordinary pages and step 5 still bans them whatever they are titled
 - **opens with a perishability header** — when it was captured, what produced it, and how to get the current truth: either the command to re-run or the source to re-verify against. without that line a six-hour-old render reads as the live picture
 
-everything else in save mode binds unchanged — the vault's schema, frontmatter and kind tag, `name = scope`, the `index.md` one-liner, a `log.md` entry per write, and a commit. link **out** to the durable pages carrying the reasoning instead of restating it; the durable pages don't link back, so the snapshot can be rewritten without dragging the rest of the vault with it.
+everything else in save mode binds unchanged — the vault's schema, frontmatter and kind tag, `name = scope`, the `index.md` one-liner, a `log.md` entry per write, and the destination's [save contract](#save-ownership). link **out** to the durable pages carrying the reasoning instead of restating it; the durable pages don't link back, so the snapshot can be rewritten without dragging the rest of the vault with it.
 
 the generator writes these directly rather than through save mode — step 4's prompt would fire on every run. they are described here so lint, and anyone editing one by hand, can tell a legitimate one from a session dump.
 
@@ -111,7 +117,7 @@ when q&a accumulates and the page stops reading as an article, refactor — neve
 
 the periodic health check — per the llm-wiki pattern it is *not optional*: drift is how these wikis die. runs weekly on a schedule, after any bulk change, or on request.
 
-**authority model — fix, don't just report.** every check below whose fix is codified by a schema rule is *executed* in the run (own git commit per logical fix, descriptive message), not flagged for a human. flag in the run summary only what is genuinely ambiguous (scope you cannot infer, content-loss risk) or big blast radius (more than ~5 structural changes queued in one run — do the mechanical ones, defer the rest). the vaults are git repos: everything is revertible, which is what makes autonomy safe.
+**authority model — fix, don't just report.** every check below whose fix is codified by a schema rule is *executed* in the run under the destination's [save contract](#save-ownership), not flagged for a human. keep each logical fix distinct for its commit owner. flag in the run summary only what is genuinely ambiguous (scope you cannot infer, content-loss risk) or big blast radius (more than ~5 structural changes queued in one run — do the mechanical ones, defer the rest). the vaults are git repos: everything is revertible, which is what makes autonomy safe.
 
 per target vault:
 
@@ -130,7 +136,7 @@ per target vault:
 13. **generated snapshot pages**: check the class's own invariants, not its content — perishability header present and naming how to refresh, exactly one page (delete dated siblings), index entry still there. do not strip its timestamps or task detail; that content is why the class exists. refresh a stale one by re-running its generator, and if you cannot run it in this pass leave the page as it stands and say so in the summary.
 14. **junk**: `Untitled.md`, empty dailies, obsidian boilerplate — remove (report-before-delete only for files with real content).
 15. **schema honesty**: dirs/conventions the schema promises actually exist; conventions the vault actually follows are documented. when a lint fix establishes a new convention, codify it in the schema in the same run.
-16. **close out**: log the lint pass in each vault's `log.md` (each vault's own direction), commit each vault touched, and end with a summary: what drifted since the last lint, what was fixed (renames/splits listed explicitly with old→new names), what was deferred and why.
+16. **close out**: log the lint pass in each vault's `log.md` (each vault's own direction), complete its [save contract](#save-ownership), and end with a summary: what drifted since the last lint, what was fixed (renames/splits listed explicitly with old→new names), what was deferred and why.
 
 a scan skeleton (adapt per vault; run from `~/development/obsidian/`):
 
@@ -195,7 +201,7 @@ before saving new or edited markdown that contains a mermaid fence, run `<notes-
 
 - defer to each vault's schema — it is the source of truth for filename, frontmatter, tags, layout, and log direction
 - lowercase filenames and human-written prose per global CLAUDE.md; preserve case-sensitive syntax and identifiers. the mermaid section names its valid direction grammar
-- **the vaults are git repos** (since 2026-07-18; `.obsidian/workspace.json` ignored) — commit at the end of any session that wrote to a vault; a plain descriptive message, no push (local-only repos)
+- **the vaults are git repos** (since 2026-07-18; `.obsidian/workspace.json` ignored) — follow [save ownership](#save-ownership); personal writers commit their changes locally with a plain descriptive message and no push, while an integrator owns commits in save-only vaults
 - prefer atomic pages — many small focused files over one big file
 - when editing a page for any reason, preserve unanswered `> q:` blocks the user has added — they are pending work, not clutter
 - **obsidian gotchas**: a file deleted while open in an obsidian tab can be resurrected from the editor buffer — verify deletions stick (quit obsidian → delete → scrub the leaf from `.obsidian/workspace.json` → reopen if needed). edit `.obsidian/*.json` only while obsidian is closed. obsidian's watcher may miss edits arriving through a symlinked dir until a vault reload.
