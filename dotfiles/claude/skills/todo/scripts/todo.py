@@ -542,9 +542,11 @@ def apply(cfg, request_path, owner):
     while True:
         paths = [cfg["checklist"], "log.md"] + ([] if indexed(cfg) else ["index.md"])
         command = [sys.executable, str(engine), "--vault", str(cfg["root"]), "--owner", owner,
-                   "--commit-message", "update captured follow-ups", "--allow-noop",
+                   "--mode", "save" if cfg["scope"] == "work" else "commit", "--allow-noop",
                    "--write-command-json", json.dumps([sys.executable, str(Path(__file__).absolute()), "write", "--request", str(request_path)]),
                    "--validator-command-json", json.dumps([sys.executable, str(Path(__file__).absolute()), "validate"])]
+        if cfg["scope"] == "personal":
+            command += ["--commit-message", "update captured follow-ups"]
         for path in paths:
             command += ["--path", path]
         result = subprocess.run(command, capture_output=True, text=True)
@@ -561,6 +563,8 @@ def apply(cfg, request_path, owner):
         except FileNotFoundError:
             lock_owner = None
         if retryable and lock_owner is None and time.monotonic() < deadline:
+            if cfg["scope"] == "work":
+                continue
             clean = subprocess.run(["git", "-C", str(cfg["root"]), "status", "--porcelain"], capture_output=True, text=True, check=True).stdout == ""
             if clean:
                 continue

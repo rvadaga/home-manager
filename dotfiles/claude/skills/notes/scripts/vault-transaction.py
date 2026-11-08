@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import secrets
+import stat
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -27,6 +30,7 @@ def git(vault: Path, *arguments: str, check: bool = True) -> subprocess.Complete
         ["git", "-C", str(vault), *arguments],
         check=False,
         capture_output=True,
+        env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"},
     )
     if check and result.returncode != 0:
         detail = result.stderr.decode("utf-8", errors="replace").strip()
@@ -204,6 +208,56 @@ def run_command(
         raise TransactionError(f"{label} failed with exit {result.returncode}")
 
 
+def file_state(path: Path) -> tuple[int, str] | None:
+    try:
+        mode = path.lstat().st_mode
+    except FileNotFoundError:
+        return None
+    if stat.S_ISLNK(mode):
+        digest = hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()
+    elif stat.S_ISREG(mode):
+        with path.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    else:
+        raise TransactionError(f"expected a file or symlink: {path}")
+    return mode, digest
+
+
+def worktree_state(vault: Path, declared: set[str]) -> dict[str, tuple[int, str] | None]:
+    paths = nul_paths(git(vault, "ls-files", "--cached", "--others", "--exclude-standard", "-z"))
+    return {path: file_state(vault / path) for path in paths | declared}
+
+
+def installed_mode() -> str:
+    # Keep the invocation path: installed symlinks use their caller's policy.
+    policy = Path(__file__).absolute().parents[1] / "references/transaction-policy.json"
+    if not policy.exists():
+        return "commit"
+    try:
+        value = json.loads(policy.read_text())
+    except (OSError, ValueError) as error:
+        raise TransactionError(f"cannot read transaction policy: {error}") from error
+    if value not in ({"mode": "save"}, {"mode": "commit"}):
+        raise TransactionError("transaction policy must contain mode save or commit")
+    return value["mode"]
+
+
+def check_saved_diff(vault: Path, before: dict[str, bytes], changed: set[str]) -> None:
+    # Check only this save's delta, including new files; earlier edits stay intact.
+    with tempfile.TemporaryDirectory(prefix="vault-save-diff-") as directory:
+        old, new = Path(directory) / "before", Path(directory) / "after"
+        for relative in sorted(changed):
+            target = vault / relative
+            if target.is_symlink():
+                raise TransactionError(f"save created a symlink: {relative}")
+            old.write_bytes(before[relative])
+            new.write_bytes(target.read_bytes() if target.exists() else b"")
+            result = subprocess.run(["git", "diff", "--no-index", "--check", "--", str(old), str(new)], capture_output=True)
+            if result.returncode not in (0, 1) or result.stdout or result.stderr:
+                detail = (result.stdout + result.stderr).decode("utf-8", errors="replace").strip()
+                raise TransactionError(f"saved diff check failed for {relative}: {detail}")
+
+
 @dataclass
 class Transaction:
     vault: Path
@@ -214,6 +268,7 @@ class Transaction:
     write_command: list[str]
     validator_command: list[str]
     allow_noop: bool = False
+    mode: str = "commit"
     declared_paths: set[str] = field(init=False)
     recorded_head: str = field(init=False, default="")
     lock_path: Path = field(init=False)
@@ -221,8 +276,12 @@ class Transaction:
     lock_acquired: bool = field(init=False, default=False)
     lock_released: bool = field(init=False, default=False)
     committed_head: str | None = field(init=False, default=None)
+    before_files: dict[str, tuple[int, str] | None] | None = field(init=False, default=None)
+    before_index: bytes | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
+        if self.mode not in {"save", "commit"}:
+            raise TransactionError("transaction mode must be save or commit")
         self.declared_paths = set(self.paths)
         if len(self.declared_paths) != len(self.paths):
             raise TransactionError("declared paths must be unique")
@@ -241,6 +300,10 @@ class Transaction:
         if not common_git_dir.is_absolute():
             common_git_dir = self.vault / common_git_dir
         self.lock_path = common_git_dir.resolve() / LOCK_NAME
+        for relative in self.paths:
+            target = self.vault / relative
+            if any(part.is_symlink() for part in (target, *target.parents) if part != self.vault.parent):
+                raise TransactionError(f"declared path must not traverse a symlink: {relative}")
 
     def effective_known_owners(self) -> dict[str, str]:
         owners = owner_map_from_lock(self.lock_path)
@@ -300,7 +363,7 @@ class Transaction:
                 f"vault head moved during lock acquisition: "
                 f"{self.recorded_head} -> {current_head}"
             )
-        if dirty:
+        if dirty and self.mode == "commit":
             raise TransactionError(
                 report_dirty(
                     "vault became dirty during lock acquisition",
@@ -321,6 +384,7 @@ class Transaction:
                 "WORK_VAULT_TOKEN": self.token,
                 "WORK_VAULT_RECORDED_HEAD": self.recorded_head,
                 "WORK_VAULT_DECLARED_PATHS_JSON": json.dumps(self.paths),
+                "GIT_OPTIONAL_LOCKS": "0",
             }
         )
         return environment
@@ -386,8 +450,12 @@ class Transaction:
         self.lock_released = True
 
     def execute(self) -> None:
-        self.require_clean_preflight()
+        if self.mode == "commit":
+            self.require_clean_preflight()
         self.acquire()
+        if self.mode == "save":
+            self.execute_save()
+            return
         environment = self.environment()
 
         run_command(self.write_command, self.vault, environment, "write command")
@@ -462,8 +530,58 @@ class Transaction:
             "vault clean; writer lock absent"
         )
 
+    def index_bytes(self) -> bytes:
+        path = Path(text_output(git(self.vault, "rev-parse", "--git-path", "index")))
+        if not path.is_absolute():
+            path = self.vault / path
+        return path.read_bytes()
+
+    def require_saved_git_state(self) -> None:
+        self.require_head_unchanged("during save")
+        if self.index_bytes() != self.before_index:
+            raise TransactionError("save changed the git index; preserving the lock")
+
+    def execute_save(self) -> None:
+        self.before_index = self.index_bytes()
+        self.before_files = worktree_state(self.vault, self.declared_paths)
+        before_contents = {p: (self.vault / p).read_bytes() if (self.vault / p).exists() else b""
+                           for p in self.paths}
+        environment = self.environment()
+        run_command(self.write_command, self.vault, environment, "write command")
+        self.require_saved_git_state()
+        written = worktree_state(self.vault, self.declared_paths)
+        changed = {p for p in self.before_files.keys() | written.keys()
+                   if self.before_files.get(p) != written.get(p)}
+        if changed != self.declared_paths and not (self.allow_noop and not changed):
+            raise TransactionError(
+                "save changed path scope differs from declared scope; "
+                f"declared: {format_paths(self.declared_paths)}; changed: {format_paths(changed)}"
+            )
+        run_command(self.validator_command, self.vault, environment, "validator command")
+        self.require_saved_git_state()
+        if worktree_state(self.vault, self.declared_paths) != written:
+            raise TransactionError("saved file readback changed during validation; preserving the lock")
+        if changed:
+            check_saved_diff(self.vault, before_contents, changed)
+        self.release()
+        outcome = "complete" if changed else "unchanged"
+        print(f"save {outcome}: validated and read back; HEAD and index unchanged; writer lock absent")
+
     def cleanup_after_failure(self) -> None:
         if not self.lock_acquired or self.lock_released:
+            return
+
+        if self.mode == "save":
+            if (self.before_files is None or
+                    worktree_state(self.vault, self.declared_paths) != self.before_files or
+                    self.index_bytes() != self.before_index or
+                    text_output(git(self.vault, "rev-parse", "HEAD")) != self.recorded_head):
+                print("incomplete save; preserving files and matching lock for the writing owner", file=sys.stderr)
+                return
+            try:
+                self.release()
+            except TransactionError as error:
+                print(f"exit cleanup could not release the writer lock: {error}", file=sys.stderr)
             return
 
         dirty = status_paths(self.vault)
@@ -504,7 +622,7 @@ class Transaction:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "run one exact-path vault write, validation, commit, and lock release"
+            "run one exact-path vault write with validation and matching lock release"
         )
     )
     parser.add_argument("--vault", required=True, type=Path)
@@ -524,8 +642,9 @@ def build_parser() -> argparse.ArgumentParser:
         type=parse_known_owner,
         help="known pre-existing path owner in the exact form path=owner",
     )
-    parser.add_argument("--commit-message", required=True)
-    parser.add_argument("--allow-noop", action="store_true", help="validate and release a clean, unchanged transaction without a commit")
+    parser.add_argument("--mode", choices=("save", "commit"), help="save leaves HEAD and index unchanged; installed save policy forbids commit mode")
+    parser.add_argument("--commit-message")
+    parser.add_argument("--allow-noop", action="store_true", help="validate and release an unchanged transaction")
     parser.add_argument(
         "--write-command-json",
         required=True,
@@ -539,15 +658,20 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main(*, save_only: bool = False) -> int:
     parser = build_parser()
     arguments = parser.parse_args()
     if not arguments.owner:
         parser.error("owner cannot be empty")
-    if not arguments.commit_message:
-        parser.error("commit message cannot be empty")
-
     try:
+        policy = "save" if save_only else installed_mode()
+        mode = arguments.mode or policy
+        if policy == "save" and mode != "save":
+            parser.error("installed save-only policy forbids writer commits")
+        if mode == "commit" and not arguments.commit_message:
+            parser.error("commit mode requires a nonempty --commit-message")
+        if mode == "save" and arguments.commit_message is not None:
+            parser.error("save mode does not accept --commit-message")
         write_command = parse_command(arguments.write_command_json, "write command")
         validator_command = parse_command(
             arguments.validator_command_json,
@@ -563,6 +687,7 @@ def main() -> int:
             write_command=write_command,
             validator_command=validator_command,
             allow_noop=arguments.allow_noop,
+            mode=mode,
         )
     except (TransactionError, argparse.ArgumentTypeError) as error:
         print(f"error: {error}", file=sys.stderr)

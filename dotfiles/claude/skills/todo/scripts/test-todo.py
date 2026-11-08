@@ -62,10 +62,14 @@ class TodoTest(unittest.TestCase):
 
     def apply(self, request, *, owner="fixture-owner", filename="request.json", success=True):
         path = self.write_request(request, filename)
+        head = self.git("rev-parse", "HEAD")
         result = self.run_cli("apply", "--request", str(path), "--owner", owner)
         if success:
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(self.git("status", "--porcelain"), "")
+            if self.cfg["scope"] == "personal":
+                self.assertEqual(self.git("status", "--porcelain"), "")
+            else:
+                self.assertEqual(self.git("rev-parse", "HEAD"), head)
             self.assertFalse((self.vault / ".git/status-page-writer.lock").exists())
             return json.loads(result.stdout)
         self.assertNotEqual(result.returncode, 0)
@@ -90,6 +94,33 @@ class TodoTest(unittest.TestCase):
         self.assertIn("%23%5Etodo-001", item["obsidian_link"])
         self.assertEqual(self.show("session", "source-chat")[0]["id"], "T001")
         self.assertEqual(sorted(p.name for p in (self.vault / "pages").iterdir()), ["todos.md"])
+
+    def test_work_capture_and_retry_preserve_existing_dirt_and_staging(self):
+        self.cfg["scope"] = "work"
+        self.configure()
+        (self.vault / "staged.md").write_text("staged content\n")
+        self.git("add", "staged.md")
+        (self.vault / "staged.md").write_text("staged content\nuncommitted addition\n")
+        (self.vault / "other.md").write_text("other writer\n")
+        (self.vault / "SCHEMA.md").write_text("# schema\n\nExisting modified schema.\n")
+        head = self.git("rev-parse", "HEAD")
+        index = (self.vault / ".git/index").read_bytes()
+        request = self.write_request(self.request())
+        result = self.run_cli("apply", "--request", str(request), "--owner", "fixture-owner")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["id"], "T001")
+        self.assertEqual((self.vault / ".git/index").read_bytes(), index)
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+        self.assertEqual((self.vault / "staged.md").read_text(), "staged content\nuncommitted addition\n")
+        self.assertEqual((self.vault / "other.md").read_text(), "other writer\n")
+        self.assertEqual((self.vault / "SCHEMA.md").read_text(), "# schema\n\nExisting modified schema.\n")
+        saved = {p: (self.vault/p).read_bytes() for p in ("pages/todos.md", "index.md", "log.md")}
+        result = self.run_cli("apply", "--request", str(request), "--owner", "fixture-owner")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual({p: (self.vault/p).read_bytes() for p in saved}, saved)
+        self.assertEqual((self.vault / ".git/index").read_bytes(), index)
+        self.assertEqual(self.git("rev-parse", "HEAD"), head)
+        self.assertFalse((self.vault / ".git/status-page-writer.lock").exists())
 
     def test_annotation_and_optional_context_survive(self):
         source = {"chat": "chat-two", "message": "capture-two", "annotation": {"message": "response-one", "start": 14, "end": 87}}

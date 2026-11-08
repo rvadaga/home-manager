@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +29,8 @@ class Fixture:
         self.tools = self.root / "tools"
         self.vault.mkdir()
         self.tools.mkdir()
+        self.engine = self.tools / "vault-transaction.py"
+        shutil.copyfile(WRAPPER, self.engine)
         self.git("init", "-b", "main")
         self.git("config", "user.name", "fixture writer")
         self.git("config", "user.email", "fixture@example.invalid")
@@ -73,22 +76,25 @@ class Fixture:
         known_owners: tuple[tuple[str, str], ...] = (),
         vault: Path | None = None,
         allow_noop: bool = False,
+        mode: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         target_vault = vault or self.vault
         command = [
             sys.executable,
-            str(WRAPPER),
+            str(self.engine),
             "--vault",
             str(target_vault),
             "--owner",
             owner,
-            "--commit-message",
-            "update fixture page",
             "--write-command-json",
             json.dumps([sys.executable, str(writer)]),
             "--validator-command-json",
             json.dumps([sys.executable, str(validator)]),
         ]
+        if mode:
+            command.extend(["--mode", mode])
+        if mode != "save":
+            command.extend(["--commit-message", "update fixture page"])
         for path in paths:
             command.extend(["--path", path])
         if allow_noop:
@@ -116,7 +122,7 @@ class Fixture:
         )
 
 
-class WorkVaultTransactionTest(unittest.TestCase):
+class CommitTransactionTest(unittest.TestCase):
     def setUp(self) -> None:
         self.fixture = Fixture()
 
@@ -556,6 +562,167 @@ class WorkVaultTransactionTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("cannot contain glob syntax", result.stderr)
         self.assertFalse(self.fixture.lock.exists())
+
+
+class SaveTransactionTest(unittest.TestCase):
+    def setUp(self):
+        self.fixture = Fixture()
+        self.head = self.fixture.git("rev-parse", "HEAD").stdout
+
+    def tearDown(self):
+        self.fixture.close()
+
+    def run_save(self, writer, validator=None, **kwargs):
+        return self.fixture.run(writer, validator or self.fixture.passing_validator(), mode="save", **kwargs)
+
+    def assert_git_unchanged(self, index):
+        self.assertEqual((self.fixture.vault / ".git/index").read_bytes(), index)
+        self.assertEqual(self.fixture.git("rev-parse", "HEAD").stdout, self.head)
+
+    def test_preserves_staged_modified_untracked_and_rereads_declared_file(self):
+        f = self.fixture
+        (f.vault / "other.md").write_text("original\n")
+        f.git("add", "other.md")
+        f.git("commit", "-m", "seed other page")
+        self.head = f.git("rev-parse", "HEAD").stdout
+        (f.vault / "page.md").write_text("staged\n")
+        f.git("add", "page.md")
+        (f.vault / "page.md").write_text("staged\nuncommitted\n")
+        (f.vault / "other.md").write_text("other writer\n")
+        (f.vault / "new.md").write_text("untracked writer\n")
+        index = (f.vault / ".git/index").read_bytes()
+        writer = f.script("append.py", '''
+            from pathlib import Path
+            import json, os
+            lock = Path(os.environ['WORK_VAULT_LOCK_DIR'])
+            assert json.loads((lock/'owner.json').read_text())['token'] == os.environ['WORK_VAULT_TOKEN']
+            p = Path('page.md')
+            assert p.read_text() == 'staged\\nuncommitted\\n'
+            p.write_text(p.read_text() + 'new finding\\n')
+        ''')
+        validator = f.script("check.py", "from pathlib import Path\nassert Path('page.md').read_text() == 'staged\\nuncommitted\\nnew finding\\n'\n")
+        result = self.run_save(writer, validator)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_git_unchanged(index)
+        self.assertEqual(f.git("show", ":page.md").stdout, "staged\n")
+        self.assertEqual((f.vault / "other.md").read_text(), "other writer\n")
+        self.assertEqual((f.vault / "new.md").read_text(), "untracked writer\n")
+        self.assertFalse(f.lock.exists())
+
+    def test_foreign_lock_stops_before_metadata_writer_or_validator(self):
+        f = self.fixture
+        f.lock.mkdir()
+        metadata = b'{"owner":"integrator","token":"foreign","paths":["other.md"]}\n'
+        (f.lock / "owner.json").write_bytes(metadata)
+        marker = f.root / "callback"
+        callback = f.script("callback.py", f"from pathlib import Path\nPath({str(marker)!r}).write_text('called')\n")
+        index = (f.vault / ".git/index").read_bytes()
+        result = self.run_save(callback, callback)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("writer lock already exists", result.stderr)
+        self.assertEqual((f.lock / "owner.json").read_bytes(), metadata)
+        self.assertFalse(marker.exists())
+        self.assertEqual((f.vault / "page.md").read_text(), "before\n")
+        self.assert_git_unchanged(index)
+
+    def test_noop_with_existing_dirt_still_validates(self):
+        f = self.fixture
+        (f.vault / "page.md").write_text("unsaved\n")
+        marker = f.root / "validated"
+        validator = f.script("mark.py", f"from pathlib import Path\nPath({str(marker)!r}).write_text('yes')\n")
+        index = (f.vault / ".git/index").read_bytes()
+        result = self.run_save(f.script("noop.py", "pass\n"), validator, allow_noop=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("save unchanged", result.stdout)
+        self.assertTrue(marker.exists())
+        self.assertEqual((f.vault / "page.md").read_text(), "unsaved\n")
+        self.assert_git_unchanged(index)
+        self.assertFalse(f.lock.exists())
+
+    def test_existing_whitespace_is_preserved_but_new_whitespace_fails(self):
+        f = self.fixture
+        (f.vault / "page.md").write_text("existing trailing space \n")
+        writer = f.script("append-clean.py", "from pathlib import Path\np=Path('page.md')\np.write_text(p.read_text()+'clean addition\\n')\n")
+        result = self.run_save(writer)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        writer = f.script("new-file.py", "from pathlib import Path\nPath('new.md').write_text('new trailing space \\n')\n")
+        result = self.run_save(writer, paths=("new.md",))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("saved diff check failed", result.stderr)
+        self.assertTrue(f.lock.exists())
+
+    def test_failed_validation_retains_written_file_and_matching_lock(self):
+        f = self.fixture
+        index = (f.vault / ".git/index").read_bytes()
+        result = self.run_save(f.page_writer(), f.script("reject.py", "raise SystemExit(9)\n"))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("validator command failed", result.stderr)
+        self.assertEqual((f.vault / "page.md").read_text(), "after\n")
+        self.assertEqual(json.loads((f.lock / "owner.json").read_text())["owner"], "fixture-owner")
+        self.assert_git_unchanged(index)
+
+    def test_unchanged_failure_releases_own_lock_despite_existing_dirt(self):
+        f = self.fixture
+        (f.vault / "other.md").write_text("preserved\n")
+        result = self.run_save(f.script("noop.py", "pass\n"), f.script("reject.py", "raise SystemExit(1)\n"), allow_noop=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((f.vault / "other.md").read_text(), "preserved\n")
+        self.assertFalse(f.lock.exists())
+
+    def test_undeclared_write_is_detected_even_if_file_was_already_dirty(self):
+        f = self.fixture
+        (f.vault / "other.md").write_text("first writer\n")
+        writer = f.script("outside.py", "from pathlib import Path\nPath('page.md').write_text('after\\n')\nPath('other.md').write_text('overwritten\\n')\n")
+        result = self.run_save(writer)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("scope differs", result.stderr)
+        self.assertTrue(f.lock.exists())
+
+    def test_validator_cannot_change_saved_bytes(self):
+        f = self.fixture
+        validator = f.script("mutate.py", "from pathlib import Path\nPath('page.md').write_text('validator changed it\\n')\n")
+        result = self.run_save(f.page_writer(), validator)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("readback changed", result.stderr)
+        self.assertTrue(f.lock.exists())
+
+    def test_writer_cannot_stage(self):
+        f = self.fixture
+        writer = f.script("stage.py", "from pathlib import Path\nimport subprocess\nPath('page.md').write_text('after\\n')\nsubprocess.run(['git','add','page.md'],check=True)\n")
+        result = self.run_save(writer)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("changed the git index", result.stderr)
+        self.assertTrue(f.lock.exists())
+
+    def test_token_mismatch_preserves_replacement_metadata(self):
+        f = self.fixture
+        validator = f.script("replace-token.py", "import os,json\nfrom pathlib import Path\np=Path(os.environ['WORK_VAULT_LOCK_DIR'])/'owner.json'\np.write_text(json.dumps({'token':'replacement','owner':'other'}))\n")
+        result = self.run_save(f.page_writer(), validator)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("token mismatch", result.stderr)
+        self.assertEqual(json.loads((f.lock / "owner.json").read_text())["token"], "replacement")
+
+    def test_save_policy_prevents_commit_override_before_callbacks(self):
+        f = self.fixture
+        policy = f.root / "references/transaction-policy.json"
+        policy.parent.mkdir()
+        policy.write_text('{"mode":"save"}')
+        result = f.run(f.page_writer(), f.passing_validator(), mode="commit")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("forbids writer commits", result.stderr)
+        self.assertEqual((f.vault / "page.md").read_text(), "before\n")
+        self.assertFalse(f.lock.exists())
+
+    def test_declared_symlink_cannot_write_outside_vault(self):
+        f = self.fixture
+        outside = f.root / "outside.md"
+        outside.write_text("preserve\n")
+        (f.vault / "link.md").symlink_to(outside)
+        writer = f.script("link.py", "from pathlib import Path\nPath('link.md').write_text('bad')\n")
+        result = self.run_save(writer, paths=("link.md",))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(outside.read_text(), "preserve\n")
+        self.assertFalse(f.lock.exists())
 
 
 if __name__ == "__main__":
