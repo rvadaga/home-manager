@@ -77,6 +77,5 @@ use [config task authorization](../nix-rebuild/SKILL.md#config-task-authorizatio
 
 ## notes
 
-- track steps with the task tools — cross-repo state is easy to lose mid-pipeline
+- follow the shared `CLAUDE.md` command identity, completion and task-tracking rules. keep tool-specific controls there so this workflow does not require fields another runtime lacks.
 - if anything in steps 5–8 fails in a way you cannot fix, stop and report. never leave main broken silently.
-- use omz git aliases with the full command in the bash tool's `description` field
