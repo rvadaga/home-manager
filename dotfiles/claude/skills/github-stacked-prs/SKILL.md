@@ -38,4 +38,6 @@ preserve good interfaces under the production-correctness rule in `CLAUDE.md`; r
 
 keep one branch and pull request per layer. do not keep a completed layer hidden while waiting for its parent to merge. every new pull request is draft; an interactive submission must explicitly select draft rather than accept the ready default. `--open` requires an explicit instruction to make the affected pull requests ready.
 
+after publication or restacking, follow assembled `CLAUDE.md`'s **draft pull request review worktrees** rule for each layer's attached local Changes view. that rule owns review checkout setup and refresh; keep stack history and publication here.
+
 use `gh stack view --json` for ordered machine-readable state and `gh stack view --short` for a compact human view. do not infer flags from another version; check the installed command's help when needed.
