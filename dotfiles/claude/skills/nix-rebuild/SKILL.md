@@ -128,6 +128,6 @@ settings pieces merge in order: `settings-base.json` → os piece (`settings-mac
 ## notes
 
 - check `$HM_CONFIG_NAME` to determine which flake this machine rebuilds from.
-- use omz git aliases with the full command in the bash tool's `description` field.
+- follow the shared `CLAUDE.md` command identity, completion and task-tracking rules. keep tool-specific controls there so this workflow does not require fields another runtime lacks.
 - skip `exec $SHELL` — claude code's shell snapshot won't update mid-conversation; changes land in the next conversation.
 - once merged, a known home-only activation proceeds without sudo. system activation follows the authorization and authentication rules in `CLAUDE-base.md`.
