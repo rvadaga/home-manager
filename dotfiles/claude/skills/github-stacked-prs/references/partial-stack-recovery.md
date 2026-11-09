@@ -2,6 +2,8 @@
 
 use this procedure when a lower layer has merged, a service-side rebase has moved a prefix, and a later child still has its old head. it is a recovery decision, not a publication shortcut.
 
+first apply [post-merge descendant readback](merge.md#reconcile-server-restacked-descendants) to distinguish a verified service rewrite from unexplained movement. that procedure does not prove a missing previous boundary; use the boundary checks below before any recovery rebase.
+
 ## decide whether the local recovery is supported
 
 first capture one live snapshot of the remaining stack: local and remote heads, pull request heads and bases, draft or ready states, exact leases, current trunk, and `gh stack view --json`. require the clean complete-object linked integrator checkout prepared in [preparation and publication](preparation-and-publication.md), no rebase or cherry-pick state, unchanged live heads and states, and patch identity for every service-rebased prefix layer.

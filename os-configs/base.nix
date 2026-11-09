@@ -109,6 +109,8 @@ in
         ../dotfiles/claude/skills/github-stacked-prs/references/source-handoffs.md;
       ".claude/skills/github-stacked-prs/references/complete-restack.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/complete-restack.md;
+      ".claude/skills/github-stacked-prs/references/merge.md".source =
+        ../dotfiles/claude/skills/github-stacked-prs/references/merge.md;
       ".claude/skills/github-stacked-prs/references/selective-publication.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/references/selective-publication.md;
       ".claude/skills/github-stacked-prs/references/partial-stack-recovery.md".source =
