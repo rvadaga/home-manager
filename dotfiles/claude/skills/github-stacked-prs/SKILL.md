@@ -1,6 +1,6 @@
 ---
 name: github-stacked-prs
-description: manage dependent pull request stacks with the official gh stack cli. use when creating, publishing, restacking, recovering, or merging a github-managed stack.
+description: manage dependent pull request stacks with the official gh stack cli and supported asynchronous merge API. use when creating, publishing, restacking, recovering, or merging a github-managed stack.
 ---
 
 # github stacked pull requests
@@ -14,7 +14,7 @@ use the nix-managed official `gh stack` extension. stop if it is unavailable. in
 - **integrate deferred work, sync the default branch, resolve conflicts, or restack:** use [complete restack](references/complete-restack.md). run the affected per-layer and cumulative checks at the resulting heads before publication.
 - **adopt isolated source work:** use [source handoffs](references/source-handoffs.md). only the assigned integrator adopts commits and changes stack history.
 - **recover broken previous boundaries or a wrong continuation:** use [partial stack recovery](references/partial-stack-recovery.md). never guess a boundary by removing and recreating stack metadata.
-- **merge:** use the bottom-up procedure in [complete restack](references/complete-restack.md), with separate merge authorization, a verified ready bottom layer, and the squash commit message rule in assembled `CLAUDE.md`.
+- **merge:** read [bottom-up merge and readback](references/merge.md), which owns CLI selection, the versioned async fallback and server-restacked descendants. assembled `CLAUDE.md` owns message intent and readiness; existing scoped merge authorization covers the supported transport choice.
 
 read [preparation and publication](references/preparation-and-publication.md) when establishing the integrator checkout or preparing a publication. reuse evidence while its checkout, heads, ownership and inputs remain unchanged; repeat invalidated observations after an interruption, handoff, conflict or unexpected movement.
 

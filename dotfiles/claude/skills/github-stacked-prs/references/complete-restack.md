@@ -76,15 +76,7 @@ this authorization does not cover:
 
 ## merge bottom-up
 
-merge bottom-up and select only a layer whose live github state is ready. the shared `CLAUDE.md` rule decides whether that state is authoritative and forbids a duplicate confirmation or automatic redraft. preserve every higher layer's recorded state.
-
-1. repeat the always-required full-stack checks and apply the validation decision above. select only the current bottom pull request, and only when its live state is ready. stop if the bottom layer is still draft.
-2. apply assembled `CLAUDE.md`'s squash commit message rule to the installed official stack command and its actual direct or queued merge path before invoking it. this pointer keeps message requirements in one place. an absent override or append-only API field is not proof of replacement capability; hold the merge when the required message cannot be guaranteed. do not route around the official stack workflow.
-3. only after that check passes, run `gh stack merge <bottom-pr-number> --squash` with the verified message controls. the command merges everything through the selected pull request, so verify that its resolved target is the intended bottom pull request. rederive the merged pull request state and exact head, then independently verify its landed commit message under the shared rule before changing any remaining layer.
-4. record every remaining layer's live state, then restack with `gh stack rebase`. if conflicts stop the command, use only `gh stack rebase --continue` after resolving and staging them.
-5. repeat the always-required full-stack checks and apply the validation decision above, then publish the validated restack with `gh stack push`. verify every remaining pull request at the expected remote head and require its live state to equal the state recorded immediately before publication.
-
-repeat from the new bottom layer. never substitute per-branch git commands for landing or restacking a github-managed stack.
+follow [bottom-up merge and readback](merge.md) after the checks above. that reference owns target/downstack verification, the version-aware transport decision, async status handling and descendant reconciliation; keep this pointer short so those rules cannot drift. only a live ready bottom layer with actual merge authorization may land.
 
 ## stack state controls
 
