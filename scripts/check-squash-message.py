@@ -66,15 +66,15 @@ def oid(value):
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{40}", value) is not None
 
 
-def check_async_request(intent, capture, snapshot):
-    """Validate the qualified direct path, not authorization or live evidence."""
+def check_async_capture(intent, capture, snapshot):
+    """Compare a historical request with intent, not server message capability."""
     subject, body = expected_message(intent)
     if intent.get("stack") is not True or not oid(intent.get("head")):
         raise ValueError("expected stack and exact approved head")
     if body:
-        raise ValueError("nonempty async message behavior requires separate qualification")
+        raise ValueError("historical capture checker expects an empty-body intent")
     if snapshot.get("merge_queue") is not False or snapshot.get("queue_rule") is not False:
-        raise ValueError("direct fallback requires independently verified absence of a queue")
+        raise ValueError("recorded direct request requires independently verified absence of a queue")
     layers = snapshot.get("open_downstack")
     if not isinstance(layers, list) or len(layers) != 1:
         raise ValueError("target must be the bottom layer with no other open downstack")
@@ -94,12 +94,18 @@ def check_async_request(intent, capture, snapshot):
     if capture.get("method") != "PUT" or capture.get("path") != path:
         raise ValueError("wrong async method, repository or target")
     if capture.get("headers", {}).get("X-GitHub-Api-Version") != "2026-03-10":
-        raise ValueError("async API version is not qualified")
+        raise ValueError("capture uses a different async API version")
     payload = capture.get("body", {})
     expected = {"commit_title": subject, "commit_message": body, "sha": intent["head"],
                 "merge_method": "squash", "merge_action": "direct_merge", "bypass_rules": False}
     if payload != expected or payload.get("bypass_rules") is not False:
         raise ValueError("async payload must explicitly match message, head, route and no-bypass intent")
+
+
+def check_async_request(intent, capture, snapshot):
+    """Fail closed: a matching payload cannot prove empty-body replacement."""
+    check_async_capture(intent, capture, snapshot)
+    raise ValueError("async empty-body replacement is not established; hold the merge")
 
 
 def check_async_response(intent, response, request_id=None):
@@ -201,7 +207,7 @@ def check_server_restack(before, after, recovery_heads):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("request", "landed", "async-request", "async-response", "async-landed", "server-restack"))
+    parser.add_argument("mode", choices=("request", "landed", "async-request", "async-capture", "async-response", "async-landed", "server-restack"))
     parser.add_argument("intent", type=Path, help="JSON: title, number, optional explicitly requested_body")
     parser.add_argument("observation", type=Path, help="captured request or independently fetched commit JSON")
     parser.add_argument("--sha", help="exact merge SHA, required for landed readback")
@@ -217,6 +223,9 @@ def main():
             check_landed(intent, observation, args.sha or "")
         elif args.mode == "async-request":
             check_async_request(intent, observation["capture"], observation["snapshot"])
+        elif args.mode == "async-capture":
+            check_async_capture(intent, observation["capture"], observation["snapshot"])
+            print("historical capture only; no server capability or merge permission established")
         elif args.mode == "async-response":
             print(check_async_response(intent, observation))
         elif args.mode == "async-landed":
