@@ -1,40 +1,27 @@
 # bottom-up merge and readback
 
-assembled `CLAUDE.md` owns squash-message intent and readiness. this procedure owns transport and post-merge stack handling. it requires actual merge authorization for the exact layer; ready state alone is not merge permission. an existing scoped authorization covers the supported transport below without a duplicate request solely because the CLI lacks a message flag. preserve one integrator, required reviews and CI, runtime permissions and all project holds.
+assembled `CLAUDE.md` owns squash-message intent and readiness. this procedure owns transport and post-merge stack handling. it requires actual merge authorization for the exact layer; ready state alone is not merge permission. an existing scoped authorization covers a supported transport without a duplicate request solely because the CLI lacks a message flag. authorization does not prove that a transport can produce the required message. preserve one integrator, required reviews and CI, runtime permissions and all project holds.
 
 ## establish the target and transport
 
 1. repeat [complete-restack checks](complete-restack.md#verify-a-complete-restack-before-publication), including its decision about carried validation. record `gh stack view --json`, live remote/PR heads, bases and readiness for the complete ordered stack. retain the pre-merge heads, base and required objects in recovery refs or a verified bundle under [preparation and publication](preparation-and-publication.md).
 2. select only the live ready bottom layer. verify its exact approved head, repository, base branch and base commit. both the CLI and async endpoint can include every open ancestor through the selected target: enumerate that exact downstack set and require it to contain only the approved bottom layer. a stack number is not a PR number; the CLI resolves bare numbers as stack numbers first. inspect its resolved selection before confirming. any additional ancestor, unknown relationship or changed head holds this merge.
 3. inspect installed `gh stack --version`, `gh stack merge --help`, official source, repository squash defaults, branch rules and merge-queue configuration. prefer the official CLI when its actual route can express the authorized exact message and head. do not invent flags, rely on omitted body defaults, or use ordinary `gh pr merge` / synchronous merge endpoints for a stack.
-4. official `gh-stack` v0.3.0 sends only `merge_method` and `merge_action`; it has no message or expected-head controls. the fallback below is supported for GitHub's API version `2026-03-10`, a verified non-queued `direct_merge`, squash, explicit empty message and exact head. observed request and independent landed readback establish that empty-string behavior on this path, despite the docs describing appended detail. this does not qualify another version, nonempty requested body, or queue path; re-establish exact-message support before using those. a documentation label alone proves neither success nor impossibility.
+4. official `gh-stack` v0.3.0 sends only `merge_method` and `merge_action`; it has no message or expected-head controls. the direct async API with version `2026-03-10` also has no established empty-body replacement guarantee: `commit_message:""` has produced a generated commit-list body. do not submit that request as an empty-body fallback. hold only the merge until a supported method can demonstrably satisfy the required message; implementation, validation and otherwise authorized stack publication may continue.
 
 if a queue applies, preserve it. the async API documents no message overrides for `merge_queue`; do not force `direct_merge` to avoid it. hold only the merge when the required message cannot be controlled. do not change repository settings or bypass rules. inspect both the branch's merge-queue object and applicable rules; an unavailable check is not proof that no queue exists.
 
-## submit the supported direct async request
+## distinguish request fields from message control
 
-immediately before the write, recheck the approved head, base, exact downstack set, readiness, authorization, ownership, required reviews/CI and absence of a queue. stop for unexpected movement. retain the intended subject/body and request separately from the response. the head condition protects the target, not a concurrently changed stack topology; perform no unrelated work between these reads and submission.
+the official async documentation describes `commit_title` as the title and `commit_message` as detail appended to an automatic message, not a body-replacement field. neither an explicit empty string, an accepted request nor a successful poll proves that the generated body was cleared. the public client source does not expose the server's empty-string handling. do not invent a different field, whitespace value, endpoint or repository-setting change to work around this limit.
 
-use a JSON file so an empty string and boolean false remain explicit. substitute only independently verified values; the subject follows the shared single-suffix rule:
+one successful empty-body readback is insufficient when the default body was already empty. under GitHub's commit-message defaults, a one-commit pull request uses that commit's message, while multiple commits produce a list. compare commit count, original messages, repository defaults, exact request/version and independently read landed message before attributing the result to an override. this comparison explains why an observation may be inconclusive; it is not permission to run test merges.
 
-```json
-{
-  "commit_title": "<intended title> (#<number>)",
-  "commit_message": "",
-  "sha": "<exact approved head>",
-  "merge_method": "squash",
-  "merge_action": "direct_merge",
-  "bypass_rules": false
-}
-```
+if a later supported route establishes exact-message control, recheck the approved head, base, exact downstack set, readiness, authorization, ownership, reviews/CI and queue rules immediately before submission. retain the intended message, complete request and response separately. an expected-head field protects the target, not concurrently changed stack topology. preserve queue semantics and never bypass rules.
 
-```sh
-gh api --method PUT "repos/<owner>/<repo>/pulls/<bottom-pr>/merge-async" \
-  -H 'Accept: application/vnd.github+json' \
-  -H 'X-GitHub-Api-Version: 2026-03-10' --input request.json
-```
+## inspect an existing async attempt
 
-capture HTTP status, response body and command exit status. do not retry an uncertain submission: it may already be running. a `409` may refer to an existing request with different options; retain its UUID, investigate that request and stop new submissions. a `404`, authorization failure, validation rejection or rule failure is not permission to try a synchronous endpoint. never set `bypass_rules:true`.
+the read-only procedure below remains useful for a request already submitted; it does not release the message-control hold. retain HTTP status, response body and command exit status. do not retry an uncertain submission: it may already be running. a `409` may refer to an existing request with different options; retain its UUID, investigate that request and stop new submissions. a `404`, authorization failure, validation rejection or rule failure is not permission to try a synchronous endpoint. never set `bypass_rules:true`.
 
 ## poll, then verify independently
 
@@ -48,14 +35,14 @@ gh api "repos/<owner>/<repo>/pulls/<bottom-pr>/merge-async/<returned-uuid>" \
 poll at most once every two seconds for five minutes, with finite HTTP timeouts and responsive waits. retain each result. on timeout or interruption, report pending or unverified with the saved UUID; resume status reads, not a new merge request. handle results explicitly:
 
 - `pending`: still running, not merged.
-- `enqueued`: queue admission, not merged. for the direct fallback this is an unexpected route; stop and inspect the queue without changing its state.
+- `enqueued`: queue admission, not merged. for a recorded direct request this is an unexpected route; stop and inspect the queue without changing its state.
 - `failed`: report the server's reason and stop. do not claim a merge or automatically retry.
 - `merged`: a candidate completion, including an immediate already-merged response. independently read the PR and landed commit before declaring success.
 - unknown/malformed status or unavailable readback: unverified; stop dependent mutation and cleanup.
 
 read `gh pr view <bottom-pr> --repo <owner>/<repo> --json state,mergedAt,headRefOid,mergeCommit` separately. require `MERGED`, a non-null time, the approved source head and the response's merge SHA. then read `gh api repos/<owner>/<repo>/commits/<merge-sha>` independently: compare the entire subject/body with the saved intent and require exactly one parent for the squash commit. preserve that actual parent and any base movement for the descendant analysis. a submitted payload or `merged` response alone proves none of these checks. report mismatches without rewriting or reverting landed history.
 
-the repository's `scripts/check-squash-message.py` and tests check captured request, poll and readback consistency offline. they do not authenticate evidence, discover authorization, inspect live rules or perform a merge.
+the repository's `scripts/check-squash-message.py` separates historical capture checks (`async-capture`) from prospective request checks (`async-request`, which rejects the unproved empty-body route). its fixtures check supplied records and independent readback comparisons, not GitHub's server implementation. a passing capture check cannot release a merge hold or establish capability, authorization or live rules.
 
 ## reconcile server-restacked descendants
 
@@ -72,3 +59,4 @@ the [fetch-before-lease limitation](selective-publication.md#pinned-cli-limitati
 - [async merge API and statuses](https://github.com/github/gh-stack/blob/2a49e6751238633db504655d8a8eba3e433e827d/docs/src/content/docs/reference/merge-api.md)
 - [v0.3.0 request fields and polling](https://github.com/github/gh-stack/blob/2a49e6751238633db504655d8a8eba3e433e827d/internal/github/merge_async.go)
 - [v0.3.0 target resolution and CLI flags](https://github.com/github/gh-stack/blob/2a49e6751238633db504655d8a8eba3e433e827d/cmd/merge.go)
+- [default squash messages and commit count](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests)

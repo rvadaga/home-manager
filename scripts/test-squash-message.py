@@ -3,7 +3,11 @@
 
 import importlib.util
 from copy import deepcopy
+import json
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 
@@ -103,13 +107,13 @@ class AsyncMergeTest(unittest.TestCase):
         self.commit = {"sha": "c" * 40, "commit": {"message": "fix parser (#7)"},
                        "parents": [{"sha": "b" * 40}]}
 
-    def test_supported_explicit_empty_direct_request(self):
-        check.check_async_request(self.intent, self.capture, self.snapshot)
+    def test_historical_capture_preserves_explicit_fields_only(self):
+        check.check_async_capture(self.intent, self.capture, self.snapshot)
         for key in self.capture["body"]:
             missing = deepcopy(self.capture)
             del missing["body"][key]
             with self.subTest(missing=key), self.assertRaises(ValueError):
-                check.check_async_request(self.intent, missing, self.snapshot)
+                check.check_async_capture(self.intent, missing, self.snapshot)
 
     def test_message_head_route_and_no_bypass(self):
         for key, value in (("commit_title", "fix parser (#7) (#7)"), ("commit_message", None),
@@ -120,18 +124,18 @@ class AsyncMergeTest(unittest.TestCase):
             altered = deepcopy(self.capture)
             altered["body"][key] = value
             with self.subTest(key=key, value=value), self.assertRaises(ValueError):
-                check.check_async_request(self.intent, altered, self.snapshot)
+                check.check_async_capture(self.intent, altered, self.snapshot)
 
-    def test_version_and_queue_paths_need_their_own_evidence(self):
+    def test_capture_rejects_different_version_and_queue_records(self):
         for key in ("merge_queue", "queue_rule"):
             for value in (True, None, "false"):
                 changed = deepcopy(self.snapshot)
                 changed[key] = value
                 with self.subTest(key=key, value=value), self.assertRaises(ValueError):
-                    check.check_async_request(self.intent, self.capture, changed)
+                    check.check_async_capture(self.intent, self.capture, changed)
         self.capture["headers"]["X-GitHub-Api-Version"] = "2099-01-01"
         with self.assertRaisesRegex(ValueError, "version"):
-            check.check_async_request(self.intent, self.capture, self.snapshot)
+            check.check_async_capture(self.intent, self.capture, self.snapshot)
 
     def test_target_cannot_include_unapproved_ancestors(self):
         for layers in ([], self.snapshot["open_downstack"] * 2,
@@ -140,10 +144,45 @@ class AsyncMergeTest(unittest.TestCase):
                        [dict(self.snapshot["open_downstack"][0], head="d" * 40)],
                        [dict(self.snapshot["open_downstack"][0], base_sha="d" * 40)]):
             with self.subTest(layers=layers), self.assertRaises(ValueError):
-                check.check_async_request(self.intent, self.capture, dict(self.snapshot, open_downstack=layers))
+                check.check_async_capture(self.intent, self.capture, dict(self.snapshot, open_downstack=layers))
         for path in ("repos/elsewhere/project/pulls/7/merge-async", "repos/example/project/pulls/8/merge-async"):
             with self.subTest(path=path), self.assertRaises(ValueError):
-                check.check_async_request(self.intent, dict(self.capture, path=path), self.snapshot)
+                check.check_async_capture(self.intent, dict(self.capture, path=path), self.snapshot)
+
+    def test_empty_payload_never_establishes_replacement_capability(self):
+        # A default already equal to the intent cannot distinguish an override.
+        for count, default in ((1, ""), (2, "* first change\n\n* second change")):
+            snapshot = dict(self.snapshot, commit_count=count, default_body=default,
+                            message_replacement_supported=True)
+            check.check_async_capture(self.intent, self.capture, snapshot)
+            with self.subTest(commits=count), self.assertRaisesRegex(ValueError, "hold the merge"):
+                check.check_async_request(self.intent, self.capture, snapshot)
+
+    def test_matching_capture_can_still_land_a_generated_body(self):
+        check.check_async_capture(self.intent, self.capture, self.snapshot)
+        check.check_async_landed(self.intent, self.merged, self.pr, self.commit)
+        generated = dict(self.commit, commit={"message": "fix parser (#7)\n\n* first change\n\n* second change"})
+        with self.assertRaisesRegex(ValueError, "landed subject or body differs"):
+            check.check_async_landed(self.intent, self.merged, self.pr, generated)
+        with self.assertRaisesRegex(ValueError, "hold the merge"):
+            check.check_async_request(self.intent, self.capture, self.snapshot)
+
+    def test_cli_distinguishes_historical_capture_from_preflight(self):
+        with tempfile.TemporaryDirectory() as directory:
+            intent = Path(directory) / "intent.json"
+            observation = Path(directory) / "observation.json"
+            intent.write_text(json.dumps(self.intent))
+            observation.write_text(json.dumps({"capture": self.capture, "snapshot": self.snapshot}))
+            command = [sys.executable, str(Path(check.__file__))]
+            historical = subprocess.run(command + ["async-capture", str(intent), str(observation)],
+                                        text=True, capture_output=True)
+            self.assertEqual(historical.returncode, 0, historical.stderr)
+            self.assertIn("no server capability", historical.stdout)
+            prospective = subprocess.run(command + ["async-request", str(intent), str(observation)],
+                                         text=True, capture_output=True)
+            self.assertEqual(prospective.returncode, 1)
+            self.assertIn("hold the merge", prospective.stderr)
+            self.assertNotIn("matches", prospective.stdout)
 
     def test_synchronous_stack_route_rejected_even_with_empty_body(self):
         request = {"query": "mutation { mergePullRequest(input:$input) { clientMutationId } }",
