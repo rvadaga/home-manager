@@ -1,0 +1,17 @@
+{
+  "name": "markdown-preview-style",
+  "publisher": "rvadaga",
+  "version": "0.1.0",
+  "displayName": "Markdown Preview Style",
+  "description": "Fira Sans Markdown previews and Mermaid styling using the existing renderer.",
+  "engines": { "vscode": "^1.121.0" },
+  "categories": ["Other"],
+  "contributes": {
+    "markdown.previewStyles": ["./preview.css", "./vscode.css"],
+    "configurationDefaults": {
+      "markdown-mermaid.lightModeTheme": "vscode",
+      "markdown-mermaid.darkModeTheme": "vscode",
+      "mermaidChart.markdownPreview.enabled": false
+    }
+  }
+}

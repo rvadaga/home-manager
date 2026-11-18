@@ -9,6 +9,8 @@ let
   patchedBash = pkgs.callPackage ../packages/bash-darwin-pipe-fallback.nix { };
 in
 {
+  imports = [ ../programs/editor-preview.nix ];
+
   llmInstructions.platforms = [ "mac" ];
 
   programs.bash.package = patchedBash;
