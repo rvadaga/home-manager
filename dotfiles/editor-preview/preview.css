@@ -1,0 +1,111 @@
+/* Preview typography and diagram appearance; source-editor fonts stay separate. */
+:root {
+  --preview-font: "Fira Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --preview-light-surface: #ffffff;
+  --preview-light-ink: #030303;
+  --preview-light-accent: #3a83f7;
+  --preview-dark-surface: #1e1e1e;
+  --preview-dark-ink: #d4d4d4;
+  --preview-dark-accent: #007acc;
+  --preview-surface: var(--preview-light-surface);
+  --preview-ink: var(--preview-light-ink);
+  --preview-accent: var(--preview-light-accent);
+  --preview-tint: 18%;
+  --preview-node: color-mix(in srgb, var(--preview-accent) var(--preview-tint), var(--preview-surface));
+  --preview-border: color-mix(in srgb, var(--preview-ink) 18%, var(--preview-surface));
+  --preview-muted: color-mix(in srgb, var(--preview-ink) 65%, var(--preview-surface));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --preview-surface: var(--preview-dark-surface);
+    --preview-ink: var(--preview-dark-ink);
+    --preview-accent: var(--preview-dark-accent);
+    --preview-tint: 30%;
+  }
+}
+
+body {
+  background: var(--preview-surface) !important;
+  color: var(--preview-ink) !important;
+  font-family: var(--preview-font) !important;
+  font-size: 15px !important;
+  font-weight: 400;
+  line-height: 1.6 !important;
+  box-sizing: border-box;
+  max-width: none !important;
+  padding: 16px 24px !important;
+}
+
+/* Some preview extensions wrap the document in a separately themed article. */
+body :is(.markdown-body, .github-markdown-body, .github-markdown-content) {
+  background: transparent !important;
+  color: var(--preview-ink) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+  --bgColor-default: var(--preview-surface) !important;
+  --bgColor-muted: color-mix(in srgb, var(--preview-ink) 5%, var(--preview-surface)) !important;
+  --borderColor-default: var(--preview-border) !important;
+  --fgColor-default: var(--preview-ink) !important;
+  --fgColor-accent: var(--preview-accent) !important;
+}
+
+body :is(p, li, td, th, blockquote, dt, dd, h1, h2, h3, h4, h5, h6) {
+  font-family: var(--preview-font) !important;
+  color: var(--preview-ink) !important;
+}
+
+body :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 600;
+  line-height: 1.3;
+  border-color: var(--preview-border);
+  border-bottom: none !important;
+}
+
+body a { color: var(--preview-accent); }
+body blockquote { color: var(--preview-muted) !important; border-color: var(--preview-border); }
+body :is(table, td, th, hr) { border-color: var(--preview-border); }
+body :is(pre, code, kbd, samp) {
+  font-family: var(--vscode-editor-font-family, "FiraCode Nerd Font Mono", monospace) !important;
+}
+body pre {
+  background: color-mix(in srgb, var(--preview-ink) 5%, var(--preview-surface)) !important;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+/* The renderer measures labels before sizing nodes; never resize SVG boxes here. */
+body .mermaid {
+  font-family: var(--preview-font) !important;
+  background: transparent;
+  overflow: auto;
+}
+body .mermaid :is(text, tspan, .label, .nodeLabel, .edgeLabel, .messageText, .noteText) {
+  font-family: var(--preview-font) !important;
+  color: var(--preview-ink) !important;
+}
+body .mermaid :is(text, .label, .nodeLabel) { font-size: 14px !important; }
+body .mermaid .node :is(text, .label, .nodeLabel) { font-weight: 600 !important; }
+body .mermaid .edgeLabel :is(text, span, p) { font-size: 13px !important; font-weight: 600; }
+body .mermaid text { fill: var(--preview-ink) !important; }
+body .mermaid .node :is(rect, circle, ellipse, polygon, path),
+body .mermaid :is(rect.actor, .actor-top, .actor-bottom) {
+  fill: var(--preview-node) !important;
+  stroke: var(--preview-border) !important;
+}
+body .mermaid .node rect { rx: 16px; ry: 16px; }
+body .mermaid :is(.cluster rect, .note, .labelBox) {
+  fill: color-mix(in srgb, var(--preview-ink) 5%, var(--preview-surface)) !important;
+  stroke: var(--preview-border) !important;
+}
+body .mermaid :is(.edgeLabel, .edgeLabel p, .labelBkg) { background: var(--preview-surface) !important; }
+body .mermaid .edgeLabel rect { fill: var(--preview-surface) !important; }
+body .mermaid :is(.flowchart-link, .actor-line, .messageLine0, .messageLine1) {
+  stroke: var(--preview-muted) !important;
+}
+body .mermaid marker path { fill: var(--preview-muted) !important; stroke: var(--preview-muted) !important; }
+
+@media (max-width: 480px) { body { padding: 12px !important; } }

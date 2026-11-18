@@ -1,0 +1,6 @@
+:root {
+  --preview-surface: var(--preview-light-surface);
+  --preview-ink: var(--preview-light-ink);
+  --preview-accent: var(--preview-light-accent);
+  --preview-tint: 18%;
+}

@@ -1,0 +1,23 @@
+/* These variables are local to the preview webview. Mermaid reads them before layout. */
+:root {
+  --vscode-font-family: "Fira Sans", sans-serif !important;
+  --vscode-font-size: 14px !important;
+  --vscode-editor-background: var(--preview-surface) !important;
+  --vscode-editor-foreground: var(--preview-ink) !important;
+  --vscode-editorWidget-background: var(--preview-node) !important;
+  --vscode-charts-foreground: var(--preview-ink) !important;
+  --vscode-chart-line: var(--preview-muted) !important;
+  --vscode-editorWidget-border: var(--preview-border) !important;
+}
+:root:has(body.vscode-dark), :root:has(body.vscode-high-contrast:not(.vscode-high-contrast-light)) {
+  --preview-surface: var(--preview-dark-surface);
+  --preview-ink: var(--preview-dark-ink);
+  --preview-accent: var(--preview-dark-accent);
+  --preview-tint: 30%;
+}
+:root:has(body.vscode-light), :root:has(body.vscode-high-contrast-light) {
+  --preview-surface: var(--preview-light-surface);
+  --preview-ink: var(--preview-light-ink);
+  --preview-accent: var(--preview-light-accent);
+  --preview-tint: 18%;
+}
