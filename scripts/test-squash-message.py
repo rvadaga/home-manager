@@ -106,6 +106,56 @@ class AsyncMergeTest(unittest.TestCase):
                    "headRefOid": "a" * 40, "mergeCommit": {"oid": "c" * 40}}
         self.commit = {"sha": "c" * 40, "commit": {"message": "fix parser (#7)"},
                        "parents": [{"sha": "b" * 40}]}
+        self.repository = {"full_name": "example/project", "allow_squash_merge": True,
+                           "squash_merge_commit_title": "PR_TITLE",
+                           "squash_merge_commit_message": "BLANK"}
+
+    def test_blank_defaults_allow_conditional_preflight_not_replacement(self):
+        snapshot = dict(self.snapshot, repository=self.repository, commit_count=2)
+        check.check_async_request(self.intent, self.capture, snapshot)
+        check.check_async_landed(self.intent, self.merged, self.pr, self.commit)
+        generated = dict(self.commit, commit={"message": "fix parser (#7)\n\n* first change"})
+        with self.assertRaisesRegex(ValueError, "landed subject or body differs"):
+            check.check_async_landed(self.intent, self.merged, self.pr, generated)
+
+    def test_missing_different_or_other_repository_defaults_hold(self):
+        for key, values in {
+            "full_name": [None, "elsewhere/project"],
+            "allow_squash_merge": [None, False, "true", 1],
+            "squash_merge_commit_title": [None, "COMMIT_OR_PR_TITLE"],
+            "squash_merge_commit_message": [None, "COMMIT_MESSAGES", "PR_BODY", "", "blank"],
+        }.items():
+            for value in values:
+                repository = dict(self.repository, **{key: value})
+                with self.subTest(key=key, value=value), self.assertRaisesRegex(ValueError, "hold the merge"):
+                    check.check_async_request(self.intent, self.capture,
+                                              dict(self.snapshot, repository=repository))
+
+    def test_blank_defaults_do_not_waive_target_queue_or_request_checks(self):
+        snapshot = dict(self.snapshot, repository=self.repository)
+        changes = [{"merge_queue": True}, {"queue_rule": True}, {"queue_rule": None},
+                   {"open_downstack": self.snapshot["open_downstack"] * 2},
+                   {"open_downstack": [dict(self.snapshot["open_downstack"][0], isDraft=True)]},
+                   {"open_downstack": [dict(self.snapshot["open_downstack"][0], head="d" * 40)]},
+                   {"open_downstack": [dict(self.snapshot["open_downstack"][0], base_sha="d" * 40)]}]
+        for change in changes:
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                check.check_async_request(self.intent, self.capture, dict(snapshot, **change))
+        for key, value in (("commit_message", None), ("commit_message", " "),
+                           ("commit_title", "fix parser (#7) (#7)"), ("sha", "d" * 40),
+                           ("merge_action", "merge_queue"), ("bypass_rules", True)):
+            capture = deepcopy(self.capture)
+            capture["body"][key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                check.check_async_request(self.intent, capture, snapshot)
+        capture = deepcopy(self.capture)
+        del capture["body"]["commit_message"]
+        with self.assertRaises(ValueError):
+            check.check_async_request(self.intent, capture, snapshot)
+        capture = deepcopy(self.capture)
+        capture["headers"]["X-GitHub-Api-Version"] = "2099-01-01"
+        with self.assertRaisesRegex(ValueError, "version"):
+            check.check_async_request(self.intent, capture, snapshot)
 
     def test_historical_capture_preserves_explicit_fields_only(self):
         check.check_async_capture(self.intent, self.capture, self.snapshot)
@@ -183,6 +233,12 @@ class AsyncMergeTest(unittest.TestCase):
             self.assertEqual(prospective.returncode, 1)
             self.assertIn("hold the merge", prospective.stderr)
             self.assertNotIn("matches", prospective.stdout)
+            observation.write_text(json.dumps({"capture": self.capture,
+                "snapshot": dict(self.snapshot, repository=self.repository)}))
+            conditional = subprocess.run(command + ["async-request", str(intent), str(observation)],
+                                         text=True, capture_output=True)
+            self.assertEqual(conditional.returncode, 0, conditional.stderr)
+            self.assertIn("blank-default records only", conditional.stdout)
 
     def test_synchronous_stack_route_rejected_even_with_empty_body(self):
         request = {"query": "mutation { mergePullRequest(input:$input) { clientMutationId } }",

@@ -103,9 +103,14 @@ def check_async_capture(intent, capture, snapshot):
 
 
 def check_async_request(intent, capture, snapshot):
-    """Fail closed: a matching payload cannot prove empty-body replacement."""
+    """Check the blank-default route's records, not replacement capability."""
     check_async_capture(intent, capture, snapshot)
-    raise ValueError("async empty-body replacement is not established; hold the merge")
+    repository = snapshot.get("repository", {})
+    if (repository.get("full_name") != intent["repository"]
+            or repository.get("allow_squash_merge") is not True
+            or repository.get("squash_merge_commit_title") != "PR_TITLE"
+            or repository.get("squash_merge_commit_message") != "BLANK"):
+        raise ValueError("exact repository PR_TITLE / BLANK defaults required; hold the merge")
 
 
 def check_async_response(intent, response, request_id=None):
@@ -223,6 +228,7 @@ def main():
             check_landed(intent, observation, args.sha or "")
         elif args.mode == "async-request":
             check_async_request(intent, observation["capture"], observation["snapshot"])
+            print("blank-default records only; verify live state and the independently landed message")
         elif args.mode == "async-capture":
             check_async_capture(intent, observation["capture"], observation["snapshot"])
             print("historical capture only; no server capability or merge permission established")
