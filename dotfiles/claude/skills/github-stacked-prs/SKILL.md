@@ -14,7 +14,7 @@ use the nix-managed official `gh stack` extension. stop if it is unavailable. in
 - **integrate deferred work, sync the default branch, resolve conflicts, or restack:** use [complete restack](references/complete-restack.md). run the affected per-layer and cumulative checks at the resulting heads before publication.
 - **adopt isolated source work:** use [source handoffs](references/source-handoffs.md). only the assigned integrator adopts commits and changes stack history.
 - **recover broken previous boundaries or a wrong continuation:** use [partial stack recovery](references/partial-stack-recovery.md). never guess a boundary by removing and recreating stack metadata.
-- **merge:** read [bottom-up merge and readback](references/merge.md), which owns transport capability checks, current message-control limits and server-restacked descendants. assembled `CLAUDE.md` owns message intent and readiness; merge authorization does not establish transport capability.
+- **merge:** read [bottom-up merge and readback](references/merge.md), which owns the verified blank-default route, transport limits and server-restacked descendants. assembled `CLAUDE.md` owns message intent and readiness; merge authorization does not establish transport capability.
 
 read [preparation and publication](references/preparation-and-publication.md) when establishing the integrator checkout or preparing a publication. reuse evidence while its checkout, heads, ownership and inputs remain unchanged; repeat invalidated observations after an interruption, handoff, conflict or unexpected movement.
 
