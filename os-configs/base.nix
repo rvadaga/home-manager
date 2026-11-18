@@ -135,6 +135,8 @@ in
         ../dotfiles/claude/skills/editing-google-docs/SKILL.md;
       ".claude/skills/editing-google-slides/SKILL.md".source =
         ../dotfiles/claude/skills/editing-google-slides/SKILL.md;
+      ".claude/skills/screenshot-request/SKILL.md".source =
+        ../dotfiles/claude/skills/screenshot-request/SKILL.md;
       # notes skill: base covers the general llm-wiki vaults (personal-software,
       # oss-vespa); a downstream config can compose into the same skill dir by
       # adding references/work-vault.md (registry entry for its work vault).
