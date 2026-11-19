@@ -142,22 +142,24 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertEqual(self.entry_state(path, updated, new_base, given, dict(panel, base=new_base)),
                          "inspected")
 
-    def can_retire(self, path, *, replacement_state, other_claimants=(), checkout_unused=True):
+    def can_retire(self, path, *, replacement_state, other_claimants=(), checkout_unused=True,
+                   squash_pr=None):
         if replacement_state != "inspected" or not checkout_unused or other_claimants:
             return False
         if self.git("status", "--porcelain", cwd=path):
             return False
         head = self.git("rev-parse", "HEAD", cwd=path)
         remote = self.git("ls-remote", str(self.repo), "refs/heads/child")
-        if not remote:
-            return False
-        try:
-            self.git("merge-base", "--is-ancestor", head, remote.split()[0], cwd=path)
-        except subprocess.CalledProcessError as exc:
-            if exc.returncode == 1:
-                return False
-            raise
-        return True
+        if remote:
+            try:
+                self.git("merge-base", "--is-ancestor", head, remote.split()[0], cwd=path)
+            except subprocess.CalledProcessError as exc:
+                if exc.returncode != 1:
+                    raise
+            else:
+                return True
+        return bool(squash_pr and squash_pr["state"] == "MERGED" and squash_pr["mergedAt"]
+                    and squash_pr["headRefOid"] == head)
 
     def test_retirement_keeps_queued_dirty_shared_and_unpublished_copies(self):
         old = self.snapshot("old-review", self.child)
@@ -176,6 +178,22 @@ class LocalReviewDiffTest(unittest.TestCase):
         orphan = self.commit("local.txt", "needs publication\n", repo=old)
         self.assertFalse(self.can_retire(old, replacement_state="inspected"))
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=old), orphan)
+
+    def test_retirement_requires_exact_submitted_head_after_squash(self):
+        old = self.snapshot("old-implementation", self.child)
+        self.git("switch", "parent")
+        self.git("branch", "-D", "child")
+        self.assertFalse(self.can_retire(old, replacement_state="inspected"))
+
+        # Model GitHub's independent merged-PR readback after branch deletion.
+        squash_pr = {"state": "MERGED", "mergedAt": "2025-01-01T00:00:00Z",
+                     "headRefOid": self.child}
+        self.assertTrue(self.can_retire(
+            old, replacement_state="inspected", squash_pr=squash_pr
+        ))
+        self.assertFalse(self.can_retire(
+            old, replacement_state="inspected", squash_pr=dict(squash_pr, headRefOid=self.parent)
+        ))
 
 
 if __name__ == "__main__":
