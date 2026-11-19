@@ -110,14 +110,87 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertEqual(self.git("rev-parse", "parent"), self.parent)
         self.assertEqual(self.files(self.parent, updated), ["child.txt"])
 
-    def entry_state(self, path, head, base, attachments, panel):
-        if path not in attachments.get("owner", ()):
+    def entry_state(self, path, head, base, attachments, panel, *, owner="owner"):
+        if path not in attachments.get(owner, ()):
             return "unattached"
         if self.git("rev-parse", "HEAD", cwd=path) != head:
             return "stale checkout"
-        if (panel["chat"], panel["path"], panel["base"]) != ("owner", path, base):
+        if not panel or (panel["chat"], panel["path"], panel["base"]) != (owner, path, base):
             return "unverified comparison"
         return panel["state"]
+
+    def inventory(self, published, entries):
+        """Model the picker readback with supplied app rows and actual local Git."""
+        result = {}
+        for key, name, head, base, expected_files in published:
+            matches = [
+                row
+                for row in entries
+                if (row["key"], row["name"], row["purpose"]) == (key, name, "review")
+                and self.git("rev-parse", "HEAD", cwd=row["path"]) == head
+                and not self.git("status", "--porcelain", cwd=row["path"])
+            ]
+            if len(matches) != 1:
+                result[key] = (None, "ambiguous" if matches else "missing exact checkout")
+                continue
+            row = matches[0]
+            path = row["path"]
+            if self.files(base, head, cwd=path) != expected_files:
+                result[key] = (path, "wrong layer diff")
+                continue
+            owner = key[0]
+            attachments = {owner: [path]} if row["attached"] else {}
+            result[key] = (path, self.entry_state(
+                path, head, base, attachments, row["panel"], owner=owner
+            ))
+        return result
+
+    def test_current_inventory_reuses_one_exact_snapshot_per_published_layer(self):
+        bottom_key = ("owner", "example/app", 462)
+        top_key = ("owner", "example/app", 461)
+        bottom = self.snapshot("pr42-1-app", self.parent)
+        top = self.snapshot("pr42-2-app", self.child)
+        published = [
+            (bottom_key, bottom.name, self.parent, self.trunk, ["parent.txt"]),
+            (top_key, top.name, self.child, self.parent, ["child.txt"]),
+        ]
+        bottom_row = dict(key=bottom_key, name=bottom.name, path=bottom, purpose="review",
+                          attached=True, panel=dict(chat="owner", path=bottom, base=self.trunk,
+                                                   state="inspected"))
+        top_row = dict(key=top_key, name=top.name, path=top, purpose="review", attached=True,
+                       panel=dict(chat="owner", path=top, base=self.parent, state="inspected"))
+        unrelated = [
+            dict(top_row, key=("owner", "example/app", 463)),  # older open draft
+            dict(top_row, key=("owner", "example/tools", 461)),
+            dict(top_row, key=("another-chat", "example/app", 461)),
+            dict(top_row, name=f"{top.name}-local", purpose="local candidate"),
+        ]
+        rows = [top_row, *unrelated, bottom_row]
+        observed = self.inventory(published, rows)
+        self.assertEqual(list(observed.items()), [
+            (bottom_key, (bottom, "inspected")),
+            (top_key, (top, "inspected")),
+        ])
+        self.assertEqual(self.inventory(published, rows), observed)
+
+        # Requesting or retrying inspection keeps the same checkout; it cannot prove rendering.
+        self.assertEqual(self.inventory(published, [dict(top_row, panel=None), *rows[1:]])[top_key],
+                         (top, "unverified comparison"))
+        self.assertEqual(self.inventory(published, [dict(top_row, attached=False),
+                                                    *rows[1:]])[top_key], (top, "unattached"))
+        duplicate = self.snapshot("another-copy", self.child)
+        duplicate_rows = [*rows, dict(top_row, path=duplicate)]
+        self.assertEqual(self.inventory(published, duplicate_rows)[top_key], (None, "ambiguous"))
+        (duplicate / "keep.txt").write_text("uncommitted change\n")
+        self.assertEqual(self.inventory(published, duplicate_rows)[top_key], (top, "inspected"))
+        self.assertEqual(self.inventory(published, unrelated)[top_key],
+                         (None, "missing exact checkout"))
+
+        changed_head = self.commit("child.txt", "new published revision\n")
+        changed = [(top_key, top.name, changed_head, self.parent, ["child.txt"])]
+        self.assertEqual(self.inventory(changed, rows)[top_key], (None, "missing exact checkout"))
+        wrong_base = [(top_key, top.name, self.child, self.trunk, ["child.txt"])]
+        self.assertEqual(self.inventory(wrong_base, rows)[top_key], (top, "wrong layer diff"))
 
     def test_refresh_checks_head_base_owner_and_rendering_separately(self):
         path = self.snapshot("app-pr461", self.child)
@@ -143,8 +216,9 @@ class LocalReviewDiffTest(unittest.TestCase):
                          "inspected")
 
     def can_retire(self, path, *, replacement_state, other_claimants=(), checkout_unused=True,
-                   squash_pr=None):
-        if replacement_state != "inspected" or not checkout_unused or other_claimants:
+                   still_open_review=False, squash_pr=None):
+        if (replacement_state != "inspected" or not checkout_unused or still_open_review
+                or other_claimants):
             return False
         if self.git("status", "--porcelain", cwd=path):
             return False
@@ -166,6 +240,7 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertTrue(self.can_retire(old, replacement_state="inspected"))
         self.assertFalse(self.can_retire(old, replacement_state="queued"))
         self.assertFalse(self.can_retire(old, replacement_state="inspected", checkout_unused=False))
+        self.assertFalse(self.can_retire(old, replacement_state="inspected", still_open_review=True))
         self.assertFalse(self.can_retire(old, replacement_state="inspected",
                                          other_claimants=("archived-chat",)))
         edit = old / "untracked.txt"
