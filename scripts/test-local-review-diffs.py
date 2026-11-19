@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise local review comparisons with real Git; this does not test app rendering."""
+"""Exercise review comparisons with real Git and model app observations with fixtures."""
 
 import os
 from pathlib import Path
@@ -30,32 +30,55 @@ class LocalReviewDiffTest(unittest.TestCase):
             ["git", *args], cwd=cwd or self.repo, env=self.env, stderr=subprocess.PIPE
         ).decode().strip()
 
-    def commit(self, name, content):
-        (self.repo / name).write_text(content)
-        self.git("add", name)
-        self.git("commit", "-m", name)
-        return self.git("rev-parse", "HEAD")
+    def commit(self, name, content, *, repo=None):
+        repo = repo or self.repo
+        (repo / name).write_text(content)
+        self.git("add", name, cwd=repo)
+        self.git("commit", "-m", name, cwd=repo)
+        return self.git("rev-parse", "HEAD", cwd=repo)
 
-    def files(self, base, head):
-        return self.git("diff", "--name-only", f"{base}...{head}").splitlines()
+    def files(self, base, head, *, cwd=None):
+        return self.git("diff", "--name-only", f"{base}...{head}", cwd=cwd).splitlines()
 
-    def snapshot(self, name, head):
+    def snapshot(self, name, head, *, repo=None):
         path = self.root / name
-        self.git("worktree", "add", "--detach", str(path), head)
+        self.git("worktree", "add", "--detach", str(path), head, cwd=repo)
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=path), head)
         self.assertEqual(self.git("status", "--porcelain", cwd=path), "")
         self.assertEqual(self.git("rev-parse", "--abbrev-ref", "HEAD", cwd=path), "HEAD")
         return path
 
     def test_dedicated_snapshots_show_only_each_layer(self):
-        first = self.snapshot("first-review", self.parent)
-        second = self.snapshot("second-review", self.child)
-        self.assertEqual(self.files(self.trunk, self.parent), ["parent.txt"])
-        self.assertEqual(self.files(self.parent, self.child), ["child.txt"])
+        first = self.snapshot("pr42-1-app", self.parent)
+        second = self.snapshot("pr42-2-app", self.child)
+        self.assertEqual(self.files(self.trunk, self.parent, cwd=first), ["parent.txt"])
+        self.assertEqual(self.files(self.parent, self.child, cwd=second), ["child.txt"])
         self.assertEqual(self.files(self.trunk, self.child), ["child.txt", "parent.txt"])
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=first), self.parent)
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=second), self.child)
         self.assertEqual(self.git("branch", "--show-current"), "child")
+
+    def test_merge_labels_follow_cross_repo_order_and_keep_repo_bases(self):
+        tools = self.root / "tools"
+        tools.mkdir()
+        self.git("init", "-b", "main", cwd=tools)
+        self.git("config", "user.name", "Test User", cwd=tools)
+        self.git("config", "user.email", "test@example.invalid", cwd=tools)
+        tools_base = self.commit("common.txt", "tools base\n", repo=tools)
+        self.git("switch", "-c", "tools-feature", cwd=tools)
+        tools_head = self.commit("tools.txt", "new tools\n", repo=tools)
+
+        # The approved order interleaves repos, but Git comparisons never do.
+        parts = [
+            ("pr42-1-app", self.repo, self.trunk, self.parent, "parent.txt"),
+            ("pr42-2-tools", tools, tools_base, tools_head, "tools.txt"),
+            ("pr42-3-app", self.repo, self.parent, self.child, "child.txt"),
+        ]
+        for label, repo, base, head, expected in parts:
+            path = self.snapshot(label, head, repo=repo)
+            self.assertEqual(self.files(base, head, cwd=path), [expected])
+        standalone = self.snapshot("tools-pr717", tools_head, repo=tools)
+        self.assertEqual(self.files(tools_base, tools_head, cwd=standalone), ["tools.txt"])
 
     def test_advanced_target_excludes_base_only_changes(self):
         self.git("switch", "parent")
@@ -86,6 +109,73 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertEqual(self.git("rev-parse", "child"), updated)
         self.assertEqual(self.git("rev-parse", "parent"), self.parent)
         self.assertEqual(self.files(self.parent, updated), ["child.txt"])
+
+    def entry_state(self, path, head, base, attachments, panel):
+        if path not in attachments.get("owner", ()):
+            return "unattached"
+        if self.git("rev-parse", "HEAD", cwd=path) != head:
+            return "stale checkout"
+        if (panel["chat"], panel["path"], panel["base"]) != ("owner", path, base):
+            return "unverified comparison"
+        return panel["state"]
+
+    def test_refresh_checks_head_base_owner_and_rendering_separately(self):
+        path = self.snapshot("app-pr461", self.child)
+        panel = {"chat": "owner", "path": path, "base": self.parent, "state": "queued"}
+        given = {"owner": [path]}
+        self.assertEqual(self.entry_state(path, self.child, self.parent, {}, panel), "unattached")
+        self.assertEqual(self.entry_state(path, self.child, self.parent, given, panel), "queued")
+        panel["state"] = "inspected"
+        wrong_chat = dict(panel, chat="internal")
+        self.assertEqual(self.entry_state(path, self.child, self.parent, given, wrong_chat),
+                         "unverified comparison")
+        self.assertEqual(self.entry_state(path, self.child, self.parent, given, panel), "inspected")
+
+        updated = self.commit("child.txt", "published update\n")
+        self.assertEqual(self.entry_state(path, updated, self.parent, given, panel), "stale checkout")
+        self.git("switch", "--detach", updated, cwd=path)
+        self.git("switch", "parent")
+        new_base = self.commit("parent-later.txt", "new base\n")
+        self.assertEqual(self.entry_state(path, updated, new_base, given, panel),
+                         "unverified comparison")
+        self.assertEqual(self.files(new_base, updated, cwd=path), ["child.txt"])
+        self.assertEqual(self.entry_state(path, updated, new_base, given, dict(panel, base=new_base)),
+                         "inspected")
+
+    def can_retire(self, path, *, replacement_state, other_claimants=(), checkout_unused=True):
+        if replacement_state != "inspected" or not checkout_unused or other_claimants:
+            return False
+        if self.git("status", "--porcelain", cwd=path):
+            return False
+        head = self.git("rev-parse", "HEAD", cwd=path)
+        remote = self.git("ls-remote", str(self.repo), "refs/heads/child")
+        if not remote:
+            return False
+        try:
+            self.git("merge-base", "--is-ancestor", head, remote.split()[0], cwd=path)
+        except subprocess.CalledProcessError as exc:
+            if exc.returncode == 1:
+                return False
+            raise
+        return True
+
+    def test_retirement_keeps_queued_dirty_shared_and_unpublished_copies(self):
+        old = self.snapshot("old-review", self.child)
+        self.assertTrue(self.can_retire(old, replacement_state="inspected"))
+        self.assertFalse(self.can_retire(old, replacement_state="queued"))
+        self.assertFalse(self.can_retire(old, replacement_state="inspected", checkout_unused=False))
+        self.assertFalse(self.can_retire(old, replacement_state="inspected",
+                                         other_claimants=("archived-chat",)))
+        edit = old / "untracked.txt"
+        edit.write_text("keep this\n")
+        self.assertFalse(self.can_retire(old, replacement_state="inspected"))
+        self.assertEqual(edit.read_text(), "keep this\n")
+        edit.unlink()
+        self.commit("child.txt", "new remote revision\n")
+        self.assertTrue(self.can_retire(old, replacement_state="inspected"))
+        orphan = self.commit("local.txt", "needs publication\n", repo=old)
+        self.assertFalse(self.can_retire(old, replacement_state="inspected"))
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=old), orphan)
 
 
 if __name__ == "__main__":
