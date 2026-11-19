@@ -117,7 +117,16 @@ class LocalReviewDiffTest(unittest.TestCase):
             return "stale checkout"
         if not panel or (panel["chat"], panel["path"], panel["base"]) != (owner, path, base):
             return "unverified comparison"
+        if panel["state"] == "inspected" and (
+            panel.get("head") != head
+            or panel.get("diff") != self.git("diff", f"{base}...{head}", cwd=path)
+        ):
+            return "unverified comparison"
         return panel["state"]
+
+    def inspected_panel(self, path, head, base):
+        return dict(chat="owner", path=path, head=head, base=base, state="inspected",
+                    diff=self.git("diff", f"{base}...{head}", cwd=path))
 
     def inventory(self, published, entries):
         """Model the picker readback with supplied app rows and actual local Git."""
@@ -126,7 +135,7 @@ class LocalReviewDiffTest(unittest.TestCase):
             matches = [
                 row
                 for row in entries
-                if (row["key"], row["name"], row["purpose"]) == (key, name, "review")
+                if (row["key"], row["purpose"]) == (key, "review")
                 and self.git("rev-parse", "HEAD", cwd=row["path"]) == head
                 and not self.git("status", "--porcelain", cwd=row["path"])
             ]
@@ -140,9 +149,12 @@ class LocalReviewDiffTest(unittest.TestCase):
                 continue
             owner = key[0]
             attachments = {owner: [path]} if row["attached"] else {}
-            result[key] = (path, self.entry_state(
+            state = self.entry_state(
                 path, head, base, attachments, row["panel"], owner=owner
-            ))
+            )
+            if state == "inspected" and row["name"] != name:
+                state = "verified with different name"
+            result[key] = (path, state)
         return result
 
     def test_current_inventory_reuses_one_exact_snapshot_per_published_layer(self):
@@ -155,10 +167,9 @@ class LocalReviewDiffTest(unittest.TestCase):
             (top_key, top.name, self.child, self.parent, ["child.txt"]),
         ]
         bottom_row = dict(key=bottom_key, name=bottom.name, path=bottom, purpose="review",
-                          attached=True, panel=dict(chat="owner", path=bottom, base=self.trunk,
-                                                   state="inspected"))
+                          attached=True, panel=self.inspected_panel(bottom, self.parent, self.trunk))
         top_row = dict(key=top_key, name=top.name, path=top, purpose="review", attached=True,
-                       panel=dict(chat="owner", path=top, base=self.parent, state="inspected"))
+                       panel=self.inspected_panel(top, self.child, self.parent))
         unrelated = [
             dict(top_row, key=("owner", "example/app", 463)),  # older open draft
             dict(top_row, key=("owner", "example/tools", 461)),
@@ -172,6 +183,9 @@ class LocalReviewDiffTest(unittest.TestCase):
             (top_key, (top, "inspected")),
         ])
         self.assertEqual(self.inventory(published, rows), observed)
+        self.assertEqual(self.inventory(published, [dict(top_row, name="old-name"),
+                                                    *rows[1:]])[top_key],
+                         (top, "verified with different name"))
 
         # Requesting or retrying inspection keeps the same checkout; it cannot prove rendering.
         self.assertEqual(self.inventory(published, [dict(top_row, panel=None), *rows[1:]])[top_key],
@@ -198,9 +212,15 @@ class LocalReviewDiffTest(unittest.TestCase):
         given = {"owner": [path]}
         self.assertEqual(self.entry_state(path, self.child, self.parent, {}, panel), "unattached")
         self.assertEqual(self.entry_state(path, self.child, self.parent, given, panel), "queued")
-        panel["state"] = "inspected"
+        panel = self.inspected_panel(path, self.child, self.parent)
         wrong_chat = dict(panel, chat="internal")
         self.assertEqual(self.entry_state(path, self.child, self.parent, given, wrong_chat),
+                         "unverified comparison")
+        wrong_base = dict(panel, base=self.trunk)
+        self.assertEqual(self.entry_state(path, self.child, self.parent, given, wrong_base),
+                         "unverified comparison")
+        wrong_diff = dict(panel, diff=self.git("diff", f"{self.trunk}...{self.child}"))
+        self.assertEqual(self.entry_state(path, self.child, self.parent, given, wrong_diff),
                          "unverified comparison")
         self.assertEqual(self.entry_state(path, self.child, self.parent, given, panel), "inspected")
 
@@ -212,13 +232,13 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertEqual(self.entry_state(path, updated, new_base, given, panel),
                          "unverified comparison")
         self.assertEqual(self.files(new_base, updated, cwd=path), ["child.txt"])
-        self.assertEqual(self.entry_state(path, updated, new_base, given, dict(panel, base=new_base)),
-                         "inspected")
+        self.assertEqual(self.entry_state(path, updated, new_base, given,
+                                         self.inspected_panel(path, updated, new_base)), "inspected")
 
     def can_retire(self, path, *, replacement_state, other_claimants=(), checkout_unused=True,
-                   still_open_review=False, squash_pr=None):
+                   still_open_review=False, squash_pr=None, archive_refused=False):
         if (replacement_state != "inspected" or not checkout_unused or still_open_review
-                or other_claimants):
+                or other_claimants or archive_refused):
             return False
         if self.git("status", "--porcelain", cwd=path):
             return False
@@ -234,6 +254,44 @@ class LocalReviewDiffTest(unittest.TestCase):
                 return True
         return bool(squash_pr and squash_pr["state"] == "MERGED" and squash_pr["mergedAt"]
                     and squash_pr["headRefOid"] == head)
+
+    def naming_action(self, *, supports_rename, predecessor_safe, archive_refused=False):
+        if archive_refused:
+            return "keep existing attachment"
+        if supports_rename:
+            return "rename in place"
+        if predecessor_safe:
+            return "replace and verify retirement"
+        return "keep existing attachment"
+
+    def test_rename_only_keeps_existing_when_retirement_is_unverified_or_refused(self):
+        old = self.snapshot("short-name", self.child)
+        self.assertEqual(self.naming_action(supports_rename=True, predecessor_safe=False),
+                         "rename in place")
+        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=False),
+                         "keep existing attachment")
+        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=True,
+                                            archive_refused=True),
+                         "keep existing attachment")
+        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=True),
+                         "replace and verify retirement")
+        self.assertFalse(self.can_retire(old, replacement_state="queued"))
+        self.assertTrue(self.can_retire(old, replacement_state="inspected"))
+
+    def test_refusal_links_only_a_verified_claimant_for_the_exact_checkout(self):
+        def observed_refusal(path, named_claimant, verified_claims):
+            linked = named_claimant if (named_claimant, path) in verified_claims else None
+            return named_claimant or "unnamed", linked
+
+        old = self.snapshot("old-copy", self.child)
+        self.assertEqual(observed_refusal(old, None, []), ("unnamed", None))
+        self.assertEqual(observed_refusal(old, "creator", []), ("creator", None))
+        self.assertEqual(observed_refusal(old, "reviewer", [("reviewer", self.repo)]),
+                         ("reviewer", None))
+        self.assertEqual(observed_refusal(old, "reviewer", [("reviewer", old)]),
+                         ("reviewer", "reviewer"))
+        self.assertFalse(self.can_retire(old, replacement_state="inspected", archive_refused=True))
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=old), self.child)
 
     def test_retirement_keeps_queued_dirty_shared_and_unpublished_copies(self):
         old = self.snapshot("old-review", self.child)
