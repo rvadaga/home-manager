@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 OID = re.compile(r"[a-f0-9]{40}|[a-f0-9]{64}")
 CHAT = re.compile(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}")
 PR_PATH = re.compile(r"/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/pull/([1-9][0-9]*)/?")
+SERIES_POSITION = re.compile(r"pr[0-9]+(?:\.[0-9]+)*")
 
 
 def pr_key(url):
@@ -21,6 +22,19 @@ def pr_key(url):
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or not match:
         raise ValueError("expected a canonical HTTPS pull request URL")
     return (parsed.netloc.lower(), match[1].lower(), match[2].lower(), int(match[3]))
+
+
+def checkout_name(branch, repo, number):
+    parts = branch.rsplit("/", 1)[-1].split("-")
+    positions = [i for i, part in enumerate(parts) if SERIES_POSITION.fullmatch(part)]
+    if not positions:
+        return f"{repo}-pr{number}"
+    if len(positions) != 1:
+        raise ValueError("the branch has multiple numbered series positions")
+    start = positions[0]
+    if not any(parts[start + 1:]):
+        raise ValueError("the numbered branch is missing a description")
+    return "-".join(parts[start:])
 
 
 def repo_key(url):
@@ -177,7 +191,12 @@ def plan(snapshot):
         }
         results.append(row)
         if not matches:
-            row.update(action="create", ref=head, sourceRoot=source)
+            try:
+                name = checkout_name(pull["headRefName"], key[2], key[3])
+            except ValueError as exc:
+                row.update(action="hold", reason=str(exc))
+            else:
+                row.update(action="create", ref=head, sourceRoot=source, checkoutName=name)
             continue
         usable = {path for path in known if path in candidates and path not in archived
                   and Path(path).is_dir()}
