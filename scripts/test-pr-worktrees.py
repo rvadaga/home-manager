@@ -84,6 +84,7 @@ class ReviewPlanTest(unittest.TestCase):
         unused = self.result()
         self.assertEqual(unused["action"], "create")
         self.assertEqual(unused["ref"], self.head)
+        self.assertEqual(unused["checkoutName"], "app-pr12")
         self.assertTrue(unused["attachPr"])
         path = self.detached("review with spaces 東京")
         self.attach(path)
@@ -99,6 +100,59 @@ class ReviewPlanTest(unittest.TestCase):
         self.assertEqual(self.result(), first)
         self.assertEqual(self.git("worktree", "list", "--porcelain"), before)
         self.data["artifacts"][1]["payload"]["root"] = str(path)
+        self.assertTrue(self.result()["nativePairVerified"])
+
+    def test_numbered_checkout_name_uses_series_position_and_description(self):
+        for branch, expected in [
+            ("owner/ticket-123-pr12.3-example-change", "pr12.3-example-change"),
+            ("owner/pr9.10-update-v2.3", "pr9.10-update-v2.3"),
+            ("pr4-fix-example", "pr4-fix-example"),
+            ("owner/ticket-123-repr12.3-example", "app-pr12"),
+        ]:
+            with self.subTest(branch=branch):
+                self.data["pulls"][0]["headRefName"] = branch
+                row = self.result()
+                self.assertEqual(row["action"], "create")
+                self.assertEqual(row["checkoutName"], expected)
+
+    def test_ambiguous_numbered_name_holds_creation_but_allows_proven_reuse(self):
+        for branch, reason in [
+            ("owner/ticket-123-pr12.3", "missing a description"),
+            ("owner/pr12.3-example-pr12.4-other", "multiple numbered series positions"),
+        ]:
+            with self.subTest(branch=branch):
+                self.data["pulls"][0]["headRefName"] = branch
+                row = self.result()
+                self.assertEqual(row["action"], "hold")
+                self.assertIn(reason, row["reason"])
+                self.assertNotIn("checkoutName", row)
+        path = self.detached("previous name")
+        self.attach(path)
+        self.assertEqual(self.result()["action"], "reuse")
+        self.assertEqual(self.result()["path"], str(path))
+
+    def test_in_place_move_and_desktop_attachment_have_separate_readback(self):
+        old = self.detached("old review name")
+        self.attach(old, paired=True)
+        new = self.root / "pr12.3-example-change"
+        git_dir = self.git("rev-parse", "--absolute-git-dir", cwd=old)
+        self.git("worktree", "move", str(old), str(new))
+        self.assertFalse(old.exists())
+        self.assertEqual(self.git("rev-parse", "--absolute-git-dir", cwd=new), git_dir)
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=new), self.head)
+        self.assertEqual(self.git("status", "--porcelain", cwd=new), "")
+        self.assertEqual(self.result()["action"], "hold")
+        self.assertFalse(self.result()["nativePairVerified"])
+        # Model the attachment readback after the app has registered the new path.
+        self.data["artifacts"][0]["payload"]["root"] = str(new)
+        self.data["artifacts"][0]["identityKey"] = str(new)
+        self.data["artifacts"][1]["payload"]["root"] = None
+        self.data["verifiedBindings"][0]["path"] = str(new)
+        row = self.result()
+        self.assertEqual(row["action"], "reuse")
+        self.assertEqual(row["path"], str(new))
+        self.assertFalse(row["nativePairVerified"])
+        self.data["artifacts"][1]["payload"]["root"] = str(new)
         self.assertTrue(self.result()["nativePairVerified"])
 
     def test_existing_dirty_checkout_is_preserved_even_with_published_head(self):
