@@ -29,7 +29,11 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 scripts/test-squash-message.py
       - name: verify local review comparisons
-        run: python3 scripts/test-local-review-diffs.py
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python3 scripts/test-local-review-diffs.py
+          python3 scripts/test-pr-worktrees.py
       - name: verify todo storage and vault transactions
         env:
           PYTHONDONTWRITEBYTECODE: "1"
