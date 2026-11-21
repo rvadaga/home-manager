@@ -38,6 +38,6 @@ preserve good interfaces under the production-correctness rule in `CLAUDE.md`; r
 
 keep one branch and pull request per layer. do not keep a completed layer hidden while waiting for its parent to merge. every new pull request is draft; an interactive submission must explicitly select draft rather than accept the ready default. `--open` requires an explicit instruction to make the affected pull requests ready.
 
-after verified draft publication, a published split or restacking, apply assembled `CLAUDE.md`'s required **draft pull request review worktrees** check to the affected open drafts. that rule owns local Changes setup, refresh and reporting; keep stack history and GitHub publication here.
+after verified draft publication, a published split or restacking, run [pr-worktrees](../pr-worktrees/SKILL.md) for the affected open PRs in their owning Codex Desktop chat. that skill owns local Changes setup, reuse and reporting; keep stack history and GitHub publication here.
 
 use `gh stack view --json` for ordered machine-readable state and `gh stack view --short` for a compact human view. do not infer flags from another version; check the installed command's help when needed.

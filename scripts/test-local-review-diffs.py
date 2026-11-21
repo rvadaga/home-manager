@@ -97,18 +97,17 @@ class LocalReviewDiffTest(unittest.TestCase):
         self.assertEqual(self.files(replacement, self.child), ["child.txt", "parent.txt"])
         self.assertNotEqual(self.files(replacement, self.child), self.files(self.parent, self.child))
 
-    def test_new_snapshot_preserves_edits_in_old_snapshot(self):
+    def test_dirty_snapshot_can_stay_while_published_diff_is_read(self):
         old = self.snapshot("old-review", self.child)
         (old / "child.txt").write_text("user edit\n")
         updated = self.commit("child.txt", "published update\n")
         self.assertNotEqual(self.git("rev-parse", "HEAD", cwd=old), updated)
         self.assertNotEqual(self.git("status", "--porcelain", cwd=old), "")
-        new = self.snapshot("new-review", updated)
         self.assertEqual((old / "child.txt").read_text(), "user edit\n")
-        self.assertEqual((new / "child.txt").read_text(), "published update\n")
         self.assertEqual(self.git("rev-parse", "child"), updated)
         self.assertEqual(self.git("rev-parse", "parent"), self.parent)
         self.assertEqual(self.files(self.parent, updated), ["child.txt"])
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=old), self.child)
 
     def entry_state(self, path, head, base, attachments, panel, *, owner="owner"):
         if path not in attachments.get(owner, ()):
@@ -137,7 +136,6 @@ class LocalReviewDiffTest(unittest.TestCase):
                 for row in entries
                 if (row["key"], row["purpose"]) == (key, "review")
                 and self.git("rev-parse", "HEAD", cwd=row["path"]) == head
-                and not self.git("status", "--porcelain", cwd=row["path"])
             ]
             if len(matches) != 1:
                 result[key] = (None, "ambiguous" if matches else "missing exact checkout")
@@ -196,7 +194,7 @@ class LocalReviewDiffTest(unittest.TestCase):
         duplicate_rows = [*rows, dict(top_row, path=duplicate)]
         self.assertEqual(self.inventory(published, duplicate_rows)[top_key], (None, "ambiguous"))
         (duplicate / "keep.txt").write_text("uncommitted change\n")
-        self.assertEqual(self.inventory(published, duplicate_rows)[top_key], (top, "inspected"))
+        self.assertEqual(self.inventory(published, duplicate_rows)[top_key], (None, "ambiguous"))
         self.assertEqual(self.inventory(published, unrelated)[top_key],
                          (None, "missing exact checkout"))
 
@@ -255,26 +253,15 @@ class LocalReviewDiffTest(unittest.TestCase):
         return bool(squash_pr and squash_pr["state"] == "MERGED" and squash_pr["mergedAt"]
                     and squash_pr["headRefOid"] == head)
 
-    def naming_action(self, *, supports_rename, predecessor_safe, archive_refused=False):
-        if archive_refused:
-            return "keep existing attachment"
-        if supports_rename:
-            return "rename in place"
-        if predecessor_safe:
-            return "replace and verify retirement"
-        return "keep existing attachment"
+    def naming_action(self, *, supports_rename):
+        return "rename in place" if supports_rename else "keep existing attachment"
 
     def test_rename_only_keeps_existing_when_retirement_is_unverified_or_refused(self):
         old = self.snapshot("short-name", self.child)
-        self.assertEqual(self.naming_action(supports_rename=True, predecessor_safe=False),
+        self.assertEqual(self.naming_action(supports_rename=True),
                          "rename in place")
-        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=False),
+        self.assertEqual(self.naming_action(supports_rename=False),
                          "keep existing attachment")
-        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=True,
-                                            archive_refused=True),
-                         "keep existing attachment")
-        self.assertEqual(self.naming_action(supports_rename=False, predecessor_safe=True),
-                         "replace and verify retirement")
         self.assertFalse(self.can_retire(old, replacement_state="queued"))
         self.assertTrue(self.can_retire(old, replacement_state="inspected"))
 

@@ -101,6 +101,7 @@ in
         ../dotfiles/claude/skills/bootstrap-plugins/SKILL.md;
       ".claude/skills/nix-rebuild/SKILL.md".source = ../dotfiles/claude/skills/nix-rebuild/SKILL.md;
       ".claude/skills/ship-config/SKILL.md".source = ../dotfiles/claude/skills/ship-config/SKILL.md;
+      ".claude/skills/pr-worktrees".source = ../dotfiles/claude/skills/pr-worktrees;
       ".claude/skills/github-stacked-prs/SKILL.md".source =
         ../dotfiles/claude/skills/github-stacked-prs/SKILL.md;
       ".claude/skills/github-stacked-prs/references/preparation-and-publication.md".source =
