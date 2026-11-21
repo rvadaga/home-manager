@@ -179,14 +179,16 @@ def plan(snapshot):
         if not matches:
             row.update(action="create", ref=head, sourceRoot=source)
             continue
-        if len(known) != 1:
-            row.update(action="hold", reason="existing checkout identity is ambiguous or unproved")
-            continue
-        path = next(iter(known))
-        row.update(path=path, duplicates=[candidate for candidate in matches if candidate != path])
-        if path in archived or not Path(path).is_dir() or path not in candidates:
+        usable = {path for path in known if path in candidates and path not in archived
+                  and Path(path).is_dir()}
+        if known and not usable:
             row.update(action="hold", reason="recorded checkout is archived, missing, or outside this Git inventory")
             continue
+        if len(usable) != 1:
+            row.update(action="hold", reason="existing checkout identity is ambiguous or unproved")
+            continue
+        path = next(iter(usable))
+        row.update(path=path, duplicates=[candidate for candidate in matches if candidate != path])
         actual = git(path, "rev-parse", "--verify", "HEAD").strip()
         if actual != candidates[path].get("HEAD"):
             row.update(action="hold", reason="checkout moved during inventory")

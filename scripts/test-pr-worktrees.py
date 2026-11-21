@@ -160,6 +160,18 @@ class ReviewPlanTest(unittest.TestCase):
         self.assertEqual(self.result()["action"], "hold")
         self.assertIn("missing", self.result()["reason"])
 
+    def test_missing_old_attachment_does_not_hide_the_one_existing_checkout(self):
+        older = self.detached("gone")
+        current = self.detached("current")
+        self.attach(current)
+        self.data["verifiedBindings"].append({"threadId": OWNER, "url": URL, "path": str(older)})
+        older.rename(self.root / "old-saved-elsewhere")
+        row = self.result()
+        self.assertEqual(row["action"], "reuse")
+        self.assertEqual(row["path"], str(current))
+        self.assertEqual(row["duplicates"], [str(older)])
+        self.assertFalse(older.exists())
+
     def test_base_move_reuses_checkout_and_uses_new_base(self):
         path = self.detached()
         self.attach(path)
