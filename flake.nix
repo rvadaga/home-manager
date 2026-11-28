@@ -163,7 +163,12 @@
               home-manager.useGlobalPkgs = true;
               home-manager.useUserPackages = true;
               home-manager.users.${host.user} = import host.homeManagerModule;
-              home-manager.sharedModules = hmModules;
+              home-manager.sharedModules = hmModules ++ [
+                {
+                  # The embedded CLI needs the pinned source when it looks up news.
+                  programs.home-manager.path = lib.mkDefault home-manager.outPath;
+                }
+              ];
               home-manager.extraSpecialArgs = {
                 inherit configurationName inputs;
                 machine = host;
