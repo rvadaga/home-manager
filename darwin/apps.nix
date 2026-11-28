@@ -102,12 +102,6 @@ let
           description = "homebrew cask that installs the app";
         };
 
-        nixPackage = mkOption {
-          type = types.nullOr types.path;
-          default = null;
-          description = "Nix package expression that installs the app";
-        };
-
         dock = {
           path = mkOption {
             type = types.nullOr types.str;
@@ -224,9 +218,10 @@ let
 
   caskEntries = lib.filter (entry: entry.app.cask != null) appEntries;
   casks = map (entry: entry.app.cask) caskEntries;
-  nixPackages =
-    map (entry: pkgs.callPackage entry.app.nixPackage { })
-      (lib.filter (entry: entry.app.nixPackage != null) appEntries);
+
+  installRex = pkgs.writeShellScript "install-rex-macos" (
+    builtins.readFile ../scripts/install-rex-macos.sh
+  );
 
   dockEntries = lib.sort (left: right: left.app.dock.position < right.app.dock.position) (
     lib.filter (entry: entry.app.dock.path != null) appEntries
@@ -559,7 +554,16 @@ in
     personal.apps.manifest = manifest;
 
     homebrew.casks = lib.mkDefault casks;
-    environment.systemPackages = [ licenseSetupScript ] ++ nixPackages;
+    environment.systemPackages = [ licenseSetupScript ];
+
+    system.activationScripts.applications.text = lib.mkAfter (
+      lib.optionalString (enabledApps ? rex) ''
+        ${installRex} \
+          ${lib.escapeShellArg enabledApps.rex.dock.path} \
+          ${lib.escapeShellArg config.system.primaryUser}
+      ''
+    );
+
     system.defaults.dock.persistent-apps = lib.mkDefault dockPaths;
     system.defaults.CustomUserPreferences = lib.mkDefault appPreferences;
 
