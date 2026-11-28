@@ -13,6 +13,8 @@ in
 
   llmInstructions.platforms = [ "mac" ];
 
+  xdg.configFile."rex/init.lua".source = ../dotfiles/rex/init.lua;
+
   programs.bash.package = patchedBash;
   programs.direnv = {
     package = pkgs.direnv.override { bash = patchedBash; };
