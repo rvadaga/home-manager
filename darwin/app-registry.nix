@@ -179,6 +179,14 @@
     };
   };
 
+  rex = {
+    name = "Rex";
+    dock = {
+      path = "/Applications/Rex.app";
+      position = 155;
+    };
+  };
+
   intellij-idea = {
     name = "intellij idea";
     profiles = [ "personal-laptop" ];
