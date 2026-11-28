@@ -219,6 +219,10 @@ let
   caskEntries = lib.filter (entry: entry.app.cask != null) appEntries;
   casks = map (entry: entry.app.cask) caskEntries;
 
+  installRex = pkgs.writeShellScript "install-rex-macos" (
+    builtins.readFile ../scripts/install-rex-macos.sh
+  );
+
   dockEntries = lib.sort (left: right: left.app.dock.position < right.app.dock.position) (
     lib.filter (entry: entry.app.dock.path != null) appEntries
   );
@@ -551,6 +555,15 @@ in
 
     homebrew.casks = lib.mkDefault casks;
     environment.systemPackages = [ licenseSetupScript ];
+
+    system.activationScripts.applications.text = lib.mkAfter (
+      lib.optionalString (enabledApps ? rex) ''
+        ${installRex} \
+          ${lib.escapeShellArg enabledApps.rex.dock.path} \
+          ${lib.escapeShellArg config.system.primaryUser}
+      ''
+    );
+
     system.defaults.dock.persistent-apps = lib.mkDefault dockPaths;
     system.defaults.CustomUserPreferences = lib.mkDefault appPreferences;
 
