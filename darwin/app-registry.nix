@@ -180,9 +180,9 @@
   };
 
   rex = {
-    name = "Rex";
+    nixPackage = ../packages/rex.nix;
     dock = {
-      path = "/Applications/Rex.app";
+      path = "/Applications/Nix Apps/Rex.app";
       position = 155;
     };
   };

@@ -189,7 +189,7 @@ note: `masApps` (mac app store apps) is currently disabled due to a compatibilit
 
 ## app registry
 
-`darwin/app-registry.nix` is the only place that names an app-specific cask, dock path, preference domain, privacy identity or permission, bootstrap step, login item step, license target, shell alias, or backup source. `darwin/apps.nix` validates that data and derives the nix-darwin values, privacy artifacts, setup commands, and bootstrap manifest.
+`darwin/app-registry.nix` is the only place that names an app-specific cask or Nix package, dock path, preference domain, privacy identity or permission, bootstrap step, login item step, license target, shell alias, or backup source. `darwin/apps.nix` validates that data and derives the nix-darwin values, privacy artifacts, setup commands, and bootstrap manifest.
 
 add an app id to `personal.apps.disabled`, set its registry `enable` field to `false`, or remove the source record to remove every generated reference. profile-specific apps use the `profiles` field instead of machine-local cask, dock, or privacy overrides. the flake check disables apps that exercise installation, dock, preferences, privacy, login items, licenses, aliases, and backups, requires unrelated apps to remain, then checks the evaluated configuration and generated files for orphaned references.
 
